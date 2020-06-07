@@ -5,7 +5,7 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#include "symbol.h"
+#include "lr1.h"
 #include <iostream>
 
 
@@ -83,6 +83,11 @@ int main()
 				std::cout << _first->GetId() << ", ";
 			std::cout << "\n";
 		}
+
+
+		// test
+		//Element elem{factor, 0, 0, {g_end}};
+		//std::cout << elem << std::endl;
 	}
 
 	else if constexpr(example == 1)

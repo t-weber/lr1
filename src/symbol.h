@@ -82,6 +82,7 @@ public:
 	}
 
 	std::size_t NumSymbols() const { return m_syms.size(); }
+	std::size_t size() const { return NumSymbols(); }
 
 	const SymbolPtr operator[](const std::size_t i) const { return m_syms[i]; }
 
@@ -102,6 +103,8 @@ public:
 
 		return bMatch;
 	}
+
+	bool operator!=(const Word& other) const { return !operator==(other); }
 
 
 private:
@@ -167,6 +170,7 @@ private:
 };
 
 
+using WordPtr = std::shared_ptr<Word>;
 using TerminalPtr = std::shared_ptr<Terminal>;
 using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 
