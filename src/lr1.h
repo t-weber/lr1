@@ -23,15 +23,7 @@
 class Element
 {
 public:
-	std::function<bool(const TerminalPtr term1, TerminalPtr term2)>
-	lookaheads_compare = [](const TerminalPtr term1, const TerminalPtr term2) -> bool
-	{
-		const std::string& id1 = term1->GetId();
-		const std::string& id2 = term2->GetId();
-
-		return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
-	};
-
+	static std::function<bool(const TerminalPtr term1, const TerminalPtr term2)> lookaheads_compare;
 	using t_lookaheads = std::set<TerminalPtr, decltype(lookaheads_compare)>;
 
 
@@ -45,6 +37,10 @@ public:
 	const Word* GetRhs() const { return m_rhs; }
 	std::size_t GetCursor() const { return m_cursor; }
 	const t_lookaheads& GetLookaheads() const { return m_lookaheads; }
+	WordPtr GetRhsAfterCursor() const;
+
+	void AddLookahead(TerminalPtr term);
+	void AddLookaheads(const t_lookaheads& las);
 
 	bool IsEqual(const Element& elem, bool only_core=false) const;
 	bool operator==(const Element& other) const { return IsEqual(other, false); }
@@ -73,6 +69,16 @@ using ElementPtr = std::shared_ptr<Element>;
 class Collection
 {
 public:
+	Collection() : m_elems{}
+	{}
+
+	void AddElement(const ElementPtr elem);
+	std::pair<bool, std::size_t> HasElement(const ElementPtr elem, bool only_core=false) const;
+
+	std::size_t NumElements() const { return m_elems.size(); }
+	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
+
+	friend std::ostream& operator<<(std::ostream& ostr, const Collection& coll);
 
 private:
 	std::vector<ElementPtr> m_elems;

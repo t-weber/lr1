@@ -12,13 +12,12 @@
 int main()
 {
 	constexpr int example = 0;
-	constexpr bool bSimplifiedGrammar = 0;
+	constexpr bool bSimplifiedGrammar = 1;
 
 	if constexpr(example == 0)
 	{
 		// test grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
 		auto start = std::make_shared<NonTerminal>("start");
-
 		auto add_term = std::make_shared<NonTerminal>("add_term");
 		auto mul_term = std::make_shared<NonTerminal>("mul_term");
 		auto pow_term = std::make_shared<NonTerminal>("pow_term");
@@ -72,8 +71,15 @@ int main()
 		factor->AddRule({ sym });
 
 
-		std::map<std::string, std::set<SymbolPtr>> first;
-		std::map<std::string, std::vector<std::set<SymbolPtr>>> first_per_rule;
+		std::cout << "Productions:\n";
+		for(NonTerminalPtr nonterm : {start, add_term, mul_term, pow_term, factor})
+			nonterm->print(std::cout);
+		std::cout << std::endl;
+
+
+		std::cout << "FIRST sets:\n";
+		std::map<std::string, std::set<TerminalPtr>> first;
+		std::map<std::string, std::vector<std::set<TerminalPtr>>> first_per_rule;
 		calc_first(start, first, &first_per_rule);
 
 		for(const auto& pair : first)
@@ -83,11 +89,14 @@ int main()
 				std::cout << _first->GetId() << ", ";
 			std::cout << "\n";
 		}
+		std::cout << std::endl;
 
 
 		// test
-		//Element elem{factor, 0, 0, {g_end}};
-		//std::cout << elem << std::endl;
+		ElementPtr elem = std::make_shared<Element>(start, 0, 0, Element::t_lookaheads{g_end});
+		Collection coll;
+		coll.AddElement(elem);
+		std::cout << "\n\ntest\n" << coll << std::endl;
 	}
 
 	else if constexpr(example == 1)

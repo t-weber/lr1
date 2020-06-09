@@ -12,20 +12,54 @@ TerminalPtr g_eps = std::make_shared<Terminal>("eps", true, false);
 TerminalPtr g_end = std::make_shared<Terminal>("end", false, true);
 
 
+void Terminal::print(std::ostream& ostr) const
+{
+	ostr << GetId();
+}
+
+
+void NonTerminal::print(std::ostream& ostr) const
+{
+	ostr << GetId() << " ->\n";
+	for(std::size_t i=0; i<NumRules(); ++i)
+	{
+		if(i==0)
+			ostr << "\t  ";
+		else
+			ostr << "\t| ";
+
+		ostr << GetRule(i) << "\n";
+	}
+}
+
+
+std::ostream& operator<<(std::ostream& ostr, const Word& word)
+{
+	for(std::size_t i=0; i<word.NumSymbols(); ++i)
+	{
+		//word.GetSymbol(i)->print(ostr);
+		ostr << word.GetSymbol(i)->GetId() << " ";
+	}
+
+	return ostr;
+}
+
+
+
 /**
  * calculates the first set
  * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 void calc_first(const NonTerminalPtr nonterm,
-	std::map<std::string, std::set<SymbolPtr>>& _first,
-	std::map<std::string, std::vector<std::set<SymbolPtr>>>* _first_perrule)
+	std::map<std::string, std::set<TerminalPtr>>& _first,
+	std::map<std::string, std::vector<std::set<TerminalPtr>>>* _first_perrule)
 {
 	// set already calculated?
 	if(_first.find(nonterm->GetId()) != _first.end())
 		return;
 
-	std::set<SymbolPtr> first;
-	std::vector<std::set<SymbolPtr>> first_perrule;
+	std::set<TerminalPtr> first;
+	std::vector<std::set<TerminalPtr>> first_perrule;
 	first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
@@ -41,10 +75,11 @@ void calc_first(const NonTerminalPtr nonterm,
 			// reached terminal symbol -> end
 			if(sym->IsTerminal())
 			{
-				first.insert(sym);
-				first_perrule[iRule].insert(sym);
+				first.insert(std::dynamic_pointer_cast<Terminal>(sym));
+				first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(sym));
 				break;
 			}
+
 			// non-terminal
 			else
 			{
@@ -65,15 +100,15 @@ void calc_first(const NonTerminalPtr nonterm,
 						// last non-terminal reached -> add epsilon
 						if(iSym == rule.NumSymbols()-1)
 						{
-							first.insert(symprod);
-							first_perrule[iRule].insert(symprod);
+							first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+							first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
 						}
 
 						continue;
 					}
 
-					first.insert(symprod);
-					first_perrule[iRule].insert(symprod);
+					first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+					first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
 				}
 
 				// no epsilon in production -> end
@@ -180,3 +215,4 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 
 	_follow[nonterm->GetId()] = follow;
 }
+

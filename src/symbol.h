@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 
 /**
@@ -40,6 +41,8 @@ public:
 
 	bool operator!=(const Symbol& other) const { return !operator==(other); }
 
+	virtual void print(std::ostream& ostr) const = 0;
+
 
 private:
 	std::string m_id;
@@ -62,6 +65,8 @@ public:
 	virtual ~Terminal() = default;
 
 	virtual bool IsTerminal() const override { return 1; }
+
+	virtual void print(std::ostream& ostr) const override;
 };
 
 
@@ -72,9 +77,15 @@ public:
 class Word
 {
 public:
-	Word(const std::initializer_list<SymbolPtr> init)
-		: m_syms{init}
+	Word(const std::initializer_list<SymbolPtr> init) : m_syms{init}
 	{}
+
+	Word(const Word& other) : m_syms{other.m_syms}
+	{}
+
+	Word() : m_syms{}
+	{}
+
 
 	void AddSymbol(SymbolPtr sym)
 	{
@@ -84,7 +95,8 @@ public:
 	std::size_t NumSymbols() const { return m_syms.size(); }
 	std::size_t size() const { return NumSymbols(); }
 
-	const SymbolPtr operator[](const std::size_t i) const { return m_syms[i]; }
+	const SymbolPtr GetSymbol(const std::size_t i) const { return m_syms[i]; }
+	const SymbolPtr operator[](const std::size_t i) const { return GetSymbol(i); }
 
 	bool operator==(const Word& other) const
 	{
@@ -105,6 +117,8 @@ public:
 	}
 
 	bool operator!=(const Word& other) const { return !operator==(other); }
+
+	friend std::ostream& operator<<(std::ostream& ostr, const Word& word);
 
 
 private:
@@ -164,6 +178,9 @@ public:
 	}
 
 
+	virtual void print(std::ostream& ostr) const override;
+
+
 private:
 	// production rules
 	std::vector<Word> m_rules;
@@ -184,8 +201,8 @@ extern TerminalPtr g_end;
  * calculates the first set
  */
 void calc_first(const NonTerminalPtr nonterm,
-	std::map<std::string, std::set<SymbolPtr>>& _first,
-	std::map<std::string, std::vector<std::set<SymbolPtr>>>* _first_per_rule=nullptr);
+	std::map<std::string, std::set<TerminalPtr>>& _first,
+	std::map<std::string, std::vector<std::set<TerminalPtr>>>* _first_per_rule=nullptr);
 
 
 /**
