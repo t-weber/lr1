@@ -6,7 +6,7 @@
  *
  * References:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
- *  - "Übersetzerbau" ISBN: 978-3540653899 (1999, 2013)
+ *	- "Übersetzerbau" ISBN: 978-3540653899 (1999, 2013)
  */
 
 #include "lr1.h"
@@ -49,7 +49,7 @@ const Element& Element::operator=(const Element& elem)
 }
 
 
-bool Element::IsEqual(const Element& elem, bool only_core) const
+bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) const
 {
 	if(this->GetLhs()->GetId() != elem.GetLhs()->GetId())
 		return false;
@@ -61,15 +61,20 @@ bool Element::IsEqual(const Element& elem, bool only_core) const
 	// also compare lookaheads
 	if(!only_core)
 	{
-		// exact match
-		//if(this->GetLookaheads() != elem.GetLookaheads())
-		//	return false;
-
-		// see if all lookaheads of elem are already in this lookahead set
-		for(const TerminalPtr la : elem.GetLookaheads())
+		if(full_equal)
 		{
-			if(!this->GetLookaheads().contains(la))
+			// exact match
+			if(this->GetLookaheads() != elem.GetLookaheads())
 				return false;
+		}
+		else
+		{
+			// see if all lookaheads of elem are already in this lookahead set
+			for(const TerminalPtr& la : elem.GetLookaheads())
+			{
+				if(!this->GetLookaheads().contains(la))
+					return false;
+			}
 		}
 	}
 
@@ -101,6 +106,24 @@ void Element::AddLookaheads(const t_lookaheads& las)
 }
 
 
+/**
+ * get possible transition symbol
+ */
+const SymbolPtr Element::GetPossibleTransition() const
+{
+	if(m_cursor >= m_rhs->size())
+		return nullptr;
+	return (*m_rhs)[m_cursor];
+}
+
+
+void Element::AdvanceCursor()
+{
+	if(m_cursor < m_rhs->size())
+		++m_cursor;
+}
+
+
 std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 {
 	const NonTerminalPtr lhs = elem.GetLhs();
@@ -113,8 +136,15 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 			ostr << ".";
 
 		const SymbolPtr sym = (*rhs)[i];
-		ostr << sym->GetId() << " ";
+
+		ostr << sym->GetId();
+		//if(i < rhs->size()-1)
+			ostr << " ";
 	}
+
+	// cursor at end?
+	if(elem.GetCursor() == rhs->size())
+		ostr << ".";
 
 	ostr << ", ";
 
@@ -129,6 +159,9 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 
 // ----------------------------------------------------------------------------
+
+// global collection id counter
+std::size_t Collection::g_id = 0;
 
 
 /**
@@ -171,7 +204,7 @@ void Collection::AddElement(const ElementPtr elem)
 		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
 		{
 			// iterate lookaheads
-			for(const TerminalPtr la : nonterm_la)
+			for(const TerminalPtr& la : nonterm_la)
 			{
 				// copy ruleaftercursor and add lookahead
 				WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
@@ -208,11 +241,96 @@ std::pair<bool, std::size_t> Collection::HasElement(const ElementPtr elem, bool 
 	{
 		const ElementPtr theelem = m_elems[idx];
 
-		if(theelem->IsEqual(*elem, only_core))
+		if(theelem->IsEqual(*elem, only_core, false))
 			return std::make_pair(true, idx);
 	}
 
 	return std::make_pair(false, 0);
+}
+
+
+/**
+ * get possible transition symbols from all elements
+ */
+std::vector<SymbolPtr> Collection::GetPossibleTransitions() const
+{
+	std::vector<SymbolPtr> syms;
+
+	for(const ElementPtr& theelem : m_elems)
+	{
+		const SymbolPtr sym = theelem->GetPossibleTransition();
+		if(!sym)
+			continue;
+
+		bool sym_already_seen = std::find_if(syms.begin(), syms.end(), [sym](const SymbolPtr sym2)->bool
+		{
+			return sym->GetId() == sym2->GetId();
+		}) != syms.end();
+		if(sym && !sym_already_seen)
+			syms.emplace_back(sym);
+	}
+
+	return syms;
+}
+
+
+/**
+ * perform a transition and get the corresponding lr(1) collection
+ */
+Collection Collection::DoTransition(const SymbolPtr transsym) const
+{
+	Collection newcoll;
+
+	// look for elements with that transition
+	for(const ElementPtr& theelem : m_elems)
+	{
+		const SymbolPtr sym = theelem->GetPossibleTransition();
+		if(!sym)
+			continue;
+		if(sym->GetId() != transsym->GetId())
+			continue;
+
+		// copy element and perform transition
+		ElementPtr newelem = std::make_shared<Element>(*theelem);
+		newelem->AdvanceCursor();
+
+		newcoll.AddElement(newelem);
+	}
+
+	return newcoll;
+}
+
+
+/**
+ * perform all possible transitions from this collection and get the corresponding lr(1) collections
+ * @return [transition symbol, destination collection]
+ */
+std::vector<std::tuple<SymbolPtr, Collection>> Collection::DoTransitions() const
+{
+	std::vector<std::tuple<SymbolPtr, Collection>> colls;
+	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitions();
+
+	for(const SymbolPtr& transition : possible_transitions)
+	{
+		Collection coll = DoTransition(transition);
+		colls.emplace_back(std::make_tuple(transition, std::move(coll)));
+	}
+
+	return colls;
+}
+
+
+/**
+ * perform all possible transitions from all collections
+ * @return [source collection id, transition symbol, destination collection]
+ */
+std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> Collection::DoAllTransitions() const
+{
+	std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> colls;
+
+	// TODO
+
+	return colls;
 }
 
 

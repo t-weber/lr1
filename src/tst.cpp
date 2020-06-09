@@ -96,7 +96,17 @@ int main()
 		ElementPtr elem = std::make_shared<Element>(start, 0, 0, Element::t_lookaheads{g_end});
 		Collection coll;
 		coll.AddElement(elem);
-		std::cout << "\n\ntest\n" << coll << std::endl;
+		std::cout << "\n\n";
+		std::cout << "Collection " << coll.GetId() << ":\n" << coll << std::endl;
+
+		auto colls = coll.DoTransitions();
+		for(const auto& tup : colls)
+		{
+			std::cout << "Collection " << std::get<1>(tup).GetId() << " (";
+			std::cout << "transition from collection " << coll.GetId()
+				<< " with symbol \"" << std::get<0>(tup)->GetId() << "\"):\n";
+			std::cout << std::get<1>(tup)<< std::endl;
+		}
 	}
 
 	else if constexpr(example == 1)

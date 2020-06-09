@@ -42,7 +42,10 @@ public:
 	void AddLookahead(TerminalPtr term);
 	void AddLookaheads(const t_lookaheads& las);
 
-	bool IsEqual(const Element& elem, bool only_core=false) const;
+	const SymbolPtr GetPossibleTransition() const;
+	void AdvanceCursor();
+
+	bool IsEqual(const Element& elem, bool only_core=false, bool full_equal=true) const;
 	bool operator==(const Element& other) const { return IsEqual(other, false); }
 	bool operator!=(const Element& other) const { return !operator==(other); }
 
@@ -69,8 +72,10 @@ using ElementPtr = std::shared_ptr<Element>;
 class Collection
 {
 public:
-	Collection() : m_elems{}
+	Collection() : m_elems{}, m_id{g_id++}
 	{}
+
+	std::size_t GetId() const { return m_id; }
 
 	void AddElement(const ElementPtr elem);
 	std::pair<bool, std::size_t> HasElement(const ElementPtr elem, bool only_core=false) const;
@@ -78,10 +83,20 @@ public:
 	std::size_t NumElements() const { return m_elems.size(); }
 	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
 
+	std::vector<SymbolPtr> GetPossibleTransitions() const;
+	Collection DoTransition(const SymbolPtr) const;
+	std::vector<std::tuple<SymbolPtr, Collection>> DoTransitions() const;
+	std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> DoAllTransitions() const;
+
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& coll);
+
 
 private:
 	std::vector<ElementPtr> m_elems;
+	std::size_t m_id = 0;	// collection id
+
+	// global collection id counter
+	static std::size_t g_id;
 };
 
 
