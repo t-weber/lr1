@@ -11,9 +11,9 @@
 #include "symbol.h"
 
 #include <set>
+#include <map>
 #include <vector>
 #include <functional>
-#include <algorithm>
 #include <iostream>
 
 
@@ -49,6 +49,8 @@ public:
 	bool operator==(const Element& other) const { return IsEqual(other, false); }
 	bool operator!=(const Element& other) const { return !operator==(other); }
 
+	std::size_t hash() const;
+
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
 
 
@@ -62,7 +64,10 @@ private:
 };
 
 
+
+class Collection;
 using ElementPtr = std::shared_ptr<Element>;
+using CollectionPtr = std::shared_ptr<Collection>;
 
 
 
@@ -84,9 +89,10 @@ public:
 	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
 
 	std::vector<SymbolPtr> GetPossibleTransitions() const;
-	Collection DoTransition(const SymbolPtr) const;
-	std::vector<std::tuple<SymbolPtr, Collection>> DoTransitions() const;
-	std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> DoAllTransitions() const;
+	CollectionPtr DoTransition(const SymbolPtr) const;
+	std::vector<std::tuple<SymbolPtr, CollectionPtr>> DoTransitions() const;
+
+	std::size_t hash() const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& coll);
 
@@ -99,5 +105,27 @@ private:
 	static std::size_t g_id;
 };
 
+
+
+class Collections
+{
+public:
+	Collections(const CollectionPtr coll);
+	Collections() = delete;
+
+	void DoTransitions();
+
+public:
+	void DoTransitions(const CollectionPtr coll);
+
+private:
+	std::map<std::size_t, CollectionPtr> m_cache;	// collection hashes
+	std::vector<CollectionPtr> m_collections;		// collections
+
+	// transitions between collections, [from, to, transition symbol]
+	std::vector<std::tuple<CollectionPtr, CollectionPtr, SymbolPtr>> m_transitions;
+
+	friend std::ostream& operator<<(std::ostream& ostr, const Collections& colls);
+};
 
 #endif

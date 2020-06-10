@@ -7,14 +7,53 @@
 
 #include "symbol.h"
 
+#include <functional>
+#include <boost/functional/hash.hpp>
+
 
 TerminalPtr g_eps = std::make_shared<Terminal>("eps", true, false);
 TerminalPtr g_end = std::make_shared<Terminal>("end", false, true);
 
 
+// ----------------------------------------------------------------------------
+
+
+bool Symbol::operator==(const Symbol& other) const
+{
+	return this->hash() == other.hash();
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+
 void Terminal::print(std::ostream& ostr) const
 {
 	ostr << GetId();
+}
+
+
+std::size_t Terminal::hash() const
+{
+	std::size_t hashId = std::hash<std::string>{}(GetId());
+	std::size_t hashEps = std::hash<bool>{}(IsEps());
+	std::size_t hashEnd = std::hash<bool>{}(IsEnd());
+
+	boost::hash_combine(hashId, hashEps);
+	boost::hash_combine(hashId, hashEnd);
+
+	return hashId;
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+std::size_t NonTerminal::hash() const
+{
+	std::size_t hashId = std::hash<std::string>{}(GetId());
+	return hashId;
 }
 
 
@@ -33,6 +72,56 @@ void NonTerminal::print(std::ostream& ostr) const
 }
 
 
+/**
+ * does this non-terminal have a rule which produces epsilon?
+ */
+bool NonTerminal::HasEpsRule() const
+{
+	for(const auto& rule : m_rules)
+	{
+		if(rule.NumSymbols()==1 && rule[0]->IsEps())
+			return true;
+	}
+	return false;
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+bool Word::operator==(const Word& other) const
+{
+	if(this->NumSymbols() != other.NumSymbols())
+		return false;
+
+	bool bMatch = true;
+	for(std::size_t i=0; i<NumSymbols(); ++i)
+	{
+		if(*m_syms[i] != *other.m_syms[i])
+		{
+			bMatch = false;
+			break;
+		}
+	}
+
+	return bMatch;
+}
+
+
+std::size_t Word::hash() const
+{
+	std::size_t hash = 0;
+
+	for(std::size_t i=0; i<NumSymbols(); ++i)
+	{
+		std::size_t hashSym = m_syms[i]->hash();
+		boost::hash_combine(hash, hashSym);
+	}
+
+	return hash;
+}
+
+
 std::ostream& operator<<(std::ostream& ostr, const Word& word)
 {
 	for(std::size_t i=0; i<word.NumSymbols(); ++i)
@@ -44,6 +133,8 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 	return ostr;
 }
 
+
+// ----------------------------------------------------------------------------
 
 
 /**

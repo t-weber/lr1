@@ -11,6 +11,9 @@
 
 #include "lr1.h"
 
+#include <algorithm>
+#include <boost/functional/hash.hpp>
+
 
 /**
  * comparator for lookaheads set
@@ -18,10 +21,13 @@
 std::function<bool(const TerminalPtr term1, const TerminalPtr term2)>
 Element::lookaheads_compare = [](const TerminalPtr term1, const TerminalPtr term2) -> bool
 {
+	/*
 	const std::string& id1 = term1->GetId();
 	const std::string& id2 = term2->GetId();
-
 	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
+	*/
+
+	return term1->hash() < term2->hash();
 };
 
 
@@ -51,7 +57,7 @@ const Element& Element::operator=(const Element& elem)
 
 bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) const
 {
-	if(this->GetLhs()->GetId() != elem.GetLhs()->GetId())
+	if(*this->GetLhs() != *elem.GetLhs())
 		return false;
 	if(*this->GetRhs() != *elem.GetRhs())
 		return false;
@@ -79,6 +85,25 @@ bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) cons
 	}
 
 	return true;
+}
+
+
+std::size_t Element::hash() const
+{
+	std::size_t hashLhs = this->GetLhs()->hash();
+	std::size_t hashRhs = this->GetLhs()->hash();
+	std::size_t hashCursor = std::hash<std::size_t>{}(this->GetCursor());
+
+	boost::hash_combine(hashLhs, hashRhs);
+	boost::hash_combine(hashLhs, hashCursor);
+
+	for(const TerminalPtr& la : GetLookaheads())
+	{
+		std::size_t hashLA = la->hash();
+		boost::hash_combine(hashLhs, hashLA);
+	}
+
+	return hashLhs;
 }
 
 
@@ -159,6 +184,8 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 
 // ----------------------------------------------------------------------------
+
+
 
 // global collection id counter
 std::size_t Collection::g_id = 0;
@@ -264,7 +291,7 @@ std::vector<SymbolPtr> Collection::GetPossibleTransitions() const
 
 		bool sym_already_seen = std::find_if(syms.begin(), syms.end(), [sym](const SymbolPtr sym2)->bool
 		{
-			return sym->GetId() == sym2->GetId();
+			return *sym == *sym2;
 		}) != syms.end();
 		if(sym && !sym_already_seen)
 			syms.emplace_back(sym);
@@ -277,9 +304,9 @@ std::vector<SymbolPtr> Collection::GetPossibleTransitions() const
 /**
  * perform a transition and get the corresponding lr(1) collection
  */
-Collection Collection::DoTransition(const SymbolPtr transsym) const
+CollectionPtr Collection::DoTransition(const SymbolPtr transsym) const
 {
-	Collection newcoll;
+	CollectionPtr newcoll = std::make_shared<Collection>();
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
@@ -287,14 +314,14 @@ Collection Collection::DoTransition(const SymbolPtr transsym) const
 		const SymbolPtr sym = theelem->GetPossibleTransition();
 		if(!sym)
 			continue;
-		if(sym->GetId() != transsym->GetId())
+		if(*sym != *transsym)
 			continue;
 
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 
-		newcoll.AddElement(newelem);
+		newcoll->AddElement(newelem);
 	}
 
 	return newcoll;
@@ -305,18 +332,63 @@ Collection Collection::DoTransition(const SymbolPtr transsym) const
  * perform all possible transitions from this collection and get the corresponding lr(1) collections
  * @return [transition symbol, destination collection]
  */
-std::vector<std::tuple<SymbolPtr, Collection>> Collection::DoTransitions() const
+std::vector<std::tuple<SymbolPtr, CollectionPtr>> Collection::DoTransitions() const
 {
-	std::vector<std::tuple<SymbolPtr, Collection>> colls;
+	std::vector<std::tuple<SymbolPtr, CollectionPtr>> colls;
 	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitions();
 
 	for(const SymbolPtr& transition : possible_transitions)
 	{
-		Collection coll = DoTransition(transition);
-		colls.emplace_back(std::make_tuple(transition, std::move(coll)));
+		CollectionPtr coll = DoTransition(transition);
+		colls.emplace_back(std::make_tuple(transition, coll));
 	}
 
 	return colls;
+}
+
+
+std::size_t Collection::hash() const
+{
+	// sort element hashes before combining them
+	std::vector<std::size_t> hashes;
+	hashes.reserve(m_elems.size());
+
+	for(ElementPtr elem : m_elems)
+		hashes.emplace_back(elem->hash());
+
+	std::sort(hashes.begin(), hashes.end(), [](std::size_t hash1, std::size_t hash2)->bool
+	{
+		return hash1 < hash2;
+	});
+
+
+	std::size_t fullhash = 0;
+	for(std::size_t hash : hashes)
+		boost::hash_combine(fullhash, hash);
+	return fullhash;
+}
+
+
+std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
+{
+	ostr << "Collection " << coll.GetId() << ":\n";
+	for(std::size_t i=0; i<coll.NumElements(); ++i)
+		ostr << *coll.GetElement(i)<< "\n";
+
+	return ostr;
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
+
+Collections::Collections(const CollectionPtr coll)
+	: m_cache{}, m_collections{}, m_transitions{}
+{
+	m_cache.insert(std::make_pair(coll->hash(), coll));
+	m_collections.push_back(coll);
 }
 
 
@@ -324,20 +396,85 @@ std::vector<std::tuple<SymbolPtr, Collection>> Collection::DoTransitions() const
  * perform all possible transitions from all collections
  * @return [source collection id, transition symbol, destination collection]
  */
-std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> Collection::DoAllTransitions() const
+void Collections::DoTransitions(const CollectionPtr coll_from)
 {
-	std::vector<std::tuple<std::size_t, SymbolPtr, Collection>> colls;
+	std::vector<std::tuple<SymbolPtr, CollectionPtr>> colls = coll_from->DoTransitions();
 
-	// TODO
+	// no more transitions?
+	if(colls.size() == 0)
+		return;
 
-	return colls;
+	for(const auto& tup : colls)
+	{
+		const SymbolPtr trans_sym = std::get<0>(tup);
+		const CollectionPtr coll_to = std::get<1>(tup);
+		std::size_t hash_to = coll_to->hash();
+
+		auto cacheIter = m_cache.find(hash_to);
+		if(cacheIter == m_cache.end())
+		{
+			// new unique collection
+			m_cache.insert(std::make_pair(hash_to, coll_to));
+			m_collections.push_back(coll_to);
+			m_transitions.push_back(std::make_tuple(coll_from, coll_to, trans_sym));
+
+			DoTransitions(coll_to);
+		}
+		else
+		{
+			// collection already seen
+			m_transitions.push_back(std::make_tuple(coll_from, cacheIter->second, trans_sym));
+		}
+	}
 }
 
 
-std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
+void Collections::DoTransitions()
 {
-	for(std::size_t i=0; i<coll.NumElements(); ++i)
-		ostr << *coll.GetElement(i)<< "\n";
+	DoTransitions(m_collections[0]);
+
+	// cleanups
+	std::sort(m_collections.begin(), m_collections.end(),
+	[](const CollectionPtr coll1, const CollectionPtr coll2) -> bool
+	{
+		return coll1->GetId() < coll2->GetId();
+	});
+
+	std::stable_sort(m_transitions.begin(), m_transitions.end(),
+	[](const auto& tup1, const auto& tup2) -> bool
+	{
+		CollectionPtr from1 = std::get<0>(tup1);
+		CollectionPtr from2 = std::get<0>(tup2);
+		CollectionPtr to1 = std::get<1>(tup1);
+		CollectionPtr to2 = std::get<1>(tup2);
+
+		if(from1->GetId() < from2->GetId())
+			return true;
+		if(from1->GetId() == from2->GetId())
+			return to1->GetId() < to2->GetId();
+		return false;
+	});
+}
+
+
+std::ostream& operator<<(std::ostream& ostr, const Collections& colls)
+{
+	ostr << "--------------------------------------------------------------------------------\n";
+	ostr << "Collections\n";
+	ostr << "--------------------------------------------------------------------------------\n";
+	for(const CollectionPtr& coll : colls.m_collections)
+		ostr << *coll << "\n";
+
+	ostr << "\n";
+
+	ostr << "--------------------------------------------------------------------------------\n";
+	ostr << "Transitions\n";
+	ostr << "--------------------------------------------------------------------------------\n";
+	for(const auto& tup : colls.m_transitions)
+	{
+		ostr << std::get<0>(tup)->GetId() << " -> " << std::get<1>(tup)->GetId()
+			<< " via " << std::get<2>(tup)->GetId() << "\n";
+	}
 
 	return ostr;
 }

@@ -34,14 +34,11 @@ public:
 	bool IsEps() const { return m_iseps; }
 	bool IsEnd() const { return m_isend; }
 
-	bool operator==(const Symbol& other) const
-	{
-		return this->GetId() == other.GetId();
-	}
-
+	bool operator==(const Symbol& other) const;
 	bool operator!=(const Symbol& other) const { return !operator==(other); }
 
 	virtual void print(std::ostream& ostr) const = 0;
+	virtual std::size_t hash() const = 0;
 
 
 private:
@@ -67,6 +64,7 @@ public:
 	virtual bool IsTerminal() const override { return 1; }
 
 	virtual void print(std::ostream& ostr) const override;
+	virtual std::size_t hash() const override;
 };
 
 
@@ -77,15 +75,9 @@ public:
 class Word
 {
 public:
-	Word(const std::initializer_list<SymbolPtr> init) : m_syms{init}
-	{}
-
-	Word(const Word& other) : m_syms{other.m_syms}
-	{}
-
-	Word() : m_syms{}
-	{}
-
+	Word(const std::initializer_list<SymbolPtr> init) : m_syms{init} {}
+	Word(const Word& other) : m_syms{other.m_syms} {}
+	Word() : m_syms{} {}
 
 	void AddSymbol(SymbolPtr sym)
 	{
@@ -98,25 +90,10 @@ public:
 	const SymbolPtr GetSymbol(const std::size_t i) const { return m_syms[i]; }
 	const SymbolPtr operator[](const std::size_t i) const { return GetSymbol(i); }
 
-	bool operator==(const Word& other) const
-	{
-		if(this->NumSymbols() != other.NumSymbols())
-			return false;
-
-		bool bMatch = true;
-		for(std::size_t i=0; i<NumSymbols(); ++i)
-		{
-			if(*m_syms[i] != *other.m_syms[i])
-			{
-				bMatch = false;
-				break;
-			}
-		}
-
-		return bMatch;
-	}
-
+	bool operator==(const Word& other) const;
 	bool operator!=(const Word& other) const { return !operator==(other); }
+
+	std::size_t hash() const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Word& word);
 
@@ -139,46 +116,28 @@ public:
 
 	virtual bool IsTerminal() const override { return 0; }
 
-
 	/**
 	 * add multiple alternative production rules
 	 */
-	void AddRule(const Word& rule)
-	{
-		m_rules.push_back(rule);
-	}
-
+	void AddRule(const Word& rule) { m_rules.push_back(rule); }
 
 	/**
 	 * number of rules
 	 */
 	std::size_t NumRules() const { return m_rules.size(); }
 
-
 	/**
 	 * get a production rule
 	 */
-	const Word& GetRule(std::size_t i) const
-	{
-		return m_rules[i];
-	}
-
+	const Word& GetRule(std::size_t i) const { return m_rules[i]; }
 
 	/**
 	 * does this non-terminal have a rule which produces epsilon?
 	 */
-	bool HasEpsRule() const
-	{
-		for(const auto& rule : m_rules)
-		{
-			if(rule.NumSymbols()==1 && rule[0]->IsEps())
-				return true;
-		}
-		return false;
-	}
-
+	bool HasEpsRule() const;
 
 	virtual void print(std::ostream& ostr) const override;
+	virtual std::size_t hash() const override;
 
 
 private:
@@ -192,8 +151,15 @@ using TerminalPtr = std::shared_ptr<Terminal>;
 using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 
 
+
+// ----------------------------------------------------------------------------
+
+
 extern TerminalPtr g_eps;
 extern TerminalPtr g_end;
+
+
+// ----------------------------------------------------------------------------
 
 
 
