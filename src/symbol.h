@@ -17,6 +17,18 @@
 #include <iostream>
 
 
+class Symbol;
+class Terminal;
+class NonTerminal;
+class Word;
+
+using SymbolPtr = std::shared_ptr<Symbol>;
+using TerminalPtr = std::shared_ptr<Terminal>;
+using NonTerminalPtr = std::shared_ptr<NonTerminal>;
+using WordPtr = std::shared_ptr<Word>;
+
+
+
 /**
  * symbol base class
  */
@@ -47,8 +59,6 @@ private:
 	bool m_isend = false;
 };
 
-
-using SymbolPtr = std::shared_ptr<Symbol>;
 
 
 /**
@@ -144,11 +154,6 @@ private:
 	// production rules
 	std::vector<Word> m_rules;
 };
-
-
-using WordPtr = std::shared_ptr<Word>;
-using TerminalPtr = std::shared_ptr<Terminal>;
-using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 
 
 

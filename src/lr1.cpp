@@ -11,6 +11,7 @@
 
 #include "lr1.h"
 
+#include <fstream>
 #include <algorithm>
 #include <boost/functional/hash.hpp>
 
@@ -78,7 +79,11 @@ bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) cons
 			// see if all lookaheads of elem are already in this lookahead set
 			for(const TerminalPtr& la : elem.GetLookaheads())
 			{
+#if __cplusplus >= 201709l
 				if(!this->GetLookaheads().contains(la))
+#else
+				if(this->GetLookaheads().find(la) == this->GetLookaheads().end())
+#endif
 					return false;
 			}
 		}
@@ -91,7 +96,7 @@ bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) cons
 std::size_t Element::hash() const
 {
 	std::size_t hashLhs = this->GetLhs()->hash();
-	std::size_t hashRhs = this->GetLhs()->hash();
+	std::size_t hashRhs = this->GetRhs()->hash();
 	std::size_t hashCursor = std::hash<std::size_t>{}(this->GetCursor());
 
 	boost::hash_combine(hashLhs, hashRhs);
@@ -196,6 +201,8 @@ std::size_t Collection::g_id = 0;
  */
 void Collection::AddElement(const ElementPtr elem)
 {
+	//std::cout << "adding " << *elem << std::endl;
+
 	// full element already in collection?
 	if(HasElement(elem, false).first)
 		return;
@@ -236,6 +243,7 @@ void Collection::AddElement(const ElementPtr elem)
 				// copy ruleaftercursor and add lookahead
 				WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
 				_ruleaftercursor->AddSymbol(la);
+				//std::cout << nonterm->GetId() << ", " << *_ruleaftercursor << std::endl;
 
 				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>("tmp");
 				tmpNT->AddRule(*_ruleaftercursor);
@@ -248,7 +256,11 @@ void Collection::AddElement(const ElementPtr elem)
 				{
 					const std::set<TerminalPtr>& set_first = tmp_first.begin()->second;
 					if(set_first.size())	// should always be 1
-						first_la.insert(*set_first.begin());
+					{
+						TerminalPtr la = *set_first.begin();
+						//std::cout << "lookahead: " << la->GetId() << std::endl;
+						first_la.insert(la);
+					}
 				}
 
 				AddElement(std::make_shared<Element>(nonterm, nonterm_rhsidx, 0, first_la));
@@ -411,7 +423,13 @@ void Collections::DoTransitions(const CollectionPtr coll_from)
 		std::size_t hash_to = coll_to->hash();
 
 		auto cacheIter = m_cache.find(hash_to);
-		if(cacheIter == m_cache.end())
+		bool coll_to_new = (cacheIter == m_cache.end());
+
+		//std::cout << "transition " << coll_from->GetId() << " -> " << coll_to->GetId()
+		//	<< " via " << trans_sym->GetId() << ", new: " << coll_to_new << std::endl;
+		//std::cout << std::hex << coll_to->hash() << ", " << *coll_to << std::endl;
+
+		if(coll_to_new)
 		{
 			// new unique collection
 			m_cache.insert(std::make_pair(hash_to, coll_to));
@@ -431,29 +449,104 @@ void Collections::DoTransitions(const CollectionPtr coll_from)
 
 void Collections::DoTransitions()
 {
+	constexpr bool do_sort = 1;
+	constexpr bool do_cleanup = 1;
+
 	DoTransitions(m_collections[0]);
 
-	// cleanups
-	std::sort(m_collections.begin(), m_collections.end(),
-	[](const CollectionPtr coll1, const CollectionPtr coll2) -> bool
+	// sort rules
+	if constexpr(do_sort)
 	{
-		return coll1->GetId() < coll2->GetId();
-	});
+		std::sort(m_collections.begin(), m_collections.end(),
+		[](const CollectionPtr coll1, const CollectionPtr coll2) -> bool
+		{
+			return coll1->GetId() < coll2->GetId();
+		});
 
-	std::stable_sort(m_transitions.begin(), m_transitions.end(),
-	[](const auto& tup1, const auto& tup2) -> bool
+		std::stable_sort(m_transitions.begin(), m_transitions.end(),
+		[](const auto& tup1, const auto& tup2) -> bool
+		{
+			CollectionPtr from1 = std::get<0>(tup1);
+			CollectionPtr from2 = std::get<0>(tup2);
+			CollectionPtr to1 = std::get<1>(tup1);
+			CollectionPtr to2 = std::get<1>(tup2);
+
+			if(from1->GetId() < from2->GetId())
+				return true;
+			if(from1->GetId() == from2->GetId())
+				return to1->GetId() < to2->GetId();
+			return false;
+		});
+	}
+
+	// cleanup ids
+	if constexpr(do_cleanup)
 	{
-		CollectionPtr from1 = std::get<0>(tup1);
-		CollectionPtr from2 = std::get<0>(tup2);
-		CollectionPtr to1 = std::get<1>(tup1);
-		CollectionPtr to2 = std::get<1>(tup2);
+		std::map<std::size_t, std::size_t> idmap;
+		std::set<std::size_t> already_seen;
+		std::size_t newid = 0;
 
-		if(from1->GetId() < from2->GetId())
-			return true;
-		if(from1->GetId() == from2->GetId())
-			return to1->GetId() < to2->GetId();
-		return false;
-	});
+		for(CollectionPtr coll : m_collections)
+		{
+			std::size_t oldid = coll->GetId();
+			std::size_t hash = coll->hash();
+
+			if(already_seen.find(hash) != already_seen.end())
+				continue;
+
+			auto iditer = idmap.find(oldid);
+			if(iditer == idmap.end())
+				iditer = idmap.insert(std::make_pair(oldid, newid++)).first;
+
+			coll->SetId(iditer->second);
+			already_seen.insert(hash);
+		}
+	}
+}
+
+
+/**
+ * write out the transitions graph
+ */
+void Collections::WriteGraph(const std::string& file, bool write_full_coll) const
+{
+	std::string outfile_graph = file + ".graph";
+	std::string outfile_svg = file + ".svg";
+
+	std::ofstream ofstr{outfile_graph};
+	if(!ofstr)
+		return;
+
+	ofstr << "digraph G_lr1\n{\n";
+
+	// write states
+	for(const CollectionPtr& coll : m_collections)
+	{
+		ofstr << "\t" << coll->GetId() << " [label=\"";
+		if(write_full_coll)
+			ofstr << *coll;
+		else
+			ofstr << coll->GetId();
+		ofstr << "\"];\n";
+	}
+
+	// write transitions
+	ofstr << "\n";
+	for(const auto& tup : m_transitions)
+	{
+		const CollectionPtr coll_from = std::get<0>(tup);
+		const CollectionPtr coll_to = std::get<1>(tup);
+		const SymbolPtr trans = std::get<2>(tup);
+
+		ofstr << "\t" << coll_from->GetId() << " -> " << coll_to->GetId()
+			<< " [label=\"" << trans->GetId() << "\"];\n";
+	}
+
+	ofstr << "}" << std::endl;
+	ofstr.flush();
+	ofstr.close();
+
+	std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str());
 }
 
 

@@ -19,3 +19,10 @@
 *.exe
 *.out
 *.app
+
+# Build files
+build/**
+
+# Graph files
+*.graph
+*.svg

@@ -17,6 +17,14 @@
 #include <iostream>
 
 
+class Element;
+class Collection;
+class Collections;
+using ElementPtr = std::shared_ptr<Element>;
+using CollectionPtr = std::shared_ptr<Collection>;
+
+
+
 /**
  * LR(1) element
  */
@@ -65,17 +73,12 @@ private:
 
 
 
-class Collection;
-using ElementPtr = std::shared_ptr<Element>;
-using CollectionPtr = std::shared_ptr<Collection>;
-
-
-
 /**
  * LR(1) collection
  */
 class Collection
 {
+	friend class Collections;
 public:
 	Collection() : m_elems{}, m_id{g_id++}
 	{}
@@ -98,6 +101,10 @@ public:
 
 
 private:
+	void SetId(std::size_t id) { m_id = id; }
+
+
+private:
 	std::vector<ElementPtr> m_elems;
 	std::size_t m_id = 0;	// collection id
 
@@ -114,6 +121,8 @@ public:
 	Collections() = delete;
 
 	void DoTransitions();
+
+	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
 
 public:
 	void DoTransitions(const CollectionPtr coll);
