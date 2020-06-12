@@ -18,10 +18,10 @@
 
 
 class Element;
+class Closure;
 class Collection;
-class Collections;
 using ElementPtr = std::shared_ptr<Element>;
-using CollectionPtr = std::shared_ptr<Collection>;
+using ClosurePtr = std::shared_ptr<Closure>;
 
 
 
@@ -57,7 +57,7 @@ public:
 	bool operator==(const Element& other) const { return IsEqual(other, false); }
 	bool operator!=(const Element& other) const { return !operator==(other); }
 
-	std::size_t hash() const;
+	std::size_t hash(bool only_core=false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
 
@@ -74,14 +74,17 @@ private:
 
 
 /**
- * LR(1) collection
+ * closure of LR(1) element
  */
-class Collection
+class Closure
 {
-	friend class Collections;
+	friend class Collection;
+
 public:
-	Collection() : m_elems{}, m_id{g_id++}
-	{}
+	Closure();
+
+	Closure(const Closure& coll);
+	const Closure& operator=(const Closure& coll);
 
 	std::size_t GetId() const { return m_id; }
 
@@ -92,12 +95,12 @@ public:
 	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
 
 	std::vector<SymbolPtr> GetPossibleTransitions() const;
-	CollectionPtr DoTransition(const SymbolPtr) const;
-	std::vector<std::tuple<SymbolPtr, CollectionPtr>> DoTransitions() const;
+	ClosurePtr DoTransition(const SymbolPtr) const;
+	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions() const;
 
-	std::size_t hash() const;
+	std::size_t hash(bool only_core=false) const;
 
-	friend std::ostream& operator<<(std::ostream& ostr, const Collection& coll);
+	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);
 
 
 private:
@@ -106,35 +109,47 @@ private:
 
 private:
 	std::vector<ElementPtr> m_elems;
-	std::size_t m_id = 0;	// collection id
+	std::size_t m_id = 0;	// Closure id
 
-	// global collection id counter
+	// global Closure id counter
 	static std::size_t g_id;
 };
 
 
 
-class Collections
+/**
+ * LR(1) collection
+ */
+class Collection
 {
 public:
-	Collections(const CollectionPtr coll);
-	Collections() = delete;
+	// transition from closure 1 to closure 2 with a symbol
+	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
+
+public:
+	Collection(const ClosurePtr coll);
 
 	void DoTransitions();
+	Collection ConvertToLALR() const;
 
 	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
 
-public:
-	void DoTransitions(const CollectionPtr coll);
+protected:
+	Collection();
+
+	void DoTransitions(const ClosurePtr coll);
+	void Simplify();
+
+	static std::size_t hash_transition(const t_transition& trans);
 
 private:
-	std::map<std::size_t, CollectionPtr> m_cache;	// collection hashes
-	std::vector<CollectionPtr> m_collections;		// collections
+	std::map<std::size_t, ClosurePtr> m_cache;	// closure hashes
+	std::vector<ClosurePtr> m_collection;		// collection
 
-	// transitions between collections, [from, to, transition symbol]
-	std::vector<std::tuple<CollectionPtr, CollectionPtr, SymbolPtr>> m_transitions;
+	// transitions between collection, [from, to, transition symbol]
+	std::vector<t_transition> m_transitions;
 
-	friend std::ostream& operator<<(std::ostream& ostr, const Collections& colls);
+	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
 };
 
 #endif

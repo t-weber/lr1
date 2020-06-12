@@ -27,11 +27,17 @@ include_directories(
 
 
 # -----------------------------------------------------------------------------
-# tests
-add_executable(test1
+# lib
+add_library(lr1 STATIC
 	src/lr1.cpp src/lr1.h src/symbol.cpp src/symbol.h
-	tests/test1.cpp
 )
 
-target_link_libraries(test1 ${Boost_LIBRARIES})
+target_link_libraries(lr1 ${Boost_LIBRARIES})
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# tests
+add_executable(test1 tests/test1.cpp)
+target_link_libraries(test1 lr1)
 # -----------------------------------------------------------------------------

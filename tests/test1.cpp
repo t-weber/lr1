@@ -90,15 +90,20 @@ int main()
 
 
 	ElementPtr elem = std::make_shared<Element>(start, 0, 0, Element::t_lookaheads{g_end});
-	CollectionPtr coll = std::make_shared<Collection>();
+	ClosurePtr coll = std::make_shared<Closure>();
 	coll->AddElement(elem);
 	//std::cout << "\n\n" << *coll << std::endl;
 
-	Collections colls{coll};
+	Collection colls{coll};
 	colls.DoTransitions();
-	colls.WriteGraph("test1", 0);
-	colls.WriteGraph("test1_full", 1);
+	colls.WriteGraph("test1_lr", 0);
+	colls.WriteGraph("test1_lr_full", 1);
 	std::cout << "\n\n" << colls << std::endl;
+
+	Collection collsLALR = colls.ConvertToLALR();
+	collsLALR.WriteGraph("test1_lalr", 0);
+	collsLALR.WriteGraph("test1_lalr_full", 1);
+	std::cout << "\n\n" << collsLALR << std::endl;
 
 	return 0;
 }
