@@ -31,12 +31,7 @@ using ClosurePtr = std::shared_ptr<Closure>;
 class Element
 {
 public:
-	static std::function<bool(const TerminalPtr term1, const TerminalPtr term2)> lookaheads_compare;
-	using t_lookaheads = std::set<TerminalPtr, decltype(lookaheads_compare)>;
-
-
-public:
-	Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const t_lookaheads& la);
+	Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la);
 
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
@@ -44,11 +39,12 @@ public:
 	const NonTerminalPtr GetLhs() const { return m_lhs; }
 	const Word* GetRhs() const { return m_rhs; }
 	std::size_t GetCursor() const { return m_cursor; }
-	const t_lookaheads& GetLookaheads() const { return m_lookaheads; }
+	const Terminal::t_terminalset& GetLookaheads() const { return m_lookaheads; }
 	WordPtr GetRhsAfterCursor() const;
 
 	void AddLookahead(TerminalPtr term);
-	void AddLookaheads(const t_lookaheads& las);
+	void AddLookaheads(const Terminal::t_terminalset& las);
+	void SetLookaheads(const Terminal::t_terminalset& las);
 
 	const SymbolPtr GetPossibleTransition() const;
 	void AdvanceCursor();
@@ -68,7 +64,7 @@ private:
 	std::size_t m_rhsidx = 0;	// rule index
 	std::size_t m_cursor = 0;	// pointing before element at this index
 
-	t_lookaheads m_lookaheads{lookaheads_compare};
+	Terminal::t_terminalset m_lookaheads{Terminal::terminals_compare};
 };
 
 
@@ -130,7 +126,9 @@ public:
 	Collection(const ClosurePtr coll);
 
 	void DoTransitions();
+
 	Collection ConvertToLALR() const;
+	Collection ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const;
 
 	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
 

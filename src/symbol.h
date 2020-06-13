@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <functional>
 #include <iostream>
 
 
@@ -75,6 +76,10 @@ public:
 
 	virtual void print(std::ostream& ostr) const override;
 	virtual std::size_t hash() const override;
+
+public:
+	static std::function<bool(const TerminalPtr term1, const TerminalPtr term2)> terminals_compare;
+	using t_terminalset = std::set<TerminalPtr, decltype(terminals_compare)>;
 };
 
 
@@ -169,20 +174,20 @@ extern TerminalPtr g_end;
 
 
 /**
- * calculates the first set
+ * calculates the first set of a nonterminal
  */
-void calc_first(const NonTerminalPtr nonterm,
-	std::map<std::string, std::set<TerminalPtr>>& _first,
-	std::map<std::string, std::vector<std::set<TerminalPtr>>>* _first_per_rule=nullptr);
+extern void calc_first(const NonTerminalPtr nonterm,
+	std::map<std::string, Terminal::t_terminalset>& _first,
+	std::map<std::string, std::vector<Terminal::t_terminalset>>* _first_per_rule=nullptr);
 
 
 /**
- * calculates the follow set
+ * calculates the follow set of a nonterminal
  */
-void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
+extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
-	std::map<std::string, std::set<SymbolPtr>>& _first,
-	std::map<std::string, std::set<SymbolPtr>>& _follow);
+	const std::map<std::string, Terminal::t_terminalset>&  _first,
+	std::map<std::string, Terminal::t_terminalset>& _follow);
 
 
 #endif

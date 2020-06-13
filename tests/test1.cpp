@@ -68,16 +68,21 @@ int main()
 	factor->AddRule({ sym });
 
 
+	std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, factor}};
+	if(!bSimplifiedGrammar)
+		all_nonterminals.push_back(pow_term);
+
 	std::cout << "Productions:\n";
-	for(NonTerminalPtr nonterm : {start, add_term, mul_term, pow_term, factor})
+	for(NonTerminalPtr nonterm : all_nonterminals)
 		nonterm->print(std::cout);
 	std::cout << std::endl;
 
 
 	std::cout << "FIRST sets:\n";
-	std::map<std::string, std::set<TerminalPtr>> first;
-	std::map<std::string, std::vector<std::set<TerminalPtr>>> first_per_rule;
-	calc_first(start, first, &first_per_rule);
+	std::map<std::string, Terminal::t_terminalset> first;
+	std::map<std::string, std::vector<Terminal::t_terminalset>> first_per_rule;
+	for(const NonTerminalPtr& nonterminal : all_nonterminals)
+		calc_first(nonterminal, first, &first_per_rule);
 
 	for(const auto& pair : first)
 	{
@@ -89,7 +94,22 @@ int main()
 	std::cout << std::endl;
 
 
-	ElementPtr elem = std::make_shared<Element>(start, 0, 0, Element::t_lookaheads{g_end});
+	std::cout << "FOLLOW sets:\n";
+	std::map<std::string, Terminal::t_terminalset> follow;
+	for(const NonTerminalPtr& nonterminal : all_nonterminals)
+		calc_follow(all_nonterminals, start, nonterminal, first, follow);
+
+	for(const auto& pair : follow)
+	{
+		std::cout << pair.first << ": ";
+		for(const auto& _first : pair.second)
+			std::cout << _first->GetId() << ", ";
+		std::cout << "\n";
+	}
+	std::cout << std::endl;
+
+
+	ElementPtr elem = std::make_shared<Element>(start, 0, 0, Terminal::t_terminalset{{g_end}, Terminal::terminals_compare});
 	ClosurePtr coll = std::make_shared<Closure>();
 	coll->AddElement(elem);
 	//std::cout << "\n\n" << *coll << std::endl;
@@ -98,12 +118,17 @@ int main()
 	colls.DoTransitions();
 	colls.WriteGraph("test1_lr", 0);
 	colls.WriteGraph("test1_lr_full", 1);
-	std::cout << "\n\n" << colls << std::endl;
+	std::cout << "\n\nLR(1):\n" << colls << std::endl;
 
 	Collection collsLALR = colls.ConvertToLALR();
 	collsLALR.WriteGraph("test1_lalr", 0);
 	collsLALR.WriteGraph("test1_lalr_full", 1);
-	std::cout << "\n\n" << collsLALR << std::endl;
+	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+
+	Collection collsSLR = colls.ConvertToSLR(follow);
+	collsSLR.WriteGraph("test1_slr", 0);
+	collsSLR.WriteGraph("test1_slr_full", 1);
+	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
 	return 0;
 }

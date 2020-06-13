@@ -16,23 +16,7 @@
 #include <boost/functional/hash.hpp>
 
 
-/**
- * comparator for lookaheads set
- */
-std::function<bool(const TerminalPtr term1, const TerminalPtr term2)>
-Element::lookaheads_compare = [](const TerminalPtr term1, const TerminalPtr term2) -> bool
-{
-	/*
-	const std::string& id1 = term1->GetId();
-	const std::string& id2 = term2->GetId();
-	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
-	*/
-
-	return term1->hash() < term2->hash();
-};
-
-
-Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const t_lookaheads& la)
+Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la)
 	: m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
 {
 }
@@ -132,10 +116,16 @@ void Element::AddLookahead(TerminalPtr term)
 }
 
 
-void Element::AddLookaheads(const t_lookaheads& las)
+void Element::AddLookaheads(const Terminal::t_terminalset& las)
 {
 	for(TerminalPtr la : las)
 		AddLookahead(la);
+}
+
+
+void Element::SetLookaheads(const Terminal::t_terminalset& las)
+{
+	m_lookaheads = las;
 }
 
 
@@ -254,7 +244,7 @@ void Closure::AddElement(const ElementPtr elem)
 	{
 		// get rest of the rule after the cursor and lookaheads
 		WordPtr ruleaftercursor = elem->GetRhsAfterCursor();
-		const Element::t_lookaheads& nonterm_la = elem->GetLookaheads();
+		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 
 		// get non-terminal at cursor
 		NonTerminalPtr nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
@@ -273,13 +263,13 @@ void Closure::AddElement(const ElementPtr elem)
 				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>("tmp");
 				tmpNT->AddRule(*_ruleaftercursor);
 
-				std::map<std::string, std::set<TerminalPtr>> tmp_first;
+				std::map<std::string, Terminal::t_terminalset> tmp_first;
 				calc_first(tmpNT, tmp_first);
 
-				Element::t_lookaheads first_la{Element::lookaheads_compare};
+				Terminal::t_terminalset first_la{Terminal::terminals_compare};
 				if(tmp_first.size())	// should always be 1
 				{
-					const std::set<TerminalPtr>& set_first = tmp_first.begin()->second;
+					const Terminal::t_terminalset& set_first = tmp_first.begin()->second;
 					if(set_first.size())	// should always be 1
 					{
 						TerminalPtr la = *set_first.begin();
@@ -658,6 +648,32 @@ Collection Collection::ConvertToLALR() const
 	}
 
 	colls.Simplify();
+	return colls;
+}
+
+
+/**
+ * convert from LR(1) collection to SLR(1) collection
+ */
+Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const
+{
+	// reduce number of states first
+	Collection colls = ConvertToLALR();
+
+	// replace the lookaheads of all LR elements with the follow sets of their lhs symbols
+	for(ClosurePtr& coll : colls.m_collection)
+	{
+		for(ElementPtr& elem : coll->m_elems)
+		{
+			const NonTerminalPtr& lhs = elem->GetLhs();
+			const auto& iter = follow.find(lhs->GetId());
+			if(iter == follow.end())
+				throw std::runtime_error{"Could not find follow set of \"" + lhs->GetId() + "\"."};
+			const Terminal::t_terminalset& followLhs = iter->second;
+			elem->SetLookaheads(followLhs);
+		}
+	}
+
 	return colls;
 }
 
