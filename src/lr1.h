@@ -48,6 +48,7 @@ public:
 
 	const SymbolPtr GetPossibleTransition() const;
 	void AdvanceCursor();
+	bool IsCursorAtEnd() const;
 
 	bool IsEqual(const Element& elem, bool only_core=false, bool full_equal=true) const;
 	bool operator==(const Element& other) const { return IsEqual(other, false); }

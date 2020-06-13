@@ -13,6 +13,8 @@
 
 #include <fstream>
 #include <algorithm>
+#include <sstream>
+
 #include <boost/functional/hash.hpp>
 
 
@@ -144,6 +146,15 @@ void Element::AdvanceCursor()
 {
 	if(m_cursor < m_rhs->size())
 		++m_cursor;
+}
+
+
+/**
+ * cursor is at end, i.e. full handle has been read and can be reduced
+ */
+bool Element::IsCursorAtEnd() const
+{
+	return m_cursor >= m_rhs->size();
 }
 
 
@@ -398,7 +409,7 @@ std::size_t Closure::hash(bool only_core) const
 
 std::ostream& operator<<(std::ostream& ostr, const Closure& coll)
 {
-	ostr << "Closure " << coll.GetId() << ":\n";
+	ostr << "Closure/State " << coll.GetId() << ":\n";
 	for(std::size_t i=0; i<coll.NumElements(); ++i)
 		ostr << *coll.GetElement(i)<< "\n";
 
@@ -685,8 +696,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 	ostr << "--------------------------------------------------------------------------------\n";
 	for(const ClosurePtr& coll : colls.m_collection)
 		ostr << *coll << "\n";
-
 	ostr << "\n";
+
 
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Transitions\n";
@@ -696,6 +707,47 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 		ostr << std::get<0>(tup)->GetId() << " -> " << std::get<1>(tup)->GetId()
 			<< " via " << std::get<2>(tup)->GetId() << "\n";
 	}
+	ostr << "\n\n";
 
+
+	ostr << "--------------------------------------------------------------------------------\n";
+	ostr << "Tables\n";
+	ostr << "--------------------------------------------------------------------------------\n";
+	std::ostringstream ostrActionShift, ostrActionReduce, ostrJump;
+	for(const Collection::t_transition& tup : colls.m_transitions)
+	{
+		const ClosurePtr& stateFrom = std::get<0>(tup);
+		const ClosurePtr& stateTo = std::get<1>(tup);
+		const SymbolPtr& symTrans = std::get<2>(tup);
+
+		if(symTrans->IsTerminal())
+		{
+			ostrActionShift << "action_shift[ State " << stateFrom->GetId() << ", "
+				<< symTrans->GetId() << " ] = State " << stateTo->GetId() << "\n";
+		}
+		else
+		{
+			ostrJump << "jump[ State " << stateFrom->GetId() << ", "
+				<< symTrans->GetId() << " ] = State " << stateTo->GetId() << "\n";
+		}
+	}
+
+	for(const ClosurePtr& coll : colls.m_collection)
+	{
+		for(std::size_t elemidx=0; elemidx < coll->NumElements(); ++elemidx)
+		{
+			const ElementPtr& elem = coll->GetElement(elemidx);
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			ostrActionReduce << "action_reduce[ State " << coll->GetId() << ", ";
+			for(const auto& la : elem->GetLookaheads())
+				ostrActionReduce << la->GetId() << " ";
+			ostrActionReduce << "] = " << elem->GetLhs()->GetId() << " -> " << *elem->GetRhs();
+			ostrActionReduce << "\n";
+		}
+	}
+
+	ostr << ostrActionShift.str() << "\n" << ostrActionReduce.str() << "\n" << ostrJump.str() << "\n";
 	return ostr;
 }
