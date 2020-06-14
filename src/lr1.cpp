@@ -687,6 +687,118 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 }
 
 
+/**
+ * creates the lr(1) parser tables
+ */
+std::tuple<Collection::t_table, Collection::t_table, Collection::t_table>
+Collection::CreateParseTables() const
+{
+	const std::size_t numStates = m_collection.size();
+	const std::size_t errorVal = 0xffffffff;
+
+	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
+	_action_shift.resize(numStates);
+	_action_reduce.resize(numStates);
+	_jump.resize(numStates);
+
+	// maps the hashes to table indices for the non-terminals
+	std::map<std::size_t, std::size_t> mapNonTermIdx;
+	// maps the hashes to table indices for the terminals
+	std::map<std::size_t, std::size_t> mapTermIdx;
+
+	std::size_t curNonTermIdx = 0;
+	std::size_t curTermIdx = 0;
+
+	// translate symbol hash to table index
+	auto get_idx = [&mapNonTermIdx, &mapTermIdx, &curNonTermIdx, &curTermIdx]
+	(std::size_t hash, bool is_term) -> std::size_t
+	{
+		std::size_t* curIdx = is_term ? &curTermIdx : &curNonTermIdx;
+		std::map<std::size_t, std::size_t>* map = is_term ? &mapTermIdx : &mapNonTermIdx;
+
+		auto iter = map->find(hash);
+		if(iter == map->end())
+			iter = map->insert(std::make_pair(hash, (*curIdx)++)).first;
+		return iter->second;
+	};
+
+
+	for(const Collection::t_transition& tup : m_transitions)
+	{
+		const ClosurePtr& stateFrom = std::get<0>(tup);
+		const ClosurePtr& stateTo = std::get<1>(tup);
+		const SymbolPtr& symTrans = std::get<2>(tup);
+
+		if(symTrans->IsTerminal())
+		{
+			std::size_t symIdx = get_idx(symTrans->hash(), true);
+
+			auto& _action_row = _action_shift[stateFrom->GetId()];
+			if(_action_row.size() <= symIdx)
+				_action_row.resize(symIdx+1, errorVal);
+			_action_row[symIdx] = stateTo->GetId();
+		}
+		else
+		{
+			std::size_t symIdx = get_idx(symTrans->hash(), false);
+
+			auto& _jump_row = _jump[stateFrom->GetId()];
+			if(_jump_row.size() <= symIdx)
+				_jump_row.resize(symIdx+1, errorVal);
+			_jump_row[symIdx] = stateTo->GetId();
+		}
+	}
+
+	for(const ClosurePtr& coll : m_collection)
+	{
+		for(std::size_t elemidx=0; elemidx < coll->NumElements(); ++elemidx)
+		{
+			const ElementPtr& elem = coll->GetElement(elemidx);
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
+			if(!rulenr)		// no semantic rule assigned
+				continue;
+
+			auto& _action_row = _action_reduce[coll->GetId()];
+
+			for(const auto& la : elem->GetLookaheads())
+			{
+				std::size_t laIdx = get_idx(la->hash(), true);
+
+				if(_action_row.size() <= laIdx)
+					_action_row.resize(laIdx+1, errorVal);
+				_action_row[laIdx] = *rulenr;
+			}
+		}
+	}
+
+
+	const auto tables = std::make_tuple(
+		t_table{_action_shift, errorVal, numStates, curTermIdx},
+		t_table{_action_reduce, errorVal, numStates, curTermIdx},
+		t_table{_jump, errorVal, numStates, curNonTermIdx}
+	);
+
+	// check for shift/reduce conflicts
+	for(std::size_t state=0; state<numStates; ++state)
+	{
+		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
+		{
+			std::size_t shiftEntry = std::get<0>(tables)(state, termidx);
+			std::size_t reduceEntry = std::get<1>(tables)(state, termidx);
+
+			// both have an entry?
+			if(shiftEntry!=errorVal && reduceEntry!=errorVal)
+				throw std::runtime_error("Shift/reduce conflict detected.");
+		}
+	}
+
+	return tables;
+}
+
+
 std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 {
 	ostr << "--------------------------------------------------------------------------------\n";

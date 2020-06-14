@@ -7,6 +7,7 @@
 
 #include "lr1.h"
 #include <iostream>
+#include <iomanip>
 
 
 int main()
@@ -130,6 +131,9 @@ int main()
 	collsSLR.WriteGraph("test1_slr", 0);
 	collsSLR.WriteGraph("test1_slr_full", 1);
 	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
+
+	//const auto [tabActionShift, tabActionReduce, tabJump] = collsLALR.CreateParseTables();
+	//std::cout << tabActionShift << "\n" << tabActionReduce << "\n" << tabJump << std::endl;
 
 	return 0;
 }

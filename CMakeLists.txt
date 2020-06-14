@@ -29,7 +29,9 @@ include_directories(
 # -----------------------------------------------------------------------------
 # lib
 add_library(lr1 STATIC
-	src/lr1.cpp src/lr1.h src/symbol.cpp src/symbol.h
+	src/lr1.cpp src/lr1.h
+	src/symbol.cpp src/symbol.h
+	src/helpers.h
 )
 
 target_link_libraries(lr1 ${Boost_LIBRARIES})

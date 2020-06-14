@@ -37,7 +37,7 @@ class Symbol
 {
 public:
 	Symbol(const std::string& id, bool bEps=false, bool bEnd=false)
-		: m_id{id}, m_iseps{bEps}, m_isend{bEnd} {}
+		: m_id{id}, m_idx{}, m_iseps{bEps}, m_isend{bEnd} {}
 	Symbol() = delete;
 	virtual ~Symbol() = default;
 
@@ -56,6 +56,8 @@ public:
 
 private:
 	std::string m_id;
+	std::size_t m_idx = 0;
+
 	bool m_iseps = false;
 	bool m_isend = false;
 };
