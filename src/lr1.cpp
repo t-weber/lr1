@@ -161,7 +161,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	const NonTerminalPtr lhs = elem.GetLhs();
 	const Word* rhs = elem.GetRhs();
 
-	ostr << lhs->GetId() << " -> [ ";
+	ostr << lhs->GetStrId() << " -> [ ";
 	for(std::size_t i=0; i<rhs->size(); ++i)
 	{
 		if(elem.GetCursor() == i)
@@ -169,7 +169,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 		const SymbolPtr sym = (*rhs)[i];
 
-		ostr << sym->GetId();
+		ostr << sym->GetStrId();
 		//if(i < rhs->size()-1)
 			ostr << " ";
 	}
@@ -181,7 +181,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 	ostr << ", ";
 
 	for(const auto& la : elem.GetLookaheads())
-		ostr << la->GetId() << " ";
+		ostr << la->GetStrId() << " ";
 
 	ostr << "]";
 
@@ -269,7 +269,7 @@ void Closure::AddElement(const ElementPtr elem)
 				_ruleaftercursor->AddSymbol(la);
 				//std::cout << nonterm->GetId() << ", " << *_ruleaftercursor << std::endl;
 
-				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>("tmp");
+				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
 				tmpNT->AddRule(*_ruleaftercursor);
 
 				std::map<std::string, Terminal::t_terminalset> tmp_first;
@@ -572,7 +572,7 @@ void Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 		const SymbolPtr trans = std::get<2>(tup);
 
 		ofstr << "\t" << coll_from->GetId() << " -> " << coll_to->GetId()
-			<< " [label=\"" << trans->GetId() << "\"];\n";
+			<< " [label=\"" << trans->GetStrId() << "\"];\n";
 	}
 
 	ofstr << "}" << std::endl;
@@ -675,9 +675,9 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 		for(ElementPtr& elem : coll->m_elems)
 		{
 			const NonTerminalPtr& lhs = elem->GetLhs();
-			const auto& iter = follow.find(lhs->GetId());
+			const auto& iter = follow.find(lhs->GetStrId());
 			if(iter == follow.end())
-				throw std::runtime_error{"Could not find follow set of \"" + lhs->GetId() + "\"."};
+				throw std::runtime_error{"Could not find follow set of \"" + lhs->GetStrId() + "\"."};
 			const Terminal::t_terminalset& followLhs = iter->second;
 			elem->SetLookaheads(followLhs);
 		}
@@ -690,35 +690,36 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 /**
  * creates the lr(1) parser tables
  */
-std::tuple<Collection::t_table, Collection::t_table, Collection::t_table>
+std::tuple<Collection::t_table, Collection::t_table, Collection::t_table, Collection::t_mapIdIdx, Collection::t_mapIdIdx>
 Collection::CreateParseTables() const
 {
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = 0xffffffff;
+	const std::size_t acceptVal = 0xfffffffe;
 
 	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
 	_action_shift.resize(numStates);
 	_action_reduce.resize(numStates);
 	_jump.resize(numStates);
 
-	// maps the hashes to table indices for the non-terminals
-	std::map<std::size_t, std::size_t> mapNonTermIdx;
-	// maps the hashes to table indices for the terminals
-	std::map<std::size_t, std::size_t> mapTermIdx;
+	// maps the ids to table indices for the non-terminals
+	t_mapIdIdx mapNonTermIdx;
+	// maps the ids to table indices for the terminals
+	t_mapIdIdx mapTermIdx;
 
 	std::size_t curNonTermIdx = 0;
 	std::size_t curTermIdx = 0;
 
-	// translate symbol hash to table index
+	// translate symbol id to table index
 	auto get_idx = [&mapNonTermIdx, &mapTermIdx, &curNonTermIdx, &curTermIdx]
-	(std::size_t hash, bool is_term) -> std::size_t
+	(std::size_t id, bool is_term) -> std::size_t
 	{
 		std::size_t* curIdx = is_term ? &curTermIdx : &curNonTermIdx;
-		std::map<std::size_t, std::size_t>* map = is_term ? &mapTermIdx : &mapNonTermIdx;
+		t_mapIdIdx* map = is_term ? &mapTermIdx : &mapNonTermIdx;
 
-		auto iter = map->find(hash);
+		auto iter = map->find(id);
 		if(iter == map->end())
-			iter = map->insert(std::make_pair(hash, (*curIdx)++)).first;
+			iter = map->insert(std::make_pair(id, (*curIdx)++)).first;
 		return iter->second;
 	};
 
@@ -731,7 +732,7 @@ Collection::CreateParseTables() const
 
 		if(symTrans->IsTerminal())
 		{
-			std::size_t symIdx = get_idx(symTrans->hash(), true);
+			std::size_t symIdx = get_idx(symTrans->GetId(), true);
 
 			auto& _action_row = _action_shift[stateFrom->GetId()];
 			if(_action_row.size() <= symIdx)
@@ -740,7 +741,7 @@ Collection::CreateParseTables() const
 		}
 		else
 		{
-			std::size_t symIdx = get_idx(symTrans->hash(), false);
+			std::size_t symIdx = get_idx(symTrans->GetId(), false);
 
 			auto& _jump_row = _jump[stateFrom->GetId()];
 			if(_jump_row.size() <= symIdx)
@@ -765,21 +766,26 @@ Collection::CreateParseTables() const
 
 			for(const auto& la : elem->GetLookaheads())
 			{
-				std::size_t laIdx = get_idx(la->hash(), true);
+				std::size_t laIdx = get_idx(la->GetId(), true);
+				std::size_t rule = *rulenr;
+
+				// in extended grammar, first production (rule 0) is of the form start -> ...
+				if(rule == 0)
+					rule = acceptVal;
 
 				if(_action_row.size() <= laIdx)
 					_action_row.resize(laIdx+1, errorVal);
-				_action_row[laIdx] = *rulenr;
+				_action_row[laIdx] = rule;
 			}
 		}
 	}
 
 
 	const auto tables = std::make_tuple(
-		t_table{_action_shift, errorVal, numStates, curTermIdx},
-		t_table{_action_reduce, errorVal, numStates, curTermIdx},
-		t_table{_jump, errorVal, numStates, curNonTermIdx}
-	);
+		t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx},
+		t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx},
+		t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx},
+		mapTermIdx, mapNonTermIdx);
 
 	// check for shift/reduce conflicts
 	for(std::size_t state=0; state<numStates; ++state)
@@ -815,7 +821,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 	for(const Collection::t_transition& tup : colls.m_transitions)
 	{
 		ostr << std::get<0>(tup)->GetId() << " -> " << std::get<1>(tup)->GetId()
-			<< " via " << std::get<2>(tup)->GetId() << "\n";
+			<< " via " << std::get<2>(tup)->GetStrId() << "\n";
 	}
 	ostr << "\n\n";
 
@@ -833,12 +839,12 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 		if(symTrans->IsTerminal())
 		{
 			ostrActionShift << "action_shift[ state " << stateFrom->GetId() << ", "
-				<< symTrans->GetId() << " ] = state " << stateTo->GetId() << "\n";
+				<< symTrans->GetStrId() << " ] = state " << stateTo->GetId() << "\n";
 		}
 		else
 		{
 			ostrJump << "jump[ state " << stateFrom->GetId() << ", "
-				<< symTrans->GetId() << " ] = state " << stateTo->GetId() << "\n";
+				<< symTrans->GetStrId() << " ] = state " << stateTo->GetId() << "\n";
 		}
 	}
 
@@ -852,11 +858,11 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 
 			ostrActionReduce << "action_reduce[ state " << coll->GetId() << ", ";
 			for(const auto& la : elem->GetLookaheads())
-				ostrActionReduce << la->GetId() << " ";
+				ostrActionReduce << la->GetStrId() << " ";
 			ostrActionReduce << "] = ";
 			if(elem->GetSemanticRule())
 				ostrActionReduce << "[rule " << *elem->GetSemanticRule() << "] ";
-			ostrActionReduce << elem->GetLhs()->GetId() << " -> " << *elem->GetRhs();
+			ostrActionReduce << elem->GetLhs()->GetStrId() << " -> " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
 	}

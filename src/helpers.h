@@ -23,9 +23,9 @@ public:
 	Table() = default;
 	~Table() = default;
 
-	Table(const t_cont<t_cont<T>>& cont, T errorval=0xffffffff,
+	Table(const t_cont<t_cont<T>>& cont, T errorval=0xffffffff, T acceptval=0xfffffffe,
 		  std::optional<std::size_t> ROWS=std::nullopt, std::optional<std::size_t> COLS=std::nullopt)
-		: m_data{}, m_rowsize{}, m_colsize{}, m_errorval{errorval}
+		: m_data{}, m_rowsize{}, m_colsize{}, m_errorval{errorval}, m_acceptval{acceptval}
 	{
 		m_rowsize = ROWS ? *ROWS : cont.size();
 		m_colsize = COLS ? *COLS : 0;
@@ -66,6 +66,8 @@ public:
 				T entry = tab(row, col);
 				if(entry == tab.m_errorval)
 					ostr << std::setw(width) << std::left << "err";
+				else if(entry == tab.m_acceptval)
+					ostr << std::setw(width) << std::left << "acc";
 				else
 					ostr << std::setw(width) << std::left << entry;
 			}
@@ -78,7 +80,9 @@ public:
 private:
 	container_type m_data;
 	std::size_t m_rowsize, m_colsize;
+
 	T m_errorval = 0;
+	T m_acceptval = 0;
 };
 
 

@@ -36,13 +36,14 @@ using WordPtr = std::shared_ptr<Word>;
 class Symbol
 {
 public:
-	Symbol(const std::string& id, bool bEps=false, bool bEnd=false)
-		: m_id{id}, m_idx{}, m_iseps{bEps}, m_isend{bEnd} {}
+	Symbol(std::size_t id, const std::string& strid="", bool bEps=false, bool bEnd=false);
 	Symbol() = delete;
 	virtual ~Symbol() = default;
 
 	virtual bool IsTerminal() const = 0;
-	const std::string& GetId() const { return m_id; }
+
+	const std::string& GetStrId() const { return m_strid; }
+	std::size_t GetId() const { return m_id; }
 
 	bool IsEps() const { return m_iseps; }
 	bool IsEnd() const { return m_isend; }
@@ -55,7 +56,8 @@ public:
 
 
 private:
-	std::string m_id;
+	std::size_t m_id = 0;
+	std::string m_strid;
 	std::size_t m_idx = 0;
 
 	bool m_iseps = false;
@@ -70,8 +72,8 @@ private:
 class Terminal : public Symbol
 {
 public:
-	Terminal(const std::string& id, bool bEps=false, bool bEnd=false)
-		: Symbol{id, bEps, bEnd}, m_semantic{} {}
+	Terminal(std::size_t id, const std::string& strid="", bool bEps=false, bool bEnd=false)
+		: Symbol{id, strid, bEps, bEnd}, m_semantic{} {}
 	Terminal() = delete;
 	virtual ~Terminal() = default;
 
@@ -109,7 +111,8 @@ private:
 class NonTerminal : public Symbol
 {
 public:
-	NonTerminal(const std::string& id) : Symbol{id}, m_rules{}, m_semantics{} {}
+	NonTerminal(std::size_t id, const std::string& strid="")
+		: Symbol{id, strid}, m_rules{}, m_semantics{} {}
 	NonTerminal() = delete;
 	virtual ~NonTerminal() = default;
 

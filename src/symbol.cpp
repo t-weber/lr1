@@ -10,11 +10,20 @@
 #include <boost/functional/hash.hpp>
 
 
-const TerminalPtr g_eps = std::make_shared<Terminal>("eps", true, false);
-const TerminalPtr g_end = std::make_shared<Terminal>("end", false, true);
+const TerminalPtr g_eps = std::make_shared<Terminal>(0xffffff00, "eps", true, false);
+const TerminalPtr g_end = std::make_shared<Terminal>(0xffffff01, "end", false, true);
 
 
 // ----------------------------------------------------------------------------
+
+
+Symbol::Symbol(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
+	: m_id{id}, m_strid{strid}, m_idx{}, m_iseps{bEps}, m_isend{bEnd}
+{
+	// if no string id is given, use the numeric id
+	if(m_strid == "")
+		m_strid = std::to_string(id);
+}
 
 
 bool Symbol::operator==(const Symbol& other) const
@@ -29,13 +38,14 @@ bool Symbol::operator==(const Symbol& other) const
 
 void Terminal::print(std::ostream& ostr) const
 {
-	ostr << GetId();
+	ostr << GetStrId();
 }
 
 
 std::size_t Terminal::hash() const
 {
-	std::size_t hashId = std::hash<std::string>{}(GetId());
+	//std::size_t hashId = std::hash<std::string>{}(GetStrId());
+	std::size_t hashId = std::hash<std::size_t>{}(GetId());
 	std::size_t hashEps = std::hash<bool>{}(IsEps());
 	std::size_t hashEnd = std::hash<bool>{}(IsEnd());
 
@@ -53,11 +63,10 @@ std::function<bool(const TerminalPtr term1, const TerminalPtr term2)>
 Terminal::terminals_compare = [](const TerminalPtr term1, const TerminalPtr term2) -> bool
 {
 	/*
-	 *	const std::string& id1 = term1->GetId();
-	 *	const std::string& id2 = term2->GetId();
-	 *	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
-	 */
-
+	const std::string& id1 = term1->GetStrId();
+	const std::string& id2 = term2->GetStrId();
+	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
+	*/
 	return term1->hash() < term2->hash();
 };
 
@@ -67,14 +76,15 @@ Terminal::terminals_compare = [](const TerminalPtr term1, const TerminalPtr term
 
 std::size_t NonTerminal::hash() const
 {
-	std::size_t hashId = std::hash<std::string>{}(GetId());
+	//std::size_t hashId = std::hash<std::string>{}(GetStrId());
+	std::size_t hashId = std::hash<std::size_t>{}(GetId());
 	return hashId;
 }
 
 
 void NonTerminal::print(std::ostream& ostr) const
 {
-	ostr << GetId() << " ->\n";
+	ostr << GetStrId() << " ->\n";
 	for(std::size_t i=0; i<NumRules(); ++i)
 	{
 		if(i==0)
@@ -146,7 +156,7 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 	for(std::size_t i=0; i<word.NumSymbols(); ++i)
 	{
 		//word.GetSymbol(i)->print(ostr);
-		ostr << word.GetSymbol(i)->GetId() << " ";
+		ostr << word.GetSymbol(i)->GetStrId() << " ";
 	}
 
 	return ostr;
@@ -159,13 +169,14 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 /**
  * calculates the first set of a nonterminal
  * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ * TODO: use symbol ids, not string ids
  */
 void calc_first(const NonTerminalPtr nonterm,
 	std::map<std::string, Terminal::t_terminalset>& _first,
 	std::map<std::string, std::vector<Terminal::t_terminalset>>* _first_perrule)
 {
 	// set already calculated?
-	if(_first.find(nonterm->GetId()) != _first.end())
+	if(_first.find(nonterm->GetStrId()) != _first.end())
 		return;
 
 	Terminal::t_terminalset first{Terminal::terminals_compare};
@@ -205,7 +216,7 @@ void calc_first(const NonTerminalPtr nonterm,
 
 				// add first set except eps
 				bool bHasEps = false;
-				for(const auto& symprod : _first[symnonterm->GetId()])
+				for(const auto& symprod : _first[symnonterm->GetStrId()])
 				{
 					if(symprod->IsEps())
 					{
@@ -232,16 +243,17 @@ void calc_first(const NonTerminalPtr nonterm,
 		}
 	}
 
-	_first[nonterm->GetId()] = first;
+	_first[nonterm->GetStrId()] = first;
 
 	if(_first_perrule)
-		(*_first_perrule)[nonterm->GetId()] = first_perrule;
+		(*_first_perrule)[nonterm->GetStrId()] = first_perrule;
 }
 
 
 /**
  * calculates the follow set of a nonterminal
  * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ * TODO: use symbol ids, not string ids
  */
 void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
@@ -249,7 +261,7 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	std::map<std::string, Terminal::t_terminalset>& _follow)
 {
 	// set already calculated?
-	if(_follow.find(nonterm->GetId()) != _follow.end())
+	if(_follow.find(nonterm->GetStrId()) != _follow.end())
 		return;
 
 	Terminal::t_terminalset follow{Terminal::terminals_compare};
@@ -285,7 +297,7 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 						}
 						else	// non-terminal
 						{
-							const auto& iterFirst = _first.find(rule[_iSym]->GetId());
+							const auto& iterFirst = _first.find(rule[_iSym]->GetStrId());
 
 							for(const auto& symfirst : iterFirst->second)
 							{
@@ -321,7 +333,7 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 					{
 						if(_nonterm != nonterm)
 							calc_follow(allnonterms, start, _nonterm, _first, _follow);
-						const auto& __follow = _follow[_nonterm->GetId()];
+						const auto& __follow = _follow[_nonterm->GetStrId()];
 						follow.insert(__follow.begin(), __follow.end());
 					}
 				}
@@ -329,6 +341,5 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 		}
 	}
 
-	_follow[nonterm->GetId()] = follow;
+	_follow[nonterm->GetStrId()] = follow;
 }
-

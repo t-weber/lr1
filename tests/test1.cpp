@@ -10,28 +10,50 @@
 #include <iomanip>
 
 
+enum : std::size_t
+{
+	TOK_PLUS,
+	TOK_MINUS,
+	TOK_MULT,
+	TOK_DIV,
+	TOK_MOD,
+	TOK_POW,
+	TOK_BRACKET_OPEN,
+	TOK_BRACKET_CLOSE,
+	TOK_COMMA,
+	TOK_SYM,
+	TOK_IDENT,
+
+	START,
+	ADD_TERM,
+	MUL_TERM,
+	POW_TERM,
+	FACTOR
+};
+
+
 int main()
 {
 	bool bSimplifiedGrammar = 1;
 
 	// test grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
-	auto start = std::make_shared<NonTerminal>("start");
-	auto add_term = std::make_shared<NonTerminal>("add_term");
-	auto mul_term = std::make_shared<NonTerminal>("mul_term");
-	auto pow_term = std::make_shared<NonTerminal>("pow_term");
-	auto factor = std::make_shared<NonTerminal>("factor");
+	auto start = std::make_shared<NonTerminal>(START, "start");
+	auto add_term = std::make_shared<NonTerminal>(ADD_TERM, "add_term");
+	auto mul_term = std::make_shared<NonTerminal>(MUL_TERM, "mul_term");
+	auto pow_term = std::make_shared<NonTerminal>(POW_TERM, "pow_term");
+	auto factor = std::make_shared<NonTerminal>(FACTOR, "factor");
 
-	auto plus = std::make_shared<Terminal>("+");
-	auto minus = std::make_shared<Terminal>("-");
-	auto mult = std::make_shared<Terminal>("*");
-	auto div = std::make_shared<Terminal>("/");
-	auto mod = std::make_shared<Terminal>("%");
-	auto pow = std::make_shared<Terminal>("^");
-	auto bracket_open = std::make_shared<Terminal>("(");
-	auto bracket_close = std::make_shared<Terminal>(")");
-	auto comma = std::make_shared<Terminal>(",");
-	auto sym = std::make_shared<Terminal>("symbol");
-	auto ident = std::make_shared<Terminal>("ident");
+	auto plus = std::make_shared<Terminal>(TOK_PLUS, "+");
+	auto minus = std::make_shared<Terminal>(TOK_MINUS, "-");
+	auto mult = std::make_shared<Terminal>(TOK_MULT, "*");
+	auto div = std::make_shared<Terminal>(TOK_DIV, "/");
+	auto mod = std::make_shared<Terminal>(TOK_MOD, "%");
+	auto pow = std::make_shared<Terminal>(TOK_POW, "^");
+	auto bracket_open = std::make_shared<Terminal>(TOK_BRACKET_OPEN, "(");
+	auto bracket_close = std::make_shared<Terminal>(TOK_BRACKET_CLOSE, ")");
+	auto comma = std::make_shared<Terminal>(TOK_COMMA, ",");
+	auto sym = std::make_shared<Terminal>(TOK_SYM, "symbol");
+	auto ident = std::make_shared<Terminal>(TOK_IDENT, "ident");
 
 	std::size_t semanticindex = 0;
 	start->AddRule({ add_term }, semanticindex++);
@@ -90,7 +112,7 @@ int main()
 	{
 		std::cout << pair.first << ": ";
 		for(const auto& _first : pair.second)
-			std::cout << _first->GetId() << ", ";
+			std::cout << _first->GetStrId() << ", ";
 		std::cout << "\n";
 	}
 	std::cout << std::endl;
@@ -105,7 +127,7 @@ int main()
 	{
 		std::cout << pair.first << ": ";
 		for(const auto& _first : pair.second)
-			std::cout << _first->GetId() << ", ";
+			std::cout << _first->GetStrId() << ", ";
 		std::cout << "\n";
 	}
 	std::cout << std::endl;
@@ -132,7 +154,8 @@ int main()
 	collsSLR.WriteGraph("test1_slr_full", 1);
 	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
-	//const auto [tabActionShift, tabActionReduce, tabJump] = collsLALR.CreateParseTables();
+
+	const auto [tabActionShift, tabActionReduce, tabJump, mapTermIdx, mapNonTermIdx] = collsLALR.CreateParseTables();
 	//std::cout << tabActionShift << "\n" << tabActionReduce << "\n" << tabJump << std::endl;
 
 	return 0;

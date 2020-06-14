@@ -128,6 +128,7 @@ public:
 	// transition from closure 1 to closure 2 with a symbol
 	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
 	using t_table = Table<std::size_t, std::vector>;
+	using t_mapIdIdx = std::map<std::size_t, std::size_t>;
 
 
 public:
@@ -138,7 +139,7 @@ public:
 	Collection ConvertToLALR() const;
 	Collection ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const;
 
-	std::tuple<t_table, t_table, t_table> CreateParseTables() const;
+	std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx> CreateParseTables() const;
 
 	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
 
