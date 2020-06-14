@@ -38,6 +38,8 @@ public:
 
 	const NonTerminalPtr GetLhs() const { return m_lhs; }
 	const Word* GetRhs() const { return m_rhs; }
+	std::optional<std::size_t> GetSemanticRule() const { return m_semanticrule; }
+
 	std::size_t GetCursor() const { return m_cursor; }
 	const Terminal::t_terminalset& GetLookaheads() const { return m_lookaheads; }
 	WordPtr GetRhsAfterCursor() const;
@@ -62,6 +64,8 @@ public:
 private:
 	NonTerminalPtr m_lhs = nullptr;
 	const Word* m_rhs = nullptr;
+	std::optional<std::size_t> m_semanticrule = std::nullopt;
+
 	std::size_t m_rhsidx = 0;	// rule index
 	std::size_t m_cursor = 0;	// pointing before element at this index
 

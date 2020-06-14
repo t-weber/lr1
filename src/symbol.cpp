@@ -10,8 +10,8 @@
 #include <boost/functional/hash.hpp>
 
 
-TerminalPtr g_eps = std::make_shared<Terminal>("eps", true, false);
-TerminalPtr g_end = std::make_shared<Terminal>("end", false, true);
+const TerminalPtr g_eps = std::make_shared<Terminal>("eps", true, false);
+const TerminalPtr g_end = std::make_shared<Terminal>("end", false, true);
 
 
 // ----------------------------------------------------------------------------
@@ -82,7 +82,11 @@ void NonTerminal::print(std::ostream& ostr) const
 		else
 			ostr << "\t| ";
 
-		ostr << GetRule(i) << "\n";
+		if(GetSemanticRule(i))
+			ostr << "[rule " << *GetSemanticRule(i) << "] ";
+
+		ostr << GetRule(i);
+		ostr << "\n";
 	}
 }
 

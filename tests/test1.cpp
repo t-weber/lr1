@@ -32,40 +32,41 @@ int main()
 	auto sym = std::make_shared<Terminal>("symbol");
 	auto ident = std::make_shared<Terminal>("ident");
 
-	start->AddRule({ add_term });
+	std::size_t semanticindex = 0;
+	start->AddRule({ add_term }, semanticindex++);
 
-	add_term->AddRule({ add_term, plus, mul_term });
+	add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);
 	if(!bSimplifiedGrammar)
-		add_term->AddRule({ add_term, minus, mul_term });
-	add_term->AddRule({ mul_term });
+		add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);
+	add_term->AddRule({ mul_term }, semanticindex++);
 
 	if(bSimplifiedGrammar)
 	{
-		mul_term->AddRule({ mul_term, mult, factor });
+		mul_term->AddRule({ mul_term, mult, factor }, semanticindex++);
 	}
 	else
 	{
-		mul_term->AddRule({ mul_term, mult, pow_term });
-		mul_term->AddRule({ mul_term, div, pow_term });
-		mul_term->AddRule({ mul_term, mod, pow_term });
+		mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);
+		mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);
+		mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);
 	}
 
 	if(bSimplifiedGrammar)
-		mul_term->AddRule({ factor });
+		mul_term->AddRule({ factor }, semanticindex++);
 	else
-		mul_term->AddRule({ pow_term });
+		mul_term->AddRule({ pow_term }, semanticindex++);
 
-	pow_term->AddRule({ pow_term, pow, factor });
-	pow_term->AddRule({ factor });
+	pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
+	pow_term->AddRule({ factor }, semanticindex++);
 
-	factor->AddRule({ bracket_open, add_term, bracket_close });
+	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
 	if(!bSimplifiedGrammar)
 	{
-		factor->AddRule({ ident, bracket_open, bracket_close });			// function call
-		factor->AddRule({ ident, bracket_open, add_term, bracket_close });			// function call
-		factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close });	// function call
+		factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);			// function call
+		factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);			// function call
+		factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);	// function call
 	}
-	factor->AddRule({ sym });
+	factor->AddRule({ sym }, semanticindex++);
 
 
 	std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, factor}};

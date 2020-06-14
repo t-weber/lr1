@@ -15,6 +15,7 @@
 #include <map>
 #include <set>
 #include <functional>
+#include <optional>
 #include <iostream>
 
 
@@ -27,7 +28,6 @@ using SymbolPtr = std::shared_ptr<Symbol>;
 using TerminalPtr = std::shared_ptr<Terminal>;
 using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 using WordPtr = std::shared_ptr<Word>;
-
 
 
 /**
@@ -68,18 +68,90 @@ private:
 class Terminal : public Symbol
 {
 public:
-	Terminal(const std::string& id, bool bEps=false, bool bEnd=false) : Symbol{id, bEps, bEnd} {}
+	Terminal(const std::string& id, bool bEps=false, bool bEnd=false)
+		: Symbol{id, bEps, bEnd}, m_semantic{} {}
 	Terminal() = delete;
 	virtual ~Terminal() = default;
 
 	virtual bool IsTerminal() const override { return 1; }
 
+	/**
+	 * get the semantic rule index
+	 */
+	std::optional<std::size_t> GetSemanticRule() const { return m_semantic; }
+
+	/**
+	 * set the semantic rule index
+	 */
+	void SetSemanticRule(std::optional<std::size_t> semantic=std::nullopt){ m_semantic = semantic; }
+
 	virtual void print(std::ostream& ostr) const override;
 	virtual std::size_t hash() const override;
+
 
 public:
 	static std::function<bool(const TerminalPtr term1, const TerminalPtr term2)> terminals_compare;
 	using t_terminalset = std::set<TerminalPtr, decltype(terminals_compare)>;
+
+
+private:
+	// semantic rule
+	std::optional<std::size_t> m_semantic;
+};
+
+
+
+/**
+ * nonterminal symbols
+ */
+class NonTerminal : public Symbol
+{
+public:
+	NonTerminal(const std::string& id) : Symbol{id}, m_rules{}, m_semantics{} {}
+	NonTerminal() = delete;
+	virtual ~NonTerminal() = default;
+
+	virtual bool IsTerminal() const override { return 0; }
+
+	/**
+	 * add multiple alternative production rules
+	 */
+	void AddRule(const Word& rule, std::optional<std::size_t> semanticruleidx=std::nullopt)
+	{
+		m_rules.push_back(rule);
+		m_semantics.push_back(semanticruleidx);
+	}
+
+	/**
+	 * number of rules
+	 */
+	std::size_t NumRules() const { return m_rules.size(); }
+
+	/**
+	 * get a production rule
+	 */
+	const Word& GetRule(std::size_t i) const { return m_rules[i]; }
+
+	/**
+	 * get a semantic rule index
+	 */
+	std::optional<std::size_t> GetSemanticRule(std::size_t i) const { return m_semantics[i]; }
+
+	/**
+	 * does this non-terminal have a rule which produces epsilon?
+	 */
+	bool HasEpsRule() const;
+
+	virtual void print(std::ostream& ostr) const override;
+	virtual std::size_t hash() const override;
+
+
+private:
+	// production syntactic rules
+	std::vector<Word> m_rules;
+
+	// production semantic rule indices
+	std::vector<std::optional<std::size_t>> m_semantics;
 };
 
 
@@ -94,17 +166,29 @@ public:
 	Word(const Word& other) : m_syms{other.m_syms} {}
 	Word() : m_syms{} {}
 
+	/**
+	 * add a symbol to the word
+	 */
 	void AddSymbol(SymbolPtr sym)
 	{
 		m_syms.push_back(sym);
 	}
 
+	/**
+	 * number of symbols in the word
+	 */
 	std::size_t NumSymbols() const { return m_syms.size(); }
 	std::size_t size() const { return NumSymbols(); }
 
+	/**
+	 * get a symbol in the word
+	 */
 	const SymbolPtr GetSymbol(const std::size_t i) const { return m_syms[i]; }
 	const SymbolPtr operator[](const std::size_t i) const { return GetSymbol(i); }
 
+	/**
+	 * test for equality
+	 */
 	bool operator==(const Word& other) const;
 	bool operator!=(const Word& other) const { return !operator==(other); }
 
@@ -119,54 +203,13 @@ private:
 
 
 
-/**
- * nonterminal symbols
- */
-class NonTerminal : public Symbol
-{
-public:
-	NonTerminal(const std::string& id) : Symbol{id}, m_rules{} {}
-	NonTerminal() = delete;
-	virtual ~NonTerminal() = default;
-
-	virtual bool IsTerminal() const override { return 0; }
-
-	/**
-	 * add multiple alternative production rules
-	 */
-	void AddRule(const Word& rule) { m_rules.push_back(rule); }
-
-	/**
-	 * number of rules
-	 */
-	std::size_t NumRules() const { return m_rules.size(); }
-
-	/**
-	 * get a production rule
-	 */
-	const Word& GetRule(std::size_t i) const { return m_rules[i]; }
-
-	/**
-	 * does this non-terminal have a rule which produces epsilon?
-	 */
-	bool HasEpsRule() const;
-
-	virtual void print(std::ostream& ostr) const override;
-	virtual std::size_t hash() const override;
-
-
-private:
-	// production rules
-	std::vector<Word> m_rules;
-};
-
-
-
 // ----------------------------------------------------------------------------
 
 
-extern TerminalPtr g_eps;
-extern TerminalPtr g_end;
+/**
+ * epsilon and end symbols
+ */
+extern const TerminalPtr g_eps, g_end;
 
 
 // ----------------------------------------------------------------------------

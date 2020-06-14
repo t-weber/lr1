@@ -12,14 +12,15 @@
 #include "lr1.h"
 
 #include <fstream>
-#include <algorithm>
 #include <sstream>
+#include <algorithm>
 
 #include <boost/functional/hash.hpp>
 
 
 Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la)
-	: m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
+	: m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_semanticrule{lhs->GetSemanticRule(rhsidx)},
+		m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
 {
 }
 
@@ -34,6 +35,7 @@ const Element& Element::operator=(const Element& elem)
 {
 	this->m_lhs = elem.m_lhs;
 	this->m_rhs = elem.m_rhs;
+	this->m_semanticrule = elem.m_semanticrule;
 	this->m_rhsidx = elem.m_rhsidx;
 	this->m_cursor = elem.m_cursor;
 	this->m_lookaheads = elem.m_lookaheads;
@@ -65,11 +67,7 @@ bool Element::IsEqual(const Element& elem, bool only_core, bool full_equal) cons
 			// see if all lookaheads of elem are already in this lookahead set
 			for(const TerminalPtr& la : elem.GetLookaheads())
 			{
-#if __cplusplus >= 201709l
-				if(!this->GetLookaheads().contains(la))
-#else
 				if(this->GetLookaheads().find(la) == this->GetLookaheads().end())
-#endif
 					return false;
 			}
 		}
@@ -722,13 +720,13 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 
 		if(symTrans->IsTerminal())
 		{
-			ostrActionShift << "action_shift[ State " << stateFrom->GetId() << ", "
-				<< symTrans->GetId() << " ] = State " << stateTo->GetId() << "\n";
+			ostrActionShift << "action_shift[ state " << stateFrom->GetId() << ", "
+				<< symTrans->GetId() << " ] = state " << stateTo->GetId() << "\n";
 		}
 		else
 		{
-			ostrJump << "jump[ State " << stateFrom->GetId() << ", "
-				<< symTrans->GetId() << " ] = State " << stateTo->GetId() << "\n";
+			ostrJump << "jump[ state " << stateFrom->GetId() << ", "
+				<< symTrans->GetId() << " ] = state " << stateTo->GetId() << "\n";
 		}
 	}
 
@@ -740,10 +738,13 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			ostrActionReduce << "action_reduce[ State " << coll->GetId() << ", ";
+			ostrActionReduce << "action_reduce[ state " << coll->GetId() << ", ";
 			for(const auto& la : elem->GetLookaheads())
 				ostrActionReduce << la->GetId() << " ";
-			ostrActionReduce << "] = " << elem->GetLhs()->GetId() << " -> " << *elem->GetRhs();
+			ostrActionReduce << "] = ";
+			if(elem->GetSemanticRule())
+				ostrActionReduce << "[rule " << *elem->GetSemanticRule() << "] ";
+			ostrActionReduce << elem->GetLhs()->GetId() << " -> " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
 	}
