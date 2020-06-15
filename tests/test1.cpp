@@ -9,6 +9,7 @@
 #include "lex.h"
 
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 
 
@@ -145,12 +146,16 @@ int main()
 	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
 
-	const auto [tabActionShift, tabActionReduce, tabJump, mapTermIdx, mapNonTermIdx] = collsLALR.CreateParseTables();
+	const auto [tabActionShift, tabActionReduce, tabJump, mapTermIdx, mapNonTermIdx, numRhsSymsPerRule]
+		= collsLALR.CreateParseTables();
 	//std::cout << tabActionShift << "\n" << tabActionReduce << "\n" << tabJump << std::endl;
 
 
 	std::istringstream istr{"2*3 + 4 - 1"};
-	auto tokens = get_all_tokens(istr);
+	auto tokens = get_all_tokens(istr, &mapTermIdx);
+
+	//for(const auto& tok : tokens)
+	//	std::cout << tok->GetId() << " " << tok->GetTableIdx() << std::endl;
 
 	return 0;
 }

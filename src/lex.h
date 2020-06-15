@@ -10,14 +10,18 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 #include <utility>
 #include <optional>
 #include <variant>
+
+#include "ast.h"
 
 
 using t_real = double;
 using t_lval = std::optional<std::variant<t_real>>;
 using t_tok = std::size_t;
+using t_toknode = t_astbaseptr;
 
 
 enum class Token : t_tok
@@ -44,7 +48,9 @@ extern std::tuple<t_tok, t_lval> get_next_token(std::istream& istr = std::cin);
 /**
  * get all tokens and attributes
  */
-extern std::vector<std::tuple<t_tok, t_lval>> get_all_tokens(std::istream& istr = std::cin);
+extern std::vector<t_toknode> get_all_tokens(
+	std::istream& istr = std::cin,
+	const std::map<std::size_t, std::size_t>* mapTermIdx = nullptr);
 
 
 #endif

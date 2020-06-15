@@ -58,7 +58,6 @@ public:
 private:
 	std::size_t m_id = 0;
 	std::string m_strid;
-	std::size_t m_idx = 0;
 
 	bool m_iseps = false;
 	bool m_isend = false;

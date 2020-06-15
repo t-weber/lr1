@@ -690,13 +690,19 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 /**
  * creates the lr(1) parser tables
  */
-std::tuple<Collection::t_table, Collection::t_table, Collection::t_table, Collection::t_mapIdIdx, Collection::t_mapIdIdx>
+std::tuple<Collection::t_table, Collection::t_table, Collection::t_table,
+	Collection::t_mapIdIdx, Collection::t_mapIdIdx,
+	std::vector<std::size_t>>
 Collection::CreateParseTables() const
 {
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = 0xffffffff;
 	const std::size_t acceptVal = 0xfffffffe;
 
+	// number of symbols on rhs of a production rule
+	std::vector<std::size_t> numRhsSymsPerRule;
+
+	// lr tables
 	std::vector<std::vector<std::size_t>> _action_shift, _action_reduce, _jump;
 	_action_shift.resize(numStates);
 	_action_reduce.resize(numStates);
@@ -707,8 +713,10 @@ Collection::CreateParseTables() const
 	// maps the ids to table indices for the terminals
 	t_mapIdIdx mapTermIdx;
 
+	// current counters
 	std::size_t curNonTermIdx = 0;
 	std::size_t curTermIdx = 0;
+
 
 	// translate symbol id to table index
 	auto get_idx = [&mapNonTermIdx, &mapTermIdx, &curNonTermIdx, &curTermIdx]
@@ -761,13 +769,19 @@ Collection::CreateParseTables() const
 			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
 			if(!rulenr)		// no semantic rule assigned
 				continue;
+			std::size_t rule = *rulenr;
+
+			const Word* rhs = elem->GetRhs();
+			std::size_t numRhsSyms = rhs->NumSymbols();
+			if(numRhsSymsPerRule.size() <= rule)
+				numRhsSymsPerRule.resize(rule+1);
+			numRhsSymsPerRule[rule] = numRhsSyms;
 
 			auto& _action_row = _action_reduce[coll->GetId()];
 
 			for(const auto& la : elem->GetLookaheads())
 			{
 				std::size_t laIdx = get_idx(la->GetId(), true);
-				std::size_t rule = *rulenr;
 
 				// in extended grammar, first production (rule 0) is of the form start -> ...
 				if(rule == 0)
@@ -785,7 +799,8 @@ Collection::CreateParseTables() const
 		t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx},
-		mapTermIdx, mapNonTermIdx);
+		mapTermIdx, mapNonTermIdx,
+		numRhsSymsPerRule);
 
 	// check for shift/reduce conflicts
 	for(std::size_t state=0; state<numStates; ++state)

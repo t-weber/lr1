@@ -18,7 +18,7 @@ const TerminalPtr g_end = std::make_shared<Terminal>(0xffffff01, "end", false, t
 
 
 Symbol::Symbol(std::size_t id, const std::string& strid, bool bEps, bool bEnd)
-	: m_id{id}, m_strid{strid}, m_idx{}, m_iseps{bEps}, m_isend{bEnd}
+	: m_id{id}, m_strid{strid}, m_iseps{bEps}, m_isend{bEnd}
 {
 	// if no string id is given, use the numeric id
 	if(m_strid == "")

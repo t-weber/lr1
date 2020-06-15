@@ -31,6 +31,7 @@ include_directories(
 add_library(lr1 STATIC
 	src/lr1.cpp src/lr1.h
 	src/symbol.cpp src/symbol.h
+	src/lex.cpp src/lex.h
 	src/helpers.h
 )
 
@@ -40,6 +41,6 @@ target_link_libraries(lr1 ${Boost_LIBRARIES})
 
 # -----------------------------------------------------------------------------
 # tests
-add_executable(test1 tests/test1.cpp tests/lex.cpp tests/lex.h)
+add_executable(test1 tests/test1.cpp)
 target_link_libraries(test1 lr1)
 # -----------------------------------------------------------------------------

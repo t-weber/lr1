@@ -139,7 +139,9 @@ public:
 	Collection ConvertToLALR() const;
 	Collection ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const;
 
-	std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx> CreateParseTables() const;
+	std::tuple<t_table, t_table, t_table,
+		t_mapIdIdx, t_mapIdIdx,
+		std::vector<std::size_t>> CreateParseTables() const;
 
 	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
 

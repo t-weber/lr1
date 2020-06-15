@@ -44,11 +44,6 @@ get_matching_tokens(const std::string& str)
 			matches.push_back(std::make_tuple((t_tok)str[0], std::nullopt));
 	}
 
-	/*{	// new line
-		if(str == "\n")
-			matches.push_back(std::make_tuple((t_tok)Token::END, std::nullopt));
-	}*/
-
 	//std::cerr << "Input \"" << str << "\" has " << matches.size() << " matches." << std::endl;
 	return matches;
 }
@@ -114,20 +109,28 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 /**
  * get all tokens and attributes
  */
-std::vector<std::tuple<t_tok, t_lval>> get_all_tokens(std::istream& istr)
+std::vector<t_toknode> get_all_tokens(std::istream& istr, const std::map<std::size_t, std::size_t>* mapTermIdx)
 {
-	std::vector<std::tuple<t_tok, t_lval>> vec;
+	std::vector<t_toknode> vec;
 
 	while(1)
 	{
-		vec.emplace_back(get_next_token(istr));
+		auto tup = get_next_token(istr);
+		std::size_t id = std::get<0>(tup);
+		const t_lval& lval = std::get<1>(tup);
 
-		/*std::cout << "token: " << std::get<0>(*vec.rbegin());
-		if(std::get<1>(*vec.rbegin()))
-			std::cout << ", lvalue: " << std::get<t_real>(*std::get<1>(*vec.rbegin()));
-		std::cout << std::endl;*/
+		// get index into parse tables
+		std::size_t tableidx = 0;
+		if(mapTermIdx)
+		{
+			auto iter = mapTermIdx->find(id);
+			if(iter != mapTermIdx->end())
+				tableidx = iter->second;
+		}
 
-		if(std::get<0>(*vec.rbegin()) == (t_tok)Token::END)
+		vec.emplace_back(std::make_shared<ASTToken<t_lval>>(id, tableidx, lval));
+
+		if(id == (t_tok)Token::END)
 			break;
 	}
 
