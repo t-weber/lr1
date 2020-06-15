@@ -40,6 +40,6 @@ target_link_libraries(lr1 ${Boost_LIBRARIES})
 
 # -----------------------------------------------------------------------------
 # tests
-add_executable(test1 tests/test1.cpp)
+add_executable(test1 tests/test1.cpp tests/lex.cpp tests/lex.h)
 target_link_libraries(test1 lr1)
 # -----------------------------------------------------------------------------

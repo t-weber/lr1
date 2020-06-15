@@ -6,24 +6,14 @@
  */
 
 #include "lr1.h"
+#include "lex.h"
+
 #include <iostream>
 #include <iomanip>
 
 
 enum : std::size_t
 {
-	TOK_PLUS,
-	TOK_MINUS,
-	TOK_MULT,
-	TOK_DIV,
-	TOK_MOD,
-	TOK_POW,
-	TOK_BRACKET_OPEN,
-	TOK_BRACKET_CLOSE,
-	TOK_COMMA,
-	TOK_SYM,
-	TOK_IDENT,
-
 	START,
 	ADD_TERM,
 	MUL_TERM,
@@ -43,17 +33,17 @@ int main()
 	auto pow_term = std::make_shared<NonTerminal>(POW_TERM, "pow_term");
 	auto factor = std::make_shared<NonTerminal>(FACTOR, "factor");
 
-	auto plus = std::make_shared<Terminal>(TOK_PLUS, "+");
-	auto minus = std::make_shared<Terminal>(TOK_MINUS, "-");
-	auto mult = std::make_shared<Terminal>(TOK_MULT, "*");
-	auto div = std::make_shared<Terminal>(TOK_DIV, "/");
-	auto mod = std::make_shared<Terminal>(TOK_MOD, "%");
-	auto pow = std::make_shared<Terminal>(TOK_POW, "^");
-	auto bracket_open = std::make_shared<Terminal>(TOK_BRACKET_OPEN, "(");
-	auto bracket_close = std::make_shared<Terminal>(TOK_BRACKET_CLOSE, ")");
-	auto comma = std::make_shared<Terminal>(TOK_COMMA, ",");
-	auto sym = std::make_shared<Terminal>(TOK_SYM, "symbol");
-	auto ident = std::make_shared<Terminal>(TOK_IDENT, "ident");
+	auto plus = std::make_shared<Terminal>('+', "+");
+	auto minus = std::make_shared<Terminal>('-', "-");
+	auto mult = std::make_shared<Terminal>('*', "*");
+	auto div = std::make_shared<Terminal>('/', "/");
+	auto mod = std::make_shared<Terminal>('%', "%");
+	auto pow = std::make_shared<Terminal>('^', "^");
+	auto bracket_open = std::make_shared<Terminal>('(', "(");
+	auto bracket_close = std::make_shared<Terminal>(')', ")");
+	auto comma = std::make_shared<Terminal>(',', ",");
+	auto sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
+	auto ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
 	std::size_t semanticindex = 0;
 	start->AddRule({ add_term }, semanticindex++);
@@ -157,6 +147,10 @@ int main()
 
 	const auto [tabActionShift, tabActionReduce, tabJump, mapTermIdx, mapNonTermIdx] = collsLALR.CreateParseTables();
 	//std::cout << tabActionShift << "\n" << tabActionReduce << "\n" << tabJump << std::endl;
+
+
+	std::istringstream istr{"2*3 + 4 - 1"};
+	auto tokens = get_all_tokens(istr);
 
 	return 0;
 }
