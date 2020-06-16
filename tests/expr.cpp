@@ -3,10 +3,13 @@
  * @author Tobias Weber
  * @date 07-jun-2020
  * @license see 'LICENSE.EUPL' file
+ *
+ * References:
+ * 	- expression grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
  */
 
 #include "lr1.h"
-#include "lex.h"
+#include "lexer.h"
 #include "parser.h"
 
 #include <iostream>
@@ -26,9 +29,6 @@ enum : std::size_t
 
 int main()
 {
-	bool bSimplifiedGrammar = 1;
-
-	// test grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
 	auto start = std::make_shared<NonTerminal>(START, "start");
 	auto add_term = std::make_shared<NonTerminal>(ADD_TERM, "add_term");
 	auto mul_term = std::make_shared<NonTerminal>(MUL_TERM, "mul_term");
@@ -47,64 +47,45 @@ int main()
 	auto sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
 	auto ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
+
 	std::size_t semanticindex = 0;
 
 	// rule 0
 	start->AddRule({ add_term }, semanticindex++);
-
 	// rule 1
 	add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);
-
-	if(!bSimplifiedGrammar)
-	{
-		add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);
-	}
-
 	// rule 2
+	add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);
+	// rule 3
 	add_term->AddRule({ mul_term }, semanticindex++);
-
-	if(bSimplifiedGrammar)
-	{
-		// rule 3
-		mul_term->AddRule({ mul_term, mult, factor }, semanticindex++);
-	}
-	else
-	{
-		mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);
-		mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);
-		mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);
-	}
-
-	if(bSimplifiedGrammar)
-	{
-		// rule 4
-		mul_term->AddRule({ factor }, semanticindex++);
-	}
-	else
-	{
-		mul_term->AddRule({ pow_term }, semanticindex++);
-
-		pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
-		pow_term->AddRule({ factor }, semanticindex++);
-	}
-
+	// rule 4
+	mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);
 	// rule 5
+	mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);
+	// rule 6
+	mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);
+	// rule 7
+	mul_term->AddRule({ pow_term }, semanticindex++);
+	// rule 8
+	pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
+	// rule 9
+	pow_term->AddRule({ factor }, semanticindex++);
+	// rule 10
 	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
 
-	if(!bSimplifiedGrammar)
-	{
-		factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);			// function call
-		factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);			// function call
-		factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);	// function call
-	}
-
-	// rule 6
+	// function calls
+	// rule 11
+	factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
+	// rule 12
+	factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);
+	// rule 13
+	factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);
+	// rule 14
 	factor->AddRule({ sym }, semanticindex++);
 
 
 	std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, factor}};
-	if(!bSimplifiedGrammar)
-		all_nonterminals.push_back(pow_term);
+	all_nonterminals.push_back(pow_term);
 
 	std::cout << "Productions:\n";
 	for(NonTerminalPtr nonterm : all_nonterminals)
@@ -148,21 +129,14 @@ int main()
 	coll->AddElement(elem);
 	//std::cout << "\n\n" << *coll << std::endl;
 
+
 	Collection colls{coll};
 	colls.DoTransitions();
-	colls.WriteGraph("test1_lr", 0);
-	colls.WriteGraph("test1_lr_full", 1);
 	std::cout << "\n\nLR(1):\n" << colls << std::endl;
 
 	Collection collsLALR = colls.ConvertToLALR();
-	collsLALR.WriteGraph("test1_lalr", 0);
-	collsLALR.WriteGraph("test1_lalr_full", 1);
+	collsLALR.WriteGraph("expr_lalr_full", 1);
 	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
-
-	Collection collsSLR = colls.ConvertToSLR(follow);
-	collsSLR.WriteGraph("test1_slr", 0);
-	collsSLR.WriteGraph("test1_slr_full", 1);
-	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
 
 	auto parsetables = collsLALR.CreateParseTables();
@@ -170,6 +144,7 @@ int main()
 	const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
 
 
+	// rules for simplified grammar
 	std::vector<t_semanticrule> rules{{
 		// rule 0
 		[&mapNonTermIdx, &start](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
@@ -187,53 +162,19 @@ int main()
 			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
 		},
 
-		// rule 2
-		[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-		{
-			std::size_t id = add_term->GetId();
-			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
-		},
+		// TODO
 
-		// rule 3
-		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-		{
-			std::size_t id = mul_term->GetId();
-			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
-		},
-
-		// rule 4
-		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-		{
-			std::size_t id = mul_term->GetId();
-			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
-		},
-
-		// rule 5
-		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-		{
-			std::size_t id = factor->GetId();
-			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
-		},
-
-		// rule 6
-		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-		{
-			std::size_t id = factor->GetId();
-			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
-		},
 	}};
 
 
-	std::istringstream istr{"2*3 + 5*4"};
+	/*Parser parser{parsetables, rules};
 
-	Parser parser{parsetables, rules};
-	parser.SetInput(get_all_tokens(istr, &mapTermIdx));
-	parser.Parse();
+	std::istringstream istr{"2*3 + 5*4 * (1+2)"};
+	auto tokens = get_all_tokens(istr, &mapTermIdx);
+
+	auto ast = cst_to_ast(parser.Parse(tokens));
+	std::cout << "AST:\n";
+	ast->print(std::cout);*/
 
 	return 0;
 }

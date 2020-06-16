@@ -5,7 +5,7 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#include "lex.h"
+#include "lexer.h"
 
 #include <sstream>
 #include <memory>

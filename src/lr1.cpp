@@ -6,7 +6,7 @@
  *
  * References:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
- *	- "Übersetzerbau" ISBN: 978-3540653899 (1999, 2013)
+ *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
 #include "lr1.h"

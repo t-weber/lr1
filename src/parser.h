@@ -25,8 +25,7 @@ public:
 
 	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
 
-	void SetInput(const std::vector<t_toknode>& input) { m_input = input; }
-	void Parse() const;
+	t_astbaseptr Parse(const std::vector<t_toknode>& input) const;
 
 
 private:
@@ -44,9 +43,6 @@ private:
 
 	// semantic rules
 	std::vector<t_semanticrule> m_semantics;
-
-	// input tokens
-	std::vector<t_toknode> m_input;
 };
 
 

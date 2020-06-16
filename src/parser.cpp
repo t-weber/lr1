@@ -6,7 +6,7 @@
  *
  * References:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
- *	- "Übersetzerbau" ISBN: 978-3540653899 (1999, 2013)
+ *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
 #include "parser.h"
@@ -22,13 +22,12 @@ Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdId
 		m_mapTermIdx{std::get<3>(init)},
 		m_mapNonTermIdx{std::get<4>(init)},
 		m_numRhsSymsPerRule{std::get<5>(init)},
-		m_semantics{rules},
-		m_input{}
+		m_semantics{rules}
 {
 }
 
 
-void Parser::Parse() const
+t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 {
 	std::stack<std::size_t> states;
 	std::stack<t_astbaseptr> symbols;
@@ -37,10 +36,8 @@ void Parser::Parse() const
 	states.push(0);
 	std::size_t inputidx = 0;
 
-	t_toknode curtok = m_input[inputidx++];
+	t_toknode curtok = input[inputidx++];
 	std::size_t curtokidx = curtok->GetTableIdx();
-
-	bool accept_reached = false;
 
 	while(true)
 	{
@@ -56,24 +53,22 @@ void Parser::Parse() const
 		// accept
 		else if(newrule == ACCEPT_VAL)
 		{
-			std::cout << "accepting" << std::endl;
-
-			accept_reached = true;
-			break;
+			//std::cout << "accepting" << std::endl;
+			return symbols.top();
 		}
 
 		// shift
 		else if(newstate != ERROR_VAL)
 		{
-			std::cout << "shifting state " << newstate << std::endl;
+			//std::cout << "shifting state " << newstate << std::endl;
 
 			states.push(newstate);
 			symbols.push(curtok);
 
-			if(inputidx >= m_input.size())
+			if(inputidx >= input.size())
 				throw std::runtime_error("Input buffer underflow.");
 
-			curtok = m_input[inputidx++];
+			curtok = input[inputidx++];
 			curtokidx = curtok->GetTableIdx();
 		}
 
@@ -81,7 +76,7 @@ void Parser::Parse() const
 		else if(newrule != ERROR_VAL)
 		{
 			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
-			std::cout << "reducing " << numSyms << " symbols via rule " << newrule << std::endl;
+			//std::cout << "reducing " << numSyms << " symbols via rule " << newrule << std::endl;
 
 			// take the symbols from the stack and create an argument vector for the semantic rule
 			std::vector<t_astbaseptr> args;
@@ -105,4 +100,6 @@ void Parser::Parse() const
 			states.push(jumpstate);
 		}
 	}
+
+	return nullptr;
 }
