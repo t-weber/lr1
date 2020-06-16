@@ -6,12 +6,13 @@
  */
 
 #include "symbol.h"
+#include "common.h"
 
 #include <boost/functional/hash.hpp>
 
 
-const TerminalPtr g_eps = std::make_shared<Terminal>(0xffffff00, "eps", true, false);
-const TerminalPtr g_end = std::make_shared<Terminal>(0xffffff01, "end", false, true);
+const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "eps", true, false);
+const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "end", false, true);
 
 
 // ----------------------------------------------------------------------------

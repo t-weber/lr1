@@ -9,7 +9,7 @@
 #define __LR1_H__
 
 #include "symbol.h"
-#include "helpers.h"
+#include "common.h"
 
 #include <set>
 #include <map>
@@ -127,8 +127,6 @@ class Collection
 public:
 	// transition from closure 1 to closure 2 with a symbol
 	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
-	using t_table = Table<std::size_t, std::vector>;
-	using t_mapIdIdx = std::map<std::size_t, std::size_t>;
 
 
 public:
@@ -140,10 +138,10 @@ public:
 	Collection ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const;
 
 	std::tuple<t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx,
-		std::vector<std::size_t>> CreateParseTables() const;
+		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables() const;
 
 	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
+
 
 protected:
 	Collection();
@@ -152,6 +150,7 @@ protected:
 	void Simplify();
 
 	static std::size_t hash_transition(const t_transition& trans);
+
 
 private:
 	std::map<std::size_t, ClosurePtr> m_cache;	// closure hashes

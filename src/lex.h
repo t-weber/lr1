@@ -16,12 +16,12 @@
 #include <variant>
 
 #include "ast.h"
+#include "common.h"
 
 
 using t_real = double;
 using t_lval = std::optional<std::variant<t_real>>;
 using t_tok = std::size_t;
-using t_toknode = t_astbaseptr;
 
 
 enum class Token : t_tok
@@ -29,7 +29,7 @@ enum class Token : t_tok
 	REAL	= 1000,
 	IDENT	= 1001,
 
-	END		= 0xffffff01,	// same as in symbol.cpp
+	END		= END_IDENT,
 };
 
 
@@ -49,8 +49,7 @@ extern std::tuple<t_tok, t_lval> get_next_token(std::istream& istr = std::cin);
  * get all tokens and attributes
  */
 extern std::vector<t_toknode> get_all_tokens(
-	std::istream& istr = std::cin,
-	const std::map<std::size_t, std::size_t>* mapTermIdx = nullptr);
+	std::istream& istr = std::cin, const t_mapIdIdx* mapTermIdx = nullptr);
 
 
 #endif

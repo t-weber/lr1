@@ -1,0 +1,108 @@
+/**
+ * lr(1) parser
+ * @author Tobias Weber
+ * @date 15-jun-2020
+ * @license see 'LICENSE.EUPL' file
+ *
+ * References:
+ *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
+ *	- "Übersetzerbau" ISBN: 978-3540653899 (1999, 2013)
+ */
+
+#include "parser.h"
+
+#include <stack>
+
+
+Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
+	const std::vector<t_semanticrule>& rules)
+	: m_tabActionShift{std::get<0>(init)},
+		m_tabActionReduce{std::get<1>(init)},
+		m_tabJump{std::get<2>(init)},
+		m_mapTermIdx{std::get<3>(init)},
+		m_mapNonTermIdx{std::get<4>(init)},
+		m_numRhsSymsPerRule{std::get<5>(init)},
+		m_semantics{rules},
+		m_input{}
+{
+}
+
+
+void Parser::Parse() const
+{
+	std::stack<std::size_t> states;
+	std::stack<t_astbaseptr> symbols;
+
+	// starting state
+	states.push(0);
+	std::size_t inputidx = 0;
+
+	t_toknode curtok = m_input[inputidx++];
+	std::size_t curtokidx = curtok->GetTableIdx();
+
+	bool accept_reached = false;
+
+	while(true)
+	{
+		std::size_t topstate = states.top();
+		std::size_t newstate = m_tabActionShift(topstate, curtokidx);
+		std::size_t newrule = m_tabActionReduce(topstate, curtokidx);
+
+		if(newstate == ERROR_VAL && newrule == ERROR_VAL)
+			throw std::runtime_error("Undefined shift and reduce entries.");
+		else if(newstate != ERROR_VAL && newrule != ERROR_VAL)
+			throw std::runtime_error("Shift/reduce conflict.");
+
+		// accept
+		else if(newrule == ACCEPT_VAL)
+		{
+			std::cout << "accepting" << std::endl;
+
+			accept_reached = true;
+			break;
+		}
+
+		// shift
+		else if(newstate != ERROR_VAL)
+		{
+			std::cout << "shifting state " << newstate << std::endl;
+
+			states.push(newstate);
+			symbols.push(curtok);
+
+			if(inputidx >= m_input.size())
+				throw std::runtime_error("Input buffer underflow.");
+
+			curtok = m_input[inputidx++];
+			curtokidx = curtok->GetTableIdx();
+		}
+
+		// reduce
+		else if(newrule != ERROR_VAL)
+		{
+			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
+			std::cout << "reducing " << numSyms << " symbols via rule " << newrule << std::endl;
+
+			// take the symbols from the stack and create an argument vector for the semantic rule
+			std::vector<t_astbaseptr> args;
+			for(std::size_t arg=0; arg<numSyms; ++arg)
+			{
+				args.push_back(symbols.top());
+
+				symbols.pop();
+				states.pop();
+			}
+
+			if(args.size() > 1)
+				std::reverse(args.begin(), args.end());
+
+			// execute semantic rule
+			t_astbaseptr reducedSym = m_semantics[newrule](args);
+			symbols.push(reducedSym);
+
+			topstate = states.top();
+			std::size_t jumpstate = m_tabJump(topstate, reducedSym->GetTableIdx());
+			states.push(jumpstate);
+		}
+	}
+}

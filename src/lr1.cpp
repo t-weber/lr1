@@ -690,14 +690,12 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 /**
  * creates the lr(1) parser tables
  */
-std::tuple<Collection::t_table, Collection::t_table, Collection::t_table,
-	Collection::t_mapIdIdx, Collection::t_mapIdIdx,
-	std::vector<std::size_t>>
+std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>
 Collection::CreateParseTables() const
 {
 	const std::size_t numStates = m_collection.size();
-	const std::size_t errorVal = 0xffffffff;
-	const std::size_t acceptVal = 0xfffffffe;
+	const std::size_t errorVal = ERROR_VAL;
+	const std::size_t acceptVal = ACCEPT_VAL;
 
 	// number of symbols on rhs of a production rule
 	std::vector<std::size_t> numRhsSymsPerRule;

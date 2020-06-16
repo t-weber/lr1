@@ -109,7 +109,7 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 /**
  * get all tokens and attributes
  */
-std::vector<t_toknode> get_all_tokens(std::istream& istr, const std::map<std::size_t, std::size_t>* mapTermIdx)
+std::vector<t_toknode> get_all_tokens(std::istream& istr, const t_mapIdIdx* mapTermIdx)
 {
 	std::vector<t_toknode> vec;
 

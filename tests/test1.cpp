@@ -7,6 +7,7 @@
 
 #include "lr1.h"
 #include "lex.h"
+#include "parser.h"
 
 #include <iostream>
 #include <sstream>
@@ -47,15 +48,24 @@ int main()
 	auto ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
 	std::size_t semanticindex = 0;
+
+	// rule 0
 	start->AddRule({ add_term }, semanticindex++);
 
+	// rule 1
 	add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);
+
 	if(!bSimplifiedGrammar)
+	{
 		add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);
+	}
+
+	// rule 2
 	add_term->AddRule({ mul_term }, semanticindex++);
 
 	if(bSimplifiedGrammar)
 	{
+		// rule 3
 		mul_term->AddRule({ mul_term, mult, factor }, semanticindex++);
 	}
 	else
@@ -66,20 +76,29 @@ int main()
 	}
 
 	if(bSimplifiedGrammar)
+	{
+		// rule 4
 		mul_term->AddRule({ factor }, semanticindex++);
+	}
 	else
+	{
 		mul_term->AddRule({ pow_term }, semanticindex++);
 
-	pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
-	pow_term->AddRule({ factor }, semanticindex++);
+		pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
+		pow_term->AddRule({ factor }, semanticindex++);
+	}
 
+	// rule 5
 	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
+
 	if(!bSimplifiedGrammar)
 	{
 		factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);			// function call
 		factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);			// function call
 		factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);	// function call
 	}
+
+	// rule 6
 	factor->AddRule({ sym }, semanticindex++);
 
 
@@ -146,16 +165,75 @@ int main()
 	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
 
-	const auto [tabActionShift, tabActionReduce, tabJump, mapTermIdx, mapNonTermIdx, numRhsSymsPerRule]
-		= collsLALR.CreateParseTables();
-	//std::cout << tabActionShift << "\n" << tabActionReduce << "\n" << tabJump << std::endl;
+	auto parsetables = collsLALR.CreateParseTables();
+	const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
+	const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
 
 
-	std::istringstream istr{"2*3 + 4 - 1"};
-	auto tokens = get_all_tokens(istr, &mapTermIdx);
+	std::vector<t_semanticrule> rules{{
+		// rule 0
+		[&mapNonTermIdx, &start](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = start->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
 
-	//for(const auto& tok : tokens)
-	//	std::cout << tok->GetId() << " " << tok->GetTableIdx() << std::endl;
+		// rule 1
+		[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = add_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
+		},
+
+		// rule 2
+		[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = add_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+
+		// rule 3
+		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
+		},
+
+		// rule 4
+		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+
+		// rule 5
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = factor->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
+		},
+
+		// rule 6
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = factor->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+	}};
+
+
+	std::istringstream istr{"2*3 + 5*4"};
+
+	Parser parser{parsetables, rules};
+	parser.SetInput(get_all_tokens(istr, &mapTermIdx));
+	parser.Parse();
 
 	return 0;
 }
