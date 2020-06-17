@@ -5,8 +5,8 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#ifndef __SYM_H__
-#define __SYM_H__
+#ifndef __LR1_SYM_H__
+#define __LR1_SYM_H__
 
 
 #include <memory>

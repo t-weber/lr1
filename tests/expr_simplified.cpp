@@ -19,10 +19,10 @@
 
 enum : std::size_t
 {
-	START = 1000,
-	ADD_TERM = '+',	// id '+', etc. only for cosmetic purposes
-	MUL_TERM = '*',
-	FACTOR = 1001
+	START,
+	ADD_TERM,
+	MUL_TERM,
+	FACTOR,
 };
 
 
@@ -134,11 +134,11 @@ int main()
 		},
 
 		// rule 1
-		[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		[&mapNonTermIdx, &add_term, &plus](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 		{
 			std::size_t id = add_term->GetId();
 			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], plus->GetId());
 		},
 
 		// rule 2
@@ -150,11 +150,11 @@ int main()
 		},
 
 		// rule 3
-		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		[&mapNonTermIdx, &mul_term, &mult](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 		{
 			std::size_t id = mul_term->GetId();
 			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], mult->GetId());
 		},
 
 		// rule 4

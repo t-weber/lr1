@@ -72,7 +72,6 @@ int main()
 	pow_term->AddRule({ factor }, semanticindex++);
 	// rule 10
 	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
-
 	// function calls
 	// rule 11
 	factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
@@ -82,10 +81,11 @@ int main()
 	factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);
 	// rule 14
 	factor->AddRule({ sym }, semanticindex++);
+	// rule 15
+	factor->AddRule({ ident }, semanticindex++);
 
 
-	std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, factor}};
-	all_nonterminals.push_back(pow_term);
+	std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, pow_term, factor}};
 
 	std::cout << "Productions:\n";
 	for(NonTerminalPtr nonterm : all_nonterminals)
@@ -155,26 +155,145 @@ int main()
 		},
 
 		// rule 1
+		[&mapNonTermIdx, &add_term, &plus](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = add_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], plus->GetId());
+		},
+
+		// rule 2
+		[&mapNonTermIdx, &add_term, &minus](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = add_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], minus->GetId());
+		},
+
+		// rule 3
 		[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 		{
 			std::size_t id = add_term->GetId();
 			std::size_t tableidx = mapNonTermIdx.find(id)->second;
-			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2]);
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 		},
 
-		// TODO
+		// rule 4
+		[&mapNonTermIdx, &mul_term, &mult](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], mult->GetId());
+		},
 
+		// rule 5
+		[&mapNonTermIdx, &mul_term, &div](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], div->GetId());
+		},
+
+		// rule 6
+		[&mapNonTermIdx, &mul_term, &mod](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], mod->GetId());
+		},
+
+		// rule 7
+		[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = mul_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+
+		// rule 8
+		[&mapNonTermIdx, &pow_term, &pow](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = pow_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], pow->GetId());
+		},
+
+		// rule 9
+		[&mapNonTermIdx, &pow_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = pow_term->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+
+		// rule 10
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = factor->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
+		},
+
+		// rule 11
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			// TODO: function call
+			std::cerr << "not yet implemented" << std::endl;
+			return nullptr;
+		},
+
+		// rule 12
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			// TODO: function call
+			std::cerr << "not yet implemented" << std::endl;
+			return nullptr;
+		},
+
+		// rule 13
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			// TODO: function call
+			std::cerr << "not yet implemented" << std::endl;
+			return nullptr;
+		},
+
+		// rule 14
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = factor->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
+
+		// rule 15
+		[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+		{
+			std::size_t id = factor->GetId();
+			std::size_t tableidx = mapNonTermIdx.find(id)->second;
+			return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+		},
 	}};
 
 
-	/*Parser parser{parsetables, rules};
+	Parser parser{parsetables, rules};
 
-	std::istringstream istr{"2*3 + 5*4 * (1+2)"};
-	auto tokens = get_all_tokens(istr, &mapTermIdx);
+	while(1)
+	{
+		std::string exprstr;
+		std::cout << "\nExpression: ";
+		std::getline(std::cin, exprstr);
+		std::istringstream istr{exprstr};
+		auto tokens = get_all_tokens(istr, &mapTermIdx);
+		std::cout << "Tokens: ";
+		for(const t_toknode& tok : tokens)
+			std::cout << tok->GetId() << " ";
+		std::cout << "\n";
 
-	auto ast = cst_to_ast(parser.Parse(tokens));
-	std::cout << "AST:\n";
-	ast->print(std::cout);*/
+		auto ast = cst_to_ast(parser.Parse(tokens));
+		std::cout << "AST:\n";
+		ast->print(std::cout);
+	}
 
 	return 0;
 }

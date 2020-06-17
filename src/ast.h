@@ -5,13 +5,14 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#ifndef __AST_H__
-#define __AST_H__
+#ifndef __LR1_AST_H__
+#define __LR1_AST_H__
 
 #include <memory>
 #include <functional>
 #include <optional>
 #include <iostream>
+#include <sstream>
 
 
 class ASTBase;
@@ -52,18 +53,7 @@ public:
 	virtual t_astbaseptr GetChild(std::size_t) const { return nullptr; }
 	virtual void SetChild(std::size_t, const t_astbaseptr&) { }
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0)
-	{
-		for(std::size_t i=0; i<indent; ++i)
-			ostr << "  ";
-		ostr << get_ast_typename(GetType()) << ", id=" << GetId();
-		if(GetId() < 256)
-			ostr << " (" << (char)GetId() << ")";
-		ostr << "\n";
-
-		for(std::size_t i=0; i<NumChildren(); ++i)
-			GetChild(i)->print(ostr, indent+1);
-	}
+	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* extrainfo=nullptr) const;
 
 
 private:
@@ -93,15 +83,11 @@ public:
 
 	t_lval GetLValue() const { return m_lval; }
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0) override
+	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override
 	{
-		for(std::size_t i=0; i<indent; ++i)
-			ostr << "  ";
-		ostr << get_ast_typename(GetType()) << ", id=" << GetId();
-		if(GetId() < 256)
-			ostr << " (" << (char)GetId() << ")";
-		ostr << ", value = " << std::get<0>(*GetLValue());
-		ostr << "\n";
+		std::ostringstream _ostr;
+		_ostr << ", value = " << std::get<0>(*GetLValue());
+		ASTBase::print(ostr, indent, _ostr.str().c_str());
 	}
 
 
@@ -148,13 +134,14 @@ private:
 class ASTUnary : public ASTBase
 {
 public:
-	ASTUnary(std::size_t id, std::size_t tableidx, const t_astbaseptr& arg1)
-	: ASTBase{id, tableidx}, m_arg1{arg1}
+	ASTUnary(std::size_t id, std::size_t tableidx, const t_astbaseptr& arg1, std::size_t opid)
+	: ASTBase{id, tableidx}, m_arg1{arg1}, m_opid{opid}
 	{}
 
 	virtual ~ASTUnary() = default;
 
 	virtual ASTType GetType() const override { return ASTType::UNARY; }
+	std::size_t GetOpId() const { return m_opid; }
 
 	virtual std::size_t NumChildren() const override { return 1; }
 	virtual t_astbaseptr GetChild(std::size_t i) const override
@@ -168,8 +155,11 @@ public:
 			m_arg1 = ast;
 	}
 
+	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override;
+
 private:
 	t_astbaseptr m_arg1;
+	std::size_t m_opid;
 };
 
 
@@ -180,13 +170,15 @@ class ASTBinary : public ASTBase
 {
 public:
 	ASTBinary(std::size_t id, std::size_t tableidx,
-		const t_astbaseptr& arg1, const t_astbaseptr& arg2)
-		: ASTBase{id, tableidx}, m_arg1{arg1}, m_arg2{arg2}
+		const t_astbaseptr& arg1, const t_astbaseptr& arg2,
+		std::size_t opid)
+		: ASTBase{id, tableidx}, m_arg1{arg1}, m_arg2{arg2}, m_opid{opid}
 	{}
 
 	virtual ~ASTBinary() = default;
 
 	virtual ASTType GetType() const override { return ASTType::BINARY; }
+	std::size_t GetOpId() const { return m_opid; }
 
 	virtual std::size_t NumChildren() const override { return 2; }
 	virtual t_astbaseptr GetChild(std::size_t i) const override
@@ -209,8 +201,11 @@ public:
 		}
 	}
 
+	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override;
+
 private:
 	t_astbaseptr m_arg1, m_arg2;
+	std::size_t m_opid;
 };
 
 

@@ -29,6 +29,8 @@ Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdId
 
 t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 {
+	constexpr bool debug = 0;
+
 	std::stack<std::size_t> states;
 	std::stack<t_astbaseptr> symbols;
 
@@ -53,14 +55,16 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		// accept
 		else if(newrule == ACCEPT_VAL)
 		{
-			//std::cout << "accepting" << std::endl;
+			if constexpr(debug)
+				std::cout << "accepting" << std::endl;
 			return symbols.top();
 		}
 
 		// shift
 		else if(newstate != ERROR_VAL)
 		{
-			//std::cout << "shifting state " << newstate << std::endl;
+			if constexpr(debug)
+				std::cout << "shifting state " << newstate << std::endl;
 
 			states.push(newstate);
 			symbols.push(curtok);
@@ -76,7 +80,8 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		else if(newrule != ERROR_VAL)
 		{
 			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
-			//std::cout << "reducing " << numSyms << " symbols via rule " << newrule << std::endl;
+			if constexpr(debug)
+				std::cout << "reducing " << numSyms << " symbol(s) via rule " << newrule << std::endl;
 
 			// take the symbols from the stack and create an argument vector for the semantic rule
 			std::vector<t_astbaseptr> args;

@@ -39,3 +39,39 @@ std::string get_ast_typename(ASTType ty)
 
 	return "<unknown>";
 }
+
+
+void ASTBase::print(std::ostream& ostr, std::size_t indent, const char* extrainfo) const
+{
+	for(std::size_t i=0; i<indent; ++i)
+		ostr << "  ";
+	ostr << get_ast_typename(GetType()) << ", id=" << GetId();
+	//if(GetId() < 256)
+	//	ostr << " (" << (char)GetId() << ")";
+	if(extrainfo)
+		ostr << extrainfo;
+	ostr << "\n";
+
+	for(std::size_t i=0; i<NumChildren(); ++i)
+		GetChild(i)->print(ostr, indent+1);
+}
+
+
+void ASTUnary::print(std::ostream& ostr, std::size_t indent, const char*) const
+{
+	std::ostringstream _ostr;
+	_ostr << ", op=" << GetOpId();
+	if(GetOpId() < 256)
+		_ostr << " (" << (char)GetOpId() << ")";
+	ASTBase::print(ostr, indent, _ostr.str().c_str());
+}
+
+
+void ASTBinary::print(std::ostream& ostr, std::size_t indent, const char*) const
+{
+	std::ostringstream _ostr;
+	_ostr << ", op=" << GetOpId();
+	if(GetOpId() < 256)
+		_ostr << " (" << (char)GetOpId() << ")";
+	ASTBase::print(ostr, indent, _ostr.str().c_str());
+}

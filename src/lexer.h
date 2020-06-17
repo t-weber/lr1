@@ -5,8 +5,8 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#ifndef __LEX_H__
-#define __LEX_H__
+#ifndef __LR1_LEXER_H__
+#define __LR1_LEXER_H__
 
 #include <iostream>
 #include <vector>
