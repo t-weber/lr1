@@ -35,7 +35,7 @@ get_matching_tokens(const std::string& str)
 		std::regex regex{"[A-Za-z]+[A-Za-z0-9]*"};
 		std::smatch smatch;
 		if(std::regex_match(str, smatch, regex))
-			matches.push_back(std::make_tuple((t_tok)Token::IDENT, std::nullopt));
+			matches.push_back(std::make_tuple((t_tok)Token::IDENT, str));
 	}
 
 	{	// tokens represented by themselves
@@ -128,7 +128,12 @@ std::vector<t_toknode> get_all_tokens(std::istream& istr, const t_mapIdIdx* mapT
 				tableidx = iter->second;
 		}
 
-		vec.emplace_back(std::make_shared<ASTToken<t_lval>>(id, tableidx, lval));
+		if(id == (t_tok)Token::REAL)
+			vec.emplace_back(std::make_shared<ASTToken<t_lval, t_real>>(id, tableidx, lval));
+		else if(id == (t_tok)Token::IDENT)
+			vec.emplace_back(std::make_shared<ASTToken<t_lval, std::string>>(id, tableidx, lval));
+		else
+			vec.emplace_back(std::make_shared<ASTToken<t_lval, void>>(id, tableidx, lval));
 
 		if(id == (t_tok)Token::END)
 			break;

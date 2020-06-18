@@ -68,11 +68,11 @@ private:
 /**
  * terminal symbols from lexer
  */
-template<class t_lval>
+template<class t_optlval, class t_lval=void>
 class ASTToken : public ASTBase
 {
 public:
-	ASTToken(std::size_t id, std::size_t tableidx=0, t_lval lval=t_lval{})
+	ASTToken(std::size_t id, std::size_t tableidx=0, t_optlval lval=t_optlval{})
 		: ASTBase{id, tableidx}, m_lval{lval}
 	{}
 
@@ -81,18 +81,19 @@ public:
 	virtual bool IsTerminal() const override { return true; }
 	virtual ASTType GetType() const override { return ASTType::TOKEN; }
 
-	t_lval GetLValue() const { return m_lval; }
+	const t_lval* GetLValue() const { return &std::get<t_lval>(*m_lval); }
 
 	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override
 	{
 		std::ostringstream _ostr;
-		_ostr << ", value = " << std::get<0>(*GetLValue());
+		if constexpr(!std::is_void<t_lval>())
+			_ostr << ", value = " << *GetLValue();
 		ASTBase::print(ostr, indent, _ostr.str().c_str());
 	}
 
 
 private:
-	t_lval m_lval;
+	t_optlval m_lval;
 };
 
 

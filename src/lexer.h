@@ -20,7 +20,7 @@
 
 
 using t_real = double;
-using t_lval = std::optional<std::variant<t_real>>;
+using t_lval = std::optional<std::variant<t_real, std::string>>;
 using t_tok = std::size_t;
 
 
