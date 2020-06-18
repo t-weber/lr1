@@ -8,6 +8,7 @@
 #ifndef __HELPERS_H__
 #define __HELPERS_H__
 
+#include <utility>
 #include <optional>
 #include <iostream>
 #include <iomanip>
@@ -84,6 +85,13 @@ private:
 	T m_errorval = 0;
 	T m_acceptval = 0;
 };
+
+
+template<template<std::size_t, class...> class t_func, class t_params, std::size_t ...seq>
+constexpr void constexpr_loop(const std::index_sequence<seq...>&, const t_params& params)
+{
+	( (std::apply(t_func<seq>{}, params)), ... );
+}
 
 
 #endif

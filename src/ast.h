@@ -68,11 +68,15 @@ private:
 /**
  * terminal symbols from lexer
  */
-template<class t_optlval, class t_lval=void>
+template<class t_lval>
 class ASTToken : public ASTBase
 {
 public:
-	ASTToken(std::size_t id, std::size_t tableidx=0, t_optlval lval=t_optlval{})
+	ASTToken(std::size_t id, std::size_t tableidx)
+		: ASTBase{id, tableidx}, m_lval{std::nullopt}
+	{}
+
+	ASTToken(std::size_t id, std::size_t tableidx, t_lval lval)
 		: ASTBase{id, tableidx}, m_lval{lval}
 	{}
 
@@ -81,19 +85,23 @@ public:
 	virtual bool IsTerminal() const override { return true; }
 	virtual ASTType GetType() const override { return ASTType::TOKEN; }
 
-	const t_lval* GetLValue() const { return &std::get<t_lval>(*m_lval); }
+	/**
+	 * get the lexical value of the token's attribute
+	 */
+	const t_lval& GetLexerValue() const { return *m_lval; }
+	constexpr bool HasLexerValue() const { return m_lval.operator bool(); }
 
 	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override
 	{
 		std::ostringstream _ostr;
-		if constexpr(!std::is_void<t_lval>())
-			_ostr << ", value = " << *GetLValue();
+		if(HasLexerValue())
+			_ostr << ", value = " << GetLexerValue();
 		ASTBase::print(ostr, indent, _ostr.str().c_str());
 	}
 
 
 private:
-	t_optlval m_lval;
+	std::optional<t_lval> m_lval;
 };
 
 

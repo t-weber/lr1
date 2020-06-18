@@ -106,6 +106,19 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 }
 
 
+template<std::size_t IDX> struct _Lval_LoopFunc
+{
+	void operator()(
+		std::vector<t_toknode>* vec, std::size_t id,
+		std::size_t tableidx, const t_lval& lval) const
+	{
+		using t_val = std::variant_alternative_t<IDX, typename t_lval::value_type>;
+		if(std::holds_alternative<t_val>(*lval))
+			vec->emplace_back(std::make_shared<ASTToken<t_val>>(id, tableidx, std::get<IDX>(*lval)));
+	};
+};
+
+
 /**
  * get all tokens and attributes
  */
@@ -128,12 +141,17 @@ std::vector<t_toknode> get_all_tokens(std::istream& istr, const t_mapIdIdx* mapT
 				tableidx = iter->second;
 		}
 
-		if(id == (t_tok)Token::REAL)
-			vec.emplace_back(std::make_shared<ASTToken<t_lval, t_real>>(id, tableidx, lval));
-		else if(id == (t_tok)Token::IDENT)
-			vec.emplace_back(std::make_shared<ASTToken<t_lval, std::string>>(id, tableidx, lval));
+		// does this token have an attribute?
+		if(lval)
+		{
+			// find the correct type in the variant
+			auto seq = std::make_index_sequence<std::variant_size_v<typename t_lval::value_type>>();
+			constexpr_loop<_Lval_LoopFunc>(seq, std::make_tuple(&vec, id, tableidx, lval));
+		}
 		else
-			vec.emplace_back(std::make_shared<ASTToken<t_lval, void>>(id, tableidx, lval));
+		{
+			vec.emplace_back(std::make_shared<ASTToken<void*>>(id, tableidx));
+		}
 
 		if(id == (t_tok)Token::END)
 			break;
