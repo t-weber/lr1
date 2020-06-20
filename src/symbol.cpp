@@ -36,9 +36,9 @@ bool Symbol::operator==(const Symbol& other) const
 bool Symbol::CompareSymbols::operator()(const SymbolPtr sym1, const SymbolPtr sym2) const
 {
 	/*
-	 *	const std::string& id1 = sym1->GetStrId();
-	 *	const std::string& id2 = sym2->GetStrId();
-	 *	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
+	 const std::string& id1 = sym1->GetStrId();
+	 const std::string& id2 = sym2->GetStrId();
+	 return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
 	 */
 	return sym1->hash() < sym2->hash();
 }
@@ -180,12 +180,12 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 	// iterate rules
 	for(std::size_t iRule=0; iRule<nonterm->NumRules(); ++iRule)
 	{
-		const auto& rule = nonterm->GetRule(iRule);
+		const Word& rule = nonterm->GetRule(iRule);
 
 		// iterate RHS of rule
 		for(std::size_t iSym=0; iSym<rule.NumSymbols(); ++iSym)
 		{
-			const auto& sym = rule[iSym];
+			const SymbolPtr& sym = rule[iSym];
 
 			// reached terminal symbol -> end
 			if(sym->IsTerminal())
@@ -206,7 +206,7 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 
 				// add first set except eps
 				bool bHasEps = false;
-				for(const auto& symprod : _first[symnonterm])
+				for(const TerminalPtr& symprod : _first[symnonterm])
 				{
 					if(symprod->IsEps())
 					{
@@ -261,12 +261,12 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 
 
 	// find current nonterminal in RHS of all rules (to get following symbols)
-	for(const auto& _nonterm : allnonterms)
+	for(const NonTerminalPtr& _nonterm : allnonterms)
 	{
 		// iterate rules
 		for(std::size_t iRule=0; iRule<_nonterm->NumRules(); ++iRule)
 		{
-			const auto& rule = _nonterm->GetRule(iRule);
+			const Word& rule = _nonterm->GetRule(iRule);
 
 			// iterate RHS of rule
 			for(std::size_t iSym=0; iSym<rule.NumSymbols(); ++iSym)
@@ -283,19 +283,19 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 							follow.insert(std::dynamic_pointer_cast<Terminal>(rule[_iSym]));
 							break;
 						}
-						else	// non-terminal
+
+						// non-terminal
+						else
 						{
 							const auto& iterFirst = _first.find(rule[_iSym]);
 
-							for(const auto& symfirst : iterFirst->second)
+							for(const TerminalPtr& symfirst : iterFirst->second)
 							{
 								if(!symfirst->IsEps())
 									follow.insert(symfirst);
 							}
 
-							const NonTerminalPtr symnonterm = std::dynamic_pointer_cast<NonTerminal>(rule[_iSym]);
-
-							if(!symnonterm->HasEpsRule())
+							if(!std::dynamic_pointer_cast<NonTerminal>(rule[_iSym])->HasEpsRule())
 								break;
 						}
 					}
@@ -308,12 +308,12 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 					std::size_t iNextSym = iSym+1;
 					for(; iNextSym<rule.NumSymbols(); ++iNextSym)
 					{
-						if(rule[iNextSym]->IsTerminal())
+						// terminal
+						if(rule[iNextSym]->IsTerminal() && !rule[iNextSym]->IsEps())
 							break;
 
-						const NonTerminalPtr symnonterm = std::dynamic_pointer_cast<NonTerminal>(rule[iNextSym]);
-
-						if(!symnonterm->HasEpsRule())
+						// non-terminal
+						if(!std::dynamic_pointer_cast<NonTerminal>(rule[iNextSym])->HasEpsRule())
 							break;
 					}
 
