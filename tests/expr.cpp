@@ -96,14 +96,14 @@ int main()
 
 
 		std::cout << "FIRST sets:\n";
-		std::map<std::string, Terminal::t_terminalset> first;
-		std::map<std::string, std::vector<Terminal::t_terminalset>> first_per_rule;
+		t_map_first first;
+		t_map_first_perrule first_per_rule;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
 			calc_first(nonterminal, first, &first_per_rule);
 
 		for(const auto& pair : first)
 		{
-			std::cout << pair.first << ": ";
+			std::cout << pair.first->GetStrId() << ": ";
 			for(const auto& _first : pair.second)
 				std::cout << _first->GetStrId() << ", ";
 			std::cout << "\n";
@@ -112,13 +112,13 @@ int main()
 
 
 		std::cout << "FOLLOW sets:\n";
-		std::map<std::string, Terminal::t_terminalset> follow;
+		t_map_follow follow;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
 			calc_follow(all_nonterminals, start, nonterminal, first, follow);
 
 		for(const auto& pair : follow)
 		{
-			std::cout << pair.first << ": ";
+			std::cout << pair.first->GetStrId() << ": ";
 			for(const auto& _first : pair.second)
 				std::cout << _first->GetStrId() << ", ";
 			std::cout << "\n";
@@ -126,7 +126,7 @@ int main()
 		std::cout << std::endl;
 
 
-		ElementPtr elem = std::make_shared<Element>(start, 0, 0, Terminal::t_terminalset{{g_end}, Terminal::terminals_compare});
+		ElementPtr elem = std::make_shared<Element>(start, 0, 0, Terminal::t_terminalset{{g_end}});
 		ClosurePtr coll = std::make_shared<Closure>();
 		coll->AddElement(elem);
 		//std::cout << "\n\n" << *coll << std::endl;
@@ -289,7 +289,14 @@ int main()
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 			std::cout << "Tokens: ";
 			for(const t_toknode& tok : tokens)
-				std::cout << tok->GetId() << " ";
+			{
+				std::size_t tokid = tok->GetId();
+				if(tokid == (std::size_t)Token::END)
+					std::cout << "END";
+				else
+					std::cout << tokid;
+				std::cout << " ";
+			}
 			std::cout << "\n";
 
 			auto ast = cst_to_ast(parser.Parse(tokens));

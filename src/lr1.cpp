@@ -25,7 +25,7 @@ Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t curso
 }
 
 
-Element::Element(const Element& elem)
+Element::Element(const Element& elem) : m_lookaheads{}
 {
 	this->operator=(elem);
 }
@@ -194,7 +194,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 
 
 
-// global Closure id counter
+// global closure id counter
 std::size_t Closure::g_id = 0;
 
 
@@ -221,7 +221,7 @@ const Closure& Closure::operator=(const Closure& coll)
 
 
 /**
- * adds an element and generates the rest of the Closure
+ * adds an element and generates the rest of the closure
  */
 void Closure::AddElement(const ElementPtr elem)
 {
@@ -272,10 +272,10 @@ void Closure::AddElement(const ElementPtr elem)
 				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
 				tmpNT->AddRule(*_ruleaftercursor);
 
-				std::map<std::string, Terminal::t_terminalset> tmp_first;
+				t_map_first tmp_first;
 				calc_first(tmpNT, tmp_first);
 
-				Terminal::t_terminalset first_la{Terminal::terminals_compare};
+				Terminal::t_terminalset first_la;
 				if(tmp_first.size())	// should always be 1
 				{
 					const Terminal::t_terminalset& set_first = tmp_first.begin()->second;
@@ -296,7 +296,7 @@ void Closure::AddElement(const ElementPtr elem)
 
 
 /**
- * checks if an element is already in the Closure and returns its index
+ * checks if an element is already in the closure and returns its index
  */
 std::pair<bool, std::size_t> Closure::HasElement(const ElementPtr elem, bool only_core) const
 {
@@ -338,7 +338,7 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 
 
 /**
- * perform a transition and get the corresponding lr(1) Closure
+ * perform a transition and get the corresponding lr(1) closure
  */
 ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 {
@@ -365,8 +365,8 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 
 
 /**
- * perform all possible transitions from this Closure and get the corresponding lr(1) Collection
- * @return [transition symbol, destination Closure]
+ * perform all possible transitions from this closure and get the corresponding lr(1) collection
+ * @return [transition symbol, destination closure]
  */
 std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions() const
 {
@@ -433,8 +433,8 @@ Collection::Collection() : m_cache{}, m_collection{}, m_transitions{}
 
 
 /**
- * perform all possible transitions from all Collection
- * @return [source Closure id, transition symbol, destination Closure]
+ * perform all possible transitions from all collection
+ * @return [source closure id, transition symbol, destination closure]
  */
 void Collection::DoTransitions(const ClosurePtr coll_from)
 {
@@ -459,7 +459,7 @@ void Collection::DoTransitions(const ClosurePtr coll_from)
 
 		if(coll_to_new)
 		{
-			// new unique Closure
+			// new unique closure
 			m_cache.insert(std::make_pair(hash_to, coll_to));
 			m_collection.push_back(coll_to);
 			m_transitions.push_back(std::make_tuple(coll_from, coll_to, trans_sym));
@@ -664,7 +664,7 @@ Collection Collection::ConvertToLALR() const
 /**
  * convert from LR(1) collection to SLR(1) collection
  */
-Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const
+Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 {
 	// reduce number of states first
 	Collection colls = ConvertToLALR();
@@ -675,7 +675,7 @@ Collection Collection::ConvertToSLR(const std::map<std::string, Terminal::t_term
 		for(ElementPtr& elem : coll->m_elems)
 		{
 			const NonTerminalPtr& lhs = elem->GetLhs();
-			const auto& iter = follow.find(lhs->GetStrId());
+			const auto& iter = follow.find(lhs);
 			if(iter == follow.end())
 				throw std::runtime_error{"Could not find follow set of \"" + lhs->GetStrId() + "\"."};
 			const Terminal::t_terminalset& followLhs = iter->second;

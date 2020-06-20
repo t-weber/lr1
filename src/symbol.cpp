@@ -33,6 +33,17 @@ bool Symbol::operator==(const Symbol& other) const
 }
 
 
+bool Symbol::CompareSymbols::operator()(const SymbolPtr sym1, const SymbolPtr sym2) const
+{
+	/*
+	 *	const std::string& id1 = sym1->GetStrId();
+	 *	const std::string& id2 = sym2->GetStrId();
+	 *	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
+	 */
+	return sym1->hash() < sym2->hash();
+}
+
+
 // ----------------------------------------------------------------------------
 
 
@@ -55,21 +66,6 @@ std::size_t Terminal::hash() const
 
 	return hashId;
 }
-
-
-/**
- * comparator for set of terminals
- */
-std::function<bool(const TerminalPtr term1, const TerminalPtr term2)>
-Terminal::terminals_compare = [](const TerminalPtr term1, const TerminalPtr term2) -> bool
-{
-	/*
-	const std::string& id1 = term1->GetStrId();
-	const std::string& id2 = term2->GetStrId();
-	return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
-	*/
-	return term1->hash() < term2->hash();
-};
 
 
 // ----------------------------------------------------------------------------
@@ -170,23 +166,16 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 /**
  * calculates the first set of a nonterminal
  * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
- * TODO: use symbol ids, not string ids
  */
-void calc_first(const NonTerminalPtr nonterm,
-	std::map<std::string, Terminal::t_terminalset>& _first,
-	std::map<std::string, std::vector<Terminal::t_terminalset>>* _first_perrule)
+void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_perrule* _first_perrule)
 {
 	// set already calculated?
-	if(_first.find(nonterm->GetStrId()) != _first.end())
+	if(_first.find(nonterm) != _first.end())
 		return;
 
-	Terminal::t_terminalset first{Terminal::terminals_compare};
+	Terminal::t_terminalset first;
 	std::vector<Terminal::t_terminalset> first_perrule;
-
-	// initialise first_perrule set, this is important because of the terminals_compare comparator
-	first_perrule.reserve(nonterm->NumRules());
-	for(std::size_t i=0; i<nonterm->NumRules(); ++i)
-		first_perrule.emplace_back(Terminal::t_terminalset{Terminal::terminals_compare});
+	first_perrule.resize(nonterm->NumRules());
 
 	// iterate rules
 	for(std::size_t iRule=0; iRule<nonterm->NumRules(); ++iRule)
@@ -217,7 +206,7 @@ void calc_first(const NonTerminalPtr nonterm,
 
 				// add first set except eps
 				bool bHasEps = false;
-				for(const auto& symprod : _first[symnonterm->GetStrId()])
+				for(const auto& symprod : _first[symnonterm])
 				{
 					if(symprod->IsEps())
 					{
@@ -244,28 +233,26 @@ void calc_first(const NonTerminalPtr nonterm,
 		}
 	}
 
-	_first[nonterm->GetStrId()] = first;
+	_first[nonterm] = first;
 
 	if(_first_perrule)
-		(*_first_perrule)[nonterm->GetStrId()] = first_perrule;
+		(*_first_perrule)[nonterm] = first_perrule;
 }
 
 
 /**
  * calculates the follow set of a nonterminal
  * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
- * TODO: use symbol ids, not string ids
  */
 void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
-	const std::map<std::string, Terminal::t_terminalset>& _first,
-	std::map<std::string, Terminal::t_terminalset>& _follow)
+	const t_map_first& _first, t_map_follow& _follow)
 {
 	// set already calculated?
-	if(_follow.find(nonterm->GetStrId()) != _follow.end())
+	if(_follow.find(nonterm) != _follow.end())
 		return;
 
-	Terminal::t_terminalset follow{Terminal::terminals_compare};
+	Terminal::t_terminalset follow;
 
 
 	// add end symbol as follower to start rule
@@ -298,7 +285,7 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 						}
 						else	// non-terminal
 						{
-							const auto& iterFirst = _first.find(rule[_iSym]->GetStrId());
+							const auto& iterFirst = _first.find(rule[_iSym]);
 
 							for(const auto& symfirst : iterFirst->second)
 							{
@@ -334,7 +321,7 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 					{
 						if(_nonterm != nonterm)
 							calc_follow(allnonterms, start, _nonterm, _first, _follow);
-						const auto& __follow = _follow[_nonterm->GetStrId()];
+						const auto& __follow = _follow[_nonterm];
 						follow.insert(__follow.begin(), __follow.end());
 					}
 				}
@@ -342,5 +329,5 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 		}
 	}
 
-	_follow[nonterm->GetStrId()] = follow;
+	_follow[nonterm] = follow;
 }

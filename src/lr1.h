@@ -70,7 +70,7 @@ private:
 	std::size_t m_rhsidx = 0;	// rule index
 	std::size_t m_cursor = 0;	// pointing before element at this index
 
-	Terminal::t_terminalset m_lookaheads{Terminal::terminals_compare};
+	Terminal::t_terminalset m_lookaheads;
 };
 
 
@@ -135,7 +135,7 @@ public:
 	void DoTransitions();
 
 	Collection ConvertToLALR() const;
-	Collection ConvertToSLR(const std::map<std::string, Terminal::t_terminalset>& follow) const;
+	Collection ConvertToSLR(const t_map_follow& follow) const;
 
 	std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables() const;

@@ -29,7 +29,7 @@ enum class Token : t_tok
 	REAL	= 1000,
 	IDENT	= 1001,
 
-	END		= END_IDENT,
+	END	= END_IDENT,
 };
 
 

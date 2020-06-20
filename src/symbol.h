@@ -61,6 +61,16 @@ private:
 
 	bool m_iseps = false;
 	bool m_isend = false;
+
+
+public:
+	/**
+	 * comparator for terminals
+	 */
+	struct CompareSymbols
+	{
+		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+	};
 };
 
 
@@ -93,8 +103,7 @@ public:
 
 
 public:
-	static std::function<bool(const TerminalPtr term1, const TerminalPtr term2)> terminals_compare;
-	using t_terminalset = std::set<TerminalPtr, decltype(terminals_compare)>;
+	using t_terminalset = std::set<TerminalPtr, Symbol::CompareSymbols>;
 
 
 private:
@@ -220,12 +229,16 @@ extern const TerminalPtr g_eps, g_end;
 
 
 
+using t_map_first = std::map<SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+using t_map_first_perrule = std::map<SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbols>;
+using t_map_follow = std::map<SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+
+
 /**
  * calculates the first set of a nonterminal
  */
 extern void calc_first(const NonTerminalPtr nonterm,
-	std::map<std::string, Terminal::t_terminalset>& _first,
-	std::map<std::string, std::vector<Terminal::t_terminalset>>* _first_per_rule=nullptr);
+	t_map_first& _first, t_map_first_perrule* _first_per_rule=nullptr);
 
 
 /**
@@ -233,8 +246,6 @@ extern void calc_first(const NonTerminalPtr nonterm,
  */
 extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
-	const std::map<std::string, Terminal::t_terminalset>&  _first,
-	std::map<std::string, Terminal::t_terminalset>& _follow);
-
+	const t_map_first&  _first, t_map_follow& _follow);
 
 #endif
