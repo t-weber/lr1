@@ -146,6 +146,11 @@ public:
 	const Word& GetRule(std::size_t i) const { return m_rules[i]; }
 
 	/**
+	 * clear rules
+	 */
+	void ClearRules() { m_rules.clear(); }
+
+	/**
 	 * get a semantic rule index
 	 */
 	std::optional<std::size_t> GetSemanticRule(std::size_t i) const { return m_semantics[i]; }
@@ -154,6 +159,12 @@ public:
 	 * does this non-terminal have a rule which produces epsilon?
 	 */
 	bool HasEpsRule() const;
+
+	/**
+	 * remove left recursion (for future ll(1) support)
+	 * returns possibly added non-terminal
+	 */
+	NonTerminalPtr RemoveLeftRecursion(std::size_t newIdBegin=1000);
 
 	virtual void print(std::ostream& ostr) const override;
 	virtual std::size_t hash() const override;
@@ -185,6 +196,14 @@ public:
 	void AddSymbol(SymbolPtr sym)
 	{
 		m_syms.push_back(sym);
+	}
+
+	/**
+	 * remove a symbol from the word
+	 */
+	void RemoveSymbol(std::size_t idx)
+	{
+		m_syms.erase(std::next(m_syms.begin(), idx));
 	}
 
 	/**

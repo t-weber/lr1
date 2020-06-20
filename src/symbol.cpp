@@ -71,6 +71,51 @@ std::size_t Terminal::hash() const
 // ----------------------------------------------------------------------------
 
 
+/**
+ * remove left recursion
+ * returns possibly added non-terminal
+ */
+NonTerminalPtr NonTerminal::RemoveLeftRecursion(std::size_t newIdBegin)
+{
+	std::vector<Word> rulesWithLeftRecursion;
+	std::vector<Word> rulesWithoutLeftRecursion;
+
+	for(std::size_t ruleidx=0; ruleidx<NumRules(); ++ruleidx)
+	{
+		const Word& rule = this->GetRule(ruleidx);
+		if(rule.NumSymbols() >= 1 && rule.GetSymbol(0)->hash() == this->hash())
+			rulesWithLeftRecursion.push_back(rule);
+		else
+			rulesWithoutLeftRecursion.push_back(rule);
+	}
+
+	// no left-recursive productions
+	if(rulesWithLeftRecursion.size() == 0)
+		return nullptr;
+
+	NonTerminalPtr newNonTerm = std::make_shared<NonTerminal>(this->GetId()+newIdBegin, this->GetStrId()+"'");
+
+	for(Word word : rulesWithLeftRecursion)
+	{
+		word.RemoveSymbol(0);		// remove "this" rule causing left-recursion
+		word.AddSymbol(newNonTerm);	// make it right-recursive instead
+
+		newNonTerm->AddRule(word);
+	}
+
+	newNonTerm->AddRule({g_eps});
+
+	this->ClearRules();
+	for(Word word : rulesWithoutLeftRecursion)
+	{
+		word.AddSymbol(newNonTerm);	// make it right-recursive instead
+		this->AddRule(word);
+	}
+
+	return newNonTerm;
+}
+
+
 std::size_t NonTerminal::hash() const
 {
 	//std::size_t hashId = std::hash<std::string>{}(GetStrId());
@@ -208,22 +253,20 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 				bool bHasEps = false;
 				for(const TerminalPtr& symprod : _first[symnonterm])
 				{
+					bool bInsert = true;
 					if(symprod->IsEps())
 					{
 						bHasEps = true;
 
-						// last non-terminal reached -> add epsilon
-						if(iSym == rule.NumSymbols()-1)
-						{
-							first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
-							first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
-						}
-
-						continue;
+						// if last non-terminal is reached -> add epsilon
+						bInsert = (iSym == rule.NumSymbols()-1);
 					}
 
-					first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
-					first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
+					if(bInsert)
+					{
+						first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+						first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
+					}
 				}
 
 				// no epsilon in production -> end

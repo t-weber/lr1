@@ -193,5 +193,22 @@ int main()
 	std::cout << "AST for expression " << exprstr << ":\n";
 	ast->print(std::cout);
 
+
+	/*
+	std::vector<NonTerminalPtr> newnonterminals;
+	for(NonTerminalPtr ptr : all_nonterminals)
+	{
+		NonTerminalPtr newptr = ptr->RemoveLeftRecursion();
+		if(newptr)
+			newnonterminals.emplace_back(newptr);
+	}
+	all_nonterminals.insert(all_nonterminals.end(), newnonterminals.begin(), newnonterminals.end());
+
+	std::cout << "Productions:\n";
+	for(NonTerminalPtr nonterm : all_nonterminals)
+		nonterm->print(std::cout);
+	std::cout << std::endl;
+	*/
+
 	return 0;
 }
