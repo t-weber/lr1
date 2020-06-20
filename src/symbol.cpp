@@ -3,6 +3,10 @@
  * @author Tobias Weber
  * @date 07-jun-2020
  * @license see 'LICENSE.EUPL' file
+ *
+ * References:
+ *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
+ *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
 #include "symbol.h"
