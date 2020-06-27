@@ -129,10 +129,21 @@ public:
 	/**
 	 * add multiple alternative production rules
 	 */
-	void AddRule(const Word& rule, std::optional<std::size_t> semanticruleidx=std::nullopt)
+	void AddRule(const Word& rule, std::optional<std::size_t> semanticruleidx = std::nullopt)
 	{
 		m_rules.push_back(rule);
 		m_semantics.push_back(semanticruleidx);
+	}
+
+	/**
+	 * add multiple alternative production rules
+	 */
+	void AddRule(const Word& rule, const std::size_t* semanticruleidx)
+	{
+		if(semanticruleidx)
+			AddRule(rule, *semanticruleidx);
+		else
+			AddRule(rule);
 	}
 
 	/**
@@ -164,7 +175,9 @@ public:
 	 * remove left recursion (for future ll(1) support)
 	 * returns possibly added non-terminal
 	 */
-	NonTerminalPtr RemoveLeftRecursion(std::size_t newIdBegin=1000);
+	NonTerminalPtr RemoveLeftRecursion(
+		std::size_t newIdBegin = 1000, const std::string& primerule = "'",
+		std::size_t* semanticruleidx = nullptr);
 
 	virtual void print(std::ostream& ostr) const override;
 	virtual std::size_t hash() const override;

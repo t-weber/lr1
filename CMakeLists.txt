@@ -30,6 +30,7 @@ include_directories(
 # lib
 add_library(lr1 STATIC
 	src/lr1.cpp src/lr1.h
+	src/ll1.cpp src/ll1.h
 	src/symbol.cpp src/symbol.h
 	src/lexer.cpp src/lexer.h
 	src/parser.cpp src/parser.h
@@ -45,6 +46,9 @@ target_link_libraries(lr1 ${Boost_LIBRARIES})
 # tests
 add_executable(expr_test_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_test_simplified lr1)
+
+add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
+target_link_libraries(expr_test_simplified_ll1 lr1)
 
 add_executable(expr_test tests/expr.cpp)
 target_link_libraries(expr_test lr1)

@@ -79,7 +79,9 @@ std::size_t Terminal::hash() const
  * remove left recursion
  * returns possibly added non-terminal
  */
-NonTerminalPtr NonTerminal::RemoveLeftRecursion(std::size_t newIdBegin)
+NonTerminalPtr NonTerminal::RemoveLeftRecursion(
+	std::size_t newIdBegin, const std::string& primerule,
+	std::size_t* semanticruleidx)
 {
 	std::vector<Word> rulesWithLeftRecursion;
 	std::vector<Word> rulesWithoutLeftRecursion;
@@ -97,23 +99,30 @@ NonTerminalPtr NonTerminal::RemoveLeftRecursion(std::size_t newIdBegin)
 	if(rulesWithLeftRecursion.size() == 0)
 		return nullptr;
 
-	NonTerminalPtr newNonTerm = std::make_shared<NonTerminal>(this->GetId()+newIdBegin, this->GetStrId()+"'");
+	NonTerminalPtr newNonTerm = std::make_shared<NonTerminal>(
+		this->GetId()+newIdBegin, this->GetStrId()+primerule);
 
 	for(Word word : rulesWithLeftRecursion)
 	{
 		word.RemoveSymbol(0);		// remove "this" rule causing left-recursion
 		word.AddSymbol(newNonTerm);	// make it right-recursive instead
 
-		newNonTerm->AddRule(word);
+		newNonTerm->AddRule(word, semanticruleidx);
+		if(semanticruleidx)
+			++*semanticruleidx;
 	}
 
-	newNonTerm->AddRule({g_eps});
+	newNonTerm->AddRule({g_eps}, semanticruleidx);
+	if(semanticruleidx)
+		++*semanticruleidx;
 
 	this->ClearRules();
 	for(Word word : rulesWithoutLeftRecursion)
 	{
 		word.AddSymbol(newNonTerm);	// make it right-recursive instead
-		this->AddRule(word);
+		this->AddRule(word, semanticruleidx);
+		if(semanticruleidx)
+			++*semanticruleidx;
 	}
 
 	return newNonTerm;
