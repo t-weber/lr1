@@ -50,6 +50,11 @@ public:
 	friend std::ostream& operator<<(std::ostream& ostr, const LL1& ll1);
 
 
+protected:
+	static Terminal::t_terminalset GetLookaheads(
+		const Terminal::t_terminalset& first, const Terminal::t_terminalset& follow);
+
+
 private:
 	std::vector<NonTerminalPtr> m_nonterminals;
 	NonTerminalPtr m_start = nullptr;

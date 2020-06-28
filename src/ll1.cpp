@@ -55,18 +55,28 @@ void LL1::CalcTable()
 		auto iterFollows = m_follow.find(nonterm);
 
 		if(iterFirsts == m_first_per_rule.end())
+		{
+			std::cerr << nonterm->GetStrId() << " has no FIRST set." << std::endl;
 			continue;
+		}
+		if(iterFollows == m_follow.end())
+		{
+			std::cerr << nonterm->GetStrId() << " has no FOLLOW set." << std::endl;
+			continue;
+		}
 
 		t_map_terms terms;
 
-		// iterate right hand sides
+		// iterate right-hand sides
 		for(std::size_t rule=0; rule<nonterm->NumRules(); ++rule)
 		{
-			auto semanticrule = nonterm->GetSemanticRule(rule);
 			const Terminal::t_terminalset& first = iterFirsts->second[rule];
+			Terminal::t_terminalset las = GetLookaheads(first, iterFollows->second);
 
-			// iterate possible first terminals
-			for(const TerminalPtr& term : first)
+			auto semanticrule = nonterm->GetSemanticRule(rule);
+
+			// iterate possible lookahead terminals
+			for(const TerminalPtr& term : las)
 			{
 				if(!semanticrule)
 				{
@@ -75,24 +85,7 @@ void LL1::CalcTable()
 					continue;
 				}
 
-				// use first set
-				if(!term->IsEps())
-				{
-					terms.insert(std::make_pair(term, *semanticrule));
-				}
-
-				// epsilon in first -> have to consider follow set
-				else
-				{
-					if(iterFollows == m_follow.end())
-					{
-						std::cerr << nonterm->GetStrId() << " has no FOLLOW set." << std::endl;
-						continue;
-					}
-
-					for(const TerminalPtr& followterm : iterFollows->second)
-						terms.insert(std::make_pair(followterm, *semanticrule));
-				}
+				terms.insert(std::make_pair(term, *semanticrule));
 			}
 		}
 
@@ -110,12 +103,105 @@ void LL1::PrintRecursiveDescentPseudocode(std::ostream& ostr) const
 	// iterate non-terminals
 	for(NonTerminalPtr nonterm : m_nonterminals)
 	{
+		auto iterFirsts = m_first_per_rule.find(nonterm);
+		auto iterFollows = m_follow.find(nonterm);
+
+		if(iterFirsts == m_first_per_rule.end())
+		{
+			std::cerr << nonterm->GetStrId() << " has no FIRST set." << std::endl;
+			continue;
+		}
+		if(iterFollows == m_follow.end())
+		{
+			std::cerr << nonterm->GetStrId() << " has no FOLLOW set." << std::endl;
+			continue;
+		}
+
+
 		ostr << nonterm->GetStrId() << "()\n{\n";
 
-		// TODO
+		// iterate right-hand sides
+		for(std::size_t rule=0; rule<nonterm->NumRules(); ++rule)
+		{
+			const Terminal::t_terminalset& first = iterFirsts->second[rule];
+			Terminal::t_terminalset las = GetLookaheads(first, iterFollows->second);
+
+			// iterate possible lookahead terminals
+			if(rule == 0)
+				ostr << "\tif(";
+			else
+				ostr << "\telse if(";
+			for(auto iterLA = las.begin(); iterLA != las.end(); ++iterLA)
+			{
+				const TerminalPtr& term = *iterLA;
+
+				ostr << "la=='" << term->GetStrId() << "'";
+				if(std::next(iterLA) != las.end())
+					ostr << " || ";
+			}
+
+			ostr << ")\n\t{\n";
+
+			const Word& rhs = nonterm->GetRule(rule);
+			auto semanticrule = nonterm->GetSemanticRule(rule);
+
+			// iterate rhs
+			for(std::size_t rhssymidx=0; rhssymidx<rhs.NumSymbols(); ++rhssymidx)
+			{
+				SymbolPtr rhssym = rhs.GetSymbol(rhssymidx);
+
+				if(rhssym->IsTerminal())
+				{
+					TerminalPtr rhsterm = std::dynamic_pointer_cast<Terminal>(rhssym);
+
+					if(!rhsterm->IsEps())
+						ostr << "\t\tmatch_token(la, '" << rhssym->GetStrId() << "');\n";
+					else
+						ostr << "\t\t// eps\n";
+				}
+				else
+				{
+					ostr << "\t\t" << rhssym->GetStrId() << "();\n";
+				}
+			}
+
+			if(semanticrule)
+				ostr << "\n\t\t//\n\t\t// place semantic rule " << *semanticrule << " here\n\t\t//\n";
+
+			ostr << "\t}\n";
+		}
+
+		ostr << "\telse\n\t{\n\t\terror(\"Invalid lookahead token: \", la);\n\t}\n";
 
 		ostr << "}\n\n";
 	}
+}
+
+
+Terminal::t_terminalset LL1::GetLookaheads(
+	const Terminal::t_terminalset& first, const Terminal::t_terminalset& follow)
+{
+	Terminal::t_terminalset las;
+
+	// iterate possible first terminals
+	for(const TerminalPtr& term : first)
+	{
+		// use first set
+		if(!term->IsEps())
+		{
+			las.insert(term);
+		}
+
+		// epsilon in first -> have to consider follow set
+		else
+		{
+
+			for(const TerminalPtr& followterm : follow)
+				las.insert(followterm);
+		}
+	}
+
+	return las;
 }
 
 
