@@ -162,7 +162,7 @@ public:
 	void ClearRules() { m_rules.clear(); }
 
 	/**
-	 * get a semantic rule index
+	 * get a semantic rule index for a given rule number
 	 */
 	std::optional<std::size_t> GetSemanticRule(std::size_t i) const { return m_semantics[i]; }
 

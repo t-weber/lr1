@@ -52,8 +52,12 @@ int main()
 	LL1 ll1{{start, add_term, mul_term, factor}};
 	ll1.RemoveLeftRecursion(1000, "_prime", &semanticindex);
 	ll1.CalcFirstFollow();
+	ll1.CalcTable();
 
 	std::cout << ll1 << std::endl;
+	std::cout << "Parser pseudo-code:\n";
+	ll1.PrintRecursiveDescentPseudocode(std::cout);
+	std::cout << std::endl;
 
 	return 0;
 }
