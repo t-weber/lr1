@@ -140,7 +140,10 @@ public:
 	std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables() const;
 
-	void WriteGraph(const std::string& file, bool write_full_coll=1) const;
+	static bool SaveParseTables(const std::tuple<t_table, t_table, t_table,
+		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file);
+
+	bool WriteGraph(const std::string& file, bool write_full_coll=1) const;
 
 
 protected:

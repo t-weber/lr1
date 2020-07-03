@@ -49,7 +49,14 @@ public:
 		}
 	}
 
-	Table(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS} {}
+	Table(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS}
+	{}
+
+	Table(std::size_t ROWS, std::size_t COLS,
+		T errorval=0xffffffff, T acceptval=0xfffffffe,
+		const std::initializer_list<T>& lst={})
+		: m_data{lst}, m_rowsize{ROWS}, m_colsize{COLS}, m_errorval{errorval}, m_acceptval{acceptval}
+	{}
 
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
@@ -57,12 +64,41 @@ public:
 	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
 	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
 
+
+	/**
+	 * export table to C++ code
+	 */
+	void SaveCXXDefinition(std::ostream& ostr, const std::string& var) const
+	{
+		ostr << "Table<std::size_t, std::vector> " << var << "{"
+			<< size1() << ", " << size2() << ", "
+			<< m_errorval << ", " << m_acceptval << ", ";
+
+		ostr << "{\n";
+		for(std::size_t row=0; row<size1(); ++row)
+		{
+			ostr << "\t";
+			for(std::size_t col=0; col<size2(); ++col)
+			{
+				T entry = operator()(row, col);
+				ostr << entry << ", ";
+			}
+			ostr << "\n";
+		}
+		ostr << "}";
+		ostr << "};\n\n";
+	}
+
+
+	/**
+	 * print table
+	 */
 	friend std::ostream& operator<<(std::ostream& ostr, const Table<T, t_cont>& tab)
 	{
 		const int width = 7;
-		for(std::size_t row=0; row<tab.m_rowsize; ++row)
+		for(std::size_t row=0; row<tab.size1(); ++row)
 		{
-			for(std::size_t col=0; col<tab.m_colsize; ++col)
+			for(std::size_t col=0; col<tab.size2(); ++col)
 			{
 				T entry = tab(row, col);
 				if(entry == tab.m_errorval)
@@ -85,6 +121,7 @@ private:
 	T m_errorval = 0;
 	T m_acceptval = 0;
 };
+
 
 
 template<template<std::size_t, class...> class t_func, class t_params, std::size_t ...seq>

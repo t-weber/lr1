@@ -541,14 +541,14 @@ void Collection::Simplify()
 /**
  * write out the transitions graph
  */
-void Collection::WriteGraph(const std::string& file, bool write_full_coll) const
+bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 {
 	std::string outfile_graph = file + ".graph";
 	std::string outfile_svg = file + ".svg";
 
 	std::ofstream ofstr{outfile_graph};
 	if(!ofstr)
-		return;
+		return false;
 
 	ofstr << "digraph G_lr1\n{\n";
 
@@ -580,6 +580,7 @@ void Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 	ofstr.close();
 
 	std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str());
+	return true;
 }
 
 
@@ -815,6 +816,43 @@ Collection::CreateParseTables() const
 	}
 
 	return tables;
+}
+
+
+/**
+ * export lr(1) tables to C++ code
+ */
+bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
+	t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file)
+{
+	std::ofstream ofstr{file};
+	if(!ofstr)
+		return false;
+
+	ofstr << "#ifndef __LR1_TABLES__\n";
+	ofstr << "#define __LR1_TABLES__\n\n";
+
+	std::get<0>(tabs).SaveCXXDefinition(ofstr, "tab_action_shift");
+	std::get<1>(tabs).SaveCXXDefinition(ofstr, "tab_action_reduce");
+	std::get<2>(tabs).SaveCXXDefinition(ofstr, "tab_jump");
+
+	ofstr << "t_mapIdIdx map_term_idx{{\n";
+	for(const auto& pair : std::get<3>(tabs))
+		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
+	ofstr << "}};\n\n";
+
+	ofstr << "t_mapIdIdx map_nonterm_idx{{\n";
+	for(const auto& pair : std::get<4>(tabs))
+		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
+	ofstr << "}};\n\n";
+
+	ofstr << "t_vecIdx vec_num_rhs_syms{{ ";
+	for(const auto& val : std::get<5>(tabs))
+		ofstr << val << ",";
+	ofstr << " }};\n\n";
+
+	ofstr << "\n#endif" << std::endl;
+	return true;
 }
 
 

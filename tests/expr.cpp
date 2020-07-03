@@ -10,7 +10,6 @@
 
 #include "lr1.h"
 #include "lexer.h"
-#include "parser.h"
 
 #include <iostream>
 #include <sstream>
@@ -22,72 +21,85 @@ enum : std::size_t
 	START,
 	ADD_TERM,
 	MUL_TERM,
-	POW_TERM,
+	op_pow_TERM,
 	FACTOR
 };
 
 
-int main()
+static NonTerminalPtr start, add_term, mul_term, op_pow_term, factor;
+
+static TerminalPtr op_plus, op_minus, op_mult, op_div, op_mod, op_pow;
+static TerminalPtr bracket_open, bracket_close, comma;
+static TerminalPtr sym, ident;
+
+
+static void create_grammar()
+{
+	start = std::make_shared<NonTerminal>(START, "start");
+	add_term = std::make_shared<NonTerminal>(ADD_TERM, "add_term");
+	mul_term = std::make_shared<NonTerminal>(MUL_TERM, "mul_term");
+	op_pow_term = std::make_shared<NonTerminal>(op_pow_TERM, "op_pow_term");
+	factor = std::make_shared<NonTerminal>(FACTOR, "factor");
+
+	op_plus = std::make_shared<Terminal>('+', "+");
+	op_minus = std::make_shared<Terminal>('-', "-");
+	op_mult = std::make_shared<Terminal>('*', "*");
+	op_div = std::make_shared<Terminal>('/', "/");
+	op_mod = std::make_shared<Terminal>('%', "%");
+	op_pow = std::make_shared<Terminal>('^', "^");
+	bracket_open = std::make_shared<Terminal>('(', "(");
+	bracket_close = std::make_shared<Terminal>(')', ")");
+	comma = std::make_shared<Terminal>(',', ",");
+	sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
+	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
+
+
+	std::size_t semanticindex = 0;
+
+	// rule 0
+	start->AddRule({ add_term }, semanticindex++);
+	// rule 1
+	add_term->AddRule({ add_term, op_plus, mul_term }, semanticindex++);
+	// rule 2
+	add_term->AddRule({ add_term, op_minus, mul_term }, semanticindex++);
+	// rule 3
+	add_term->AddRule({ mul_term }, semanticindex++);
+	// rule 4
+	mul_term->AddRule({ mul_term, op_mult, op_pow_term }, semanticindex++);
+	// rule 5
+	mul_term->AddRule({ mul_term, op_div, op_pow_term }, semanticindex++);
+	// rule 6
+	mul_term->AddRule({ mul_term, op_mod, op_pow_term }, semanticindex++);
+	// rule 7
+	mul_term->AddRule({ op_pow_term }, semanticindex++);
+	// rule 8
+	op_pow_term->AddRule({ op_pow_term, op_pow, factor }, semanticindex++);
+	// rule 9
+	op_pow_term->AddRule({ factor }, semanticindex++);
+	// rule 10
+	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
+	// function calls
+	// rule 11
+	factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
+	// rule 12
+	factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);
+	// rule 13
+	factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);
+	// rule 14
+	factor->AddRule({ sym }, semanticindex++);
+	// rule 15
+	factor->AddRule({ ident }, semanticindex++);
+}
+
+
+
+#ifdef CREATE_PARSER
+
+static void lr1_create_parser()
 {
 	try
 	{
-		auto start = std::make_shared<NonTerminal>(START, "start");
-		auto add_term = std::make_shared<NonTerminal>(ADD_TERM, "add_term");
-		auto mul_term = std::make_shared<NonTerminal>(MUL_TERM, "mul_term");
-		auto pow_term = std::make_shared<NonTerminal>(POW_TERM, "pow_term");
-		auto factor = std::make_shared<NonTerminal>(FACTOR, "factor");
-
-		auto plus = std::make_shared<Terminal>('+', "+");
-		auto minus = std::make_shared<Terminal>('-', "-");
-		auto mult = std::make_shared<Terminal>('*', "*");
-		auto div = std::make_shared<Terminal>('/', "/");
-		auto mod = std::make_shared<Terminal>('%', "%");
-		auto pow = std::make_shared<Terminal>('^', "^");
-		auto bracket_open = std::make_shared<Terminal>('(', "(");
-		auto bracket_close = std::make_shared<Terminal>(')', ")");
-		auto comma = std::make_shared<Terminal>(',', ",");
-		auto sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
-		auto ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
-
-
-		std::size_t semanticindex = 0;
-
-		// rule 0
-		start->AddRule({ add_term }, semanticindex++);
-		// rule 1
-		add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);
-		// rule 2
-		add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);
-		// rule 3
-		add_term->AddRule({ mul_term }, semanticindex++);
-		// rule 4
-		mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);
-		// rule 5
-		mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);
-		// rule 6
-		mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);
-		// rule 7
-		mul_term->AddRule({ pow_term }, semanticindex++);
-		// rule 8
-		pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);
-		// rule 9
-		pow_term->AddRule({ factor }, semanticindex++);
-		// rule 10
-		factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
-		// function calls
-		// rule 11
-		factor->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
-		// rule 12
-		factor->AddRule({ ident, bracket_open, add_term, bracket_close }, semanticindex++);
-		// rule 13
-		factor->AddRule({ ident, bracket_open, add_term, comma, add_term, bracket_close }, semanticindex++);
-		// rule 14
-		factor->AddRule({ sym }, semanticindex++);
-		// rule 15
-		factor->AddRule({ ident }, semanticindex++);
-
-
-		std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, pow_term, factor}};
+		std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, op_pow_term, factor}};
 
 		std::cout << "Productions:\n";
 		for(NonTerminalPtr nonterm : all_nonterminals)
@@ -142,6 +154,44 @@ int main()
 
 
 		auto parsetables = collsLALR.CreateParseTables();
+		collsLALR.SaveParseTables(parsetables, "expr.tab");
+		const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
+		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
+	}
+	catch(const std::exception& err)
+	{
+		std::cerr << "Error: " << err.what() << std::endl;
+	}
+}
+
+#endif
+
+
+
+#ifdef RUN_PARSER
+
+#if !__has_include("expr.tab")
+
+static void lr1_run_parser()
+{
+	std::cerr << "No parsing tables available, please run ./expr_test_create first and rebuild."
+		<< std::endl;
+}
+
+#else
+
+#include "parser.h"
+#include "expr.tab"
+
+static void lr1_run_parser()
+{
+	try
+	{
+		// get created parsing tables
+		auto parsetables = std::make_tuple(
+			::tab_action_shift, ::tab_action_reduce, ::tab_jump,
+			::map_term_idx, ::map_nonterm_idx, ::vec_num_rhs_syms);
+
 		const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
 		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
 
@@ -149,7 +199,7 @@ int main()
 		// rules for simplified grammar
 		std::vector<t_semanticrule> rules{{
 			// rule 0
-			[&mapNonTermIdx, &start](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = start->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -157,23 +207,23 @@ int main()
 			},
 
 			// rule 1
-			[&mapNonTermIdx, &add_term, &plus](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = add_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], plus->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_plus->GetId());
 			},
 
 			// rule 2
-			[&mapNonTermIdx, &add_term, &minus](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = add_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], minus->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_minus->GetId());
 			},
 
 			// rule 3
-			[&mapNonTermIdx, &add_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = add_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -181,31 +231,31 @@ int main()
 			},
 
 			// rule 4
-			[&mapNonTermIdx, &mul_term, &mult](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = mul_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], mult->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mult->GetId());
 			},
 
 			// rule 5
-			[&mapNonTermIdx, &mul_term, &div](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = mul_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], div->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_div->GetId());
 			},
 
 			// rule 6
-			[&mapNonTermIdx, &mul_term, &mod](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = mul_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], mod->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mod->GetId());
 			},
 
 			// rule 7
-			[&mapNonTermIdx, &mul_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = mul_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -213,23 +263,23 @@ int main()
 			},
 
 			// rule 8
-			[&mapNonTermIdx, &pow_term, &pow](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				std::size_t id = pow_term->GetId();
+				std::size_t id = op_pow_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], pow->GetId());
+				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_pow->GetId());
 			},
 
 			// rule 9
-			[&mapNonTermIdx, &pow_term](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				std::size_t id = pow_term->GetId();
+				std::size_t id = op_pow_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
 			// rule 10
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = factor->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -237,7 +287,7 @@ int main()
 			},
 
 			// rule 11
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -245,7 +295,7 @@ int main()
 			},
 
 			// rule 12
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -253,7 +303,7 @@ int main()
 			},
 
 			// rule 13
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -261,7 +311,7 @@ int main()
 			},
 
 			// rule 14
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = factor->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -269,7 +319,7 @@ int main()
 			},
 
 			// rule 15
-			[&mapNonTermIdx, &factor](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = factor->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -307,8 +357,25 @@ int main()
 	catch(const std::exception& err)
 	{
 		std::cerr << "Error: " << err.what() << std::endl;
-		return -1;
 	}
+}
+
+#endif
+#endif
+
+
+
+int main()
+{
+#ifdef CREATE_PARSER
+	create_grammar();
+	lr1_create_parser();
+#endif
+
+#ifdef RUN_PARSER
+	create_grammar();
+	lr1_run_parser();
+#endif
 
 	return 0;
 }

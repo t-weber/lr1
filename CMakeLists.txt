@@ -1,7 +1,7 @@
 #
 # @author Tobias Weber
 # @date june-2020
-# @license: see 'LICENSE.EUPL' file
+# @license see 'LICENSE.EUPL' file
 #
 
 project(lr1)
@@ -27,14 +27,11 @@ include_directories(
 
 
 # -----------------------------------------------------------------------------
-# lib
+# parser creation library
 add_library(lr1 STATIC
 	src/lr1.cpp src/lr1.h
 	src/ll1.cpp src/ll1.h
 	src/symbol.cpp src/symbol.h
-	src/lexer.cpp src/lexer.h
-	src/parser.cpp src/parser.h
-	src/ast.cpp src/ast.h
 	src/helpers.h src/common.h
 )
 
@@ -43,13 +40,32 @@ target_link_libraries(lr1 ${Boost_LIBRARIES})
 
 
 # -----------------------------------------------------------------------------
+# parser runtime library
+add_library(lr1-rt STATIC
+	src/symbol.cpp src/symbol.h
+	src/lexer.cpp src/lexer.h
+	src/parser.cpp src/parser.h
+	src/ast.cpp src/ast.h
+	src/helpers.h src/common.h
+)
+
+target_link_libraries(lr1-rt ${Boost_LIBRARIES})
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
 # tests
 add_executable(expr_test_simplified tests/expr_simplified.cpp)
-target_link_libraries(expr_test_simplified lr1)
+target_link_libraries(expr_test_simplified lr1 lr1-rt)
 
 add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
 target_link_libraries(expr_test_simplified_ll1 lr1)
 
-add_executable(expr_test tests/expr.cpp)
-target_link_libraries(expr_test lr1)
+add_executable(expr_test_create tests/expr.cpp)
+target_compile_definitions(expr_test_create PUBLIC -DCREATE_PARSER)
+target_link_libraries(expr_test_create lr1)
+
+add_executable(expr_test_run tests/expr.cpp)
+target_compile_definitions(expr_test_run PUBLIC -DRUN_PARSER)
+target_link_libraries(expr_test_run lr1-rt)
 # -----------------------------------------------------------------------------
