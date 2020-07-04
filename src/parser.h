@@ -21,6 +21,11 @@ public:
 	// directly takes the input from Collection::CreateParseTables
 	Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
 		   const std::vector<t_semanticrule>& rules);
+
+	Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
+		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
+		   const std::vector<t_semanticrule>& rules);
+
 	Parser() = delete;
 
 	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }

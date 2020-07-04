@@ -832,24 +832,37 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 	ofstr << "#ifndef __LR1_TABLES__\n";
 	ofstr << "#define __LR1_TABLES__\n\n";
 
+	ofstr <<"namespace _lr1_tables {\n\n";
+
 	std::get<0>(tabs).SaveCXXDefinition(ofstr, "tab_action_shift");
 	std::get<1>(tabs).SaveCXXDefinition(ofstr, "tab_action_reduce");
 	std::get<2>(tabs).SaveCXXDefinition(ofstr, "tab_jump");
 
-	ofstr << "t_mapIdIdx map_term_idx{{\n";
+	ofstr << "const t_mapIdIdx map_term_idx{{\n";
 	for(const auto& pair : std::get<3>(tabs))
 		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
 	ofstr << "}};\n\n";
 
-	ofstr << "t_mapIdIdx map_nonterm_idx{{\n";
+	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
 	for(const auto& pair : std::get<4>(tabs))
 		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
 	ofstr << "}};\n\n";
 
-	ofstr << "t_vecIdx vec_num_rhs_syms{{ ";
+	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
 	for(const auto& val : std::get<5>(tabs))
 		ofstr << val << ",";
 	ofstr << " }};\n\n";
+
+	ofstr << "}\n\n\n";
+
+
+	ofstr << "static std::tuple<const t_table*, const t_table*, const t_table*, const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>\n";
+	ofstr << "get_lr1_tables()\n{\n";
+	ofstr << "\treturn std::make_tuple(\n"
+		<< "\t\t&_lr1_tables::tab_action_shift, &_lr1_tables::tab_action_reduce, &_lr1_tables::tab_jump,\n"
+		<< "\t\t&_lr1_tables::map_term_idx, &_lr1_tables::map_nonterm_idx, &_lr1_tables::vec_num_rhs_syms);\n";
+	ofstr << "}\n\n";
+
 
 	ofstr << "\n#endif" << std::endl;
 	return true;

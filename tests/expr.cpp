@@ -155,8 +155,6 @@ static void lr1_create_parser()
 
 		auto parsetables = collsLALR.CreateParseTables();
 		collsLALR.SaveParseTables(parsetables, "expr.tab");
-		const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
-		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
 	}
 	catch(const std::exception& err)
 	{
@@ -188,12 +186,10 @@ static void lr1_run_parser()
 	try
 	{
 		// get created parsing tables
-		auto parsetables = std::make_tuple(
-			::tab_action_shift, ::tab_action_reduce, ::tab_jump,
-			::map_term_idx, ::map_nonterm_idx, ::vec_num_rhs_syms);
+		auto parsetables = get_lr1_tables();
 
-		const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
-		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
+		const t_mapIdIdx& mapTermIdx = *std::get<3>(parsetables);
+		const t_mapIdIdx& mapNonTermIdx = *std::get<4>(parsetables);
 
 
 		// rules for simplified grammar

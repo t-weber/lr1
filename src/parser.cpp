@@ -23,8 +23,20 @@ Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdId
 		m_mapNonTermIdx{std::get<4>(init)},
 		m_numRhsSymsPerRule{std::get<5>(init)},
 		m_semantics{rules}
-{
-}
+{}
+
+
+Parser::Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
+	const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
+	const std::vector<t_semanticrule>& rules)
+	: m_tabActionShift{*std::get<0>(init)},
+	m_tabActionReduce{*std::get<1>(init)},
+	m_tabJump{*std::get<2>(init)},
+	m_mapTermIdx{*std::get<3>(init)},
+	m_mapNonTermIdx{*std::get<4>(init)},
+	m_numRhsSymsPerRule{*std::get<5>(init)},
+	m_semantics{rules}
+{}
 
 
 t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const

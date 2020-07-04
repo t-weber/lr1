@@ -29,9 +29,9 @@ include_directories(
 # -----------------------------------------------------------------------------
 # parser creation library
 add_library(lr1 STATIC
+	src/symbol.cpp src/symbol.h
 	src/lr1.cpp src/lr1.h
 	src/ll1.cpp src/ll1.h
-	src/symbol.cpp src/symbol.h
 	src/helpers.h src/common.h
 )
 

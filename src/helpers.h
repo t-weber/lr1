@@ -70,7 +70,7 @@ public:
 	 */
 	void SaveCXXDefinition(std::ostream& ostr, const std::string& var) const
 	{
-		ostr << "Table<std::size_t, std::vector> " << var << "{"
+		ostr << "const Table<std::size_t, std::vector> " << var << "{"
 			<< size1() << ", " << size2() << ", "
 			<< m_errorval << ", " << m_acceptval << ", ";
 
