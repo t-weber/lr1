@@ -136,7 +136,10 @@ const SymbolPtr Element::GetPossibleTransition() const
 {
 	if(m_cursor >= m_rhs->size())
 		return nullptr;
-	return (*m_rhs)[m_cursor];
+	SymbolPtr sym = (*m_rhs)[m_cursor];
+	if(sym->IsEps())
+		return nullptr;
+	return sym;
 }
 
 

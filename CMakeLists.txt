@@ -55,6 +55,9 @@ target_link_libraries(lr1-rt ${Boost_LIBRARIES})
 
 # -----------------------------------------------------------------------------
 # tests
+add_executable(test1 tests/tst1.cpp)
+target_link_libraries(test1 lr1)
+
 add_executable(expr_test_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_test_simplified lr1 lr1-rt)
 
