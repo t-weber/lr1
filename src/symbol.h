@@ -51,7 +51,7 @@ public:
 	bool operator==(const Symbol& other) const;
 	bool operator!=(const Symbol& other) const { return !operator==(other); }
 
-	virtual void print(std::ostream& ostr) const = 0;
+	virtual void print(std::ostream& ostr, bool bnf=false) const = 0;
 	virtual std::size_t hash() const = 0;
 
 
@@ -98,7 +98,7 @@ public:
 	 */
 	void SetSemanticRule(std::optional<std::size_t> semantic=std::nullopt){ m_semantic = semantic; }
 
-	virtual void print(std::ostream& ostr) const override;
+	virtual void print(std::ostream& ostr, bool bnf=false) const override;
 	virtual std::size_t hash() const override;
 
 
@@ -179,7 +179,7 @@ public:
 		std::size_t newIdBegin = 1000, const std::string& primerule = "'",
 		std::size_t* semanticruleidx = nullptr);
 
-	virtual void print(std::ostream& ostr) const override;
+	virtual void print(std::ostream& ostr, bool bnf=false) const override;
 	virtual std::size_t hash() const override;
 
 

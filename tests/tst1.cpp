@@ -42,7 +42,7 @@ int main()
 
 	std::cout << "Productions:\n";
 	for(NonTerminalPtr nonterm : all_nonterminals)
-		nonterm->print(std::cout);
+		nonterm->print(std::cout, true);
 	std::cout << std::endl;
 
 

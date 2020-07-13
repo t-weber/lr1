@@ -52,7 +52,7 @@ bool Symbol::CompareSymbols::operator()(const SymbolPtr sym1, const SymbolPtr sy
 
 
 
-void Terminal::print(std::ostream& ostr) const
+void Terminal::print(std::ostream& ostr, bool /*bnf*/) const
 {
 	ostr << GetStrId();
 }
@@ -137,17 +137,18 @@ std::size_t NonTerminal::hash() const
 }
 
 
-void NonTerminal::print(std::ostream& ostr) const
+void NonTerminal::print(std::ostream& ostr, bool bnf) const
 {
-	ostr << GetStrId() << " ->\n";
+	std::string lhsrhssep = bnf ? "\t ::=" :  " ->\n";
+	std::string rulesep = bnf ? "\t  |  " :  "\t| ";
+	std::string rule0sep = bnf ? " " :  "\t  ";
+
+	ostr << GetStrId() << lhsrhssep;
 	for(std::size_t i=0; i<NumRules(); ++i)
 	{
-		if(i==0)
-			ostr << "\t  ";
-		else
-			ostr << "\t| ";
+		if(i==0) ostr << rule0sep; else ostr << rulesep;
 
-		if(GetSemanticRule(i))
+		if(GetSemanticRule(i) && !bnf)
 			ostr << "[rule " << *GetSemanticRule(i) << "] ";
 
 		ostr << GetRule(i);
