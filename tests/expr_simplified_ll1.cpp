@@ -1,6 +1,6 @@
 /**
  * ll1 comparison
- * @author Tobias Weber
+ * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 07-jun-2020
  * @license see 'LICENSE.EUPL' file
  *
