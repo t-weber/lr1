@@ -64,6 +64,9 @@ target_link_libraries(expr_test_simplified lr1 lr1-rt)
 add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
 target_link_libraries(expr_test_simplified_ll1 lr1)
 
+add_executable(expr_test_ll1 tests/expr_ll1.cpp)
+target_link_libraries(expr_test_ll1 lr1)
+
 add_executable(expr_test_create tests/expr.cpp)
 target_compile_definitions(expr_test_create PUBLIC -DCREATE_PARSER)
 target_link_libraries(expr_test_create lr1)
