@@ -26,3 +26,4 @@ build/**
 # Graph files
 *.graph
 *.svg
+*.pdf
