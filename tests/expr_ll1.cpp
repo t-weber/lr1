@@ -48,20 +48,22 @@ int main()
 
 	start->AddRule({ add_term }, semanticindex++);				// rule 0
 
-	add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);	// rule 1
-	add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);	// rule 2
-	add_term->AddRule({ mul_term }, semanticindex++);			// rule 3
+	add_term->AddRule({ plus, add_term }, semanticindex++);			// rule 1
+	add_term->AddRule({ minus, add_term }, semanticindex++);		// rule 2
+	add_term->AddRule({ add_term, plus, mul_term }, semanticindex++);	// rule 3
+	add_term->AddRule({ add_term, minus, mul_term }, semanticindex++);	// rule 4
+	add_term->AddRule({ mul_term }, semanticindex++);			// rule 5
 
-	mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);	// rule 4
-	mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);	// rule 5
-	mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);	// rule 6
-	mul_term->AddRule({ pow_term }, semanticindex++);			// rule 7
+	mul_term->AddRule({ mul_term, mult, pow_term }, semanticindex++);	// rule 6
+	mul_term->AddRule({ mul_term, div, pow_term }, semanticindex++);	// rule 7
+	mul_term->AddRule({ mul_term, mod, pow_term }, semanticindex++);	// rule 8
+	mul_term->AddRule({ pow_term }, semanticindex++);			// rule 9
 
-	pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);		// rule 8
-	pow_term->AddRule({ factor }, semanticindex++);				// rule 9
+	pow_term->AddRule({ pow_term, pow, factor }, semanticindex++);		// rule 10
+	pow_term->AddRule({ factor }, semanticindex++);				// rule 11
 
-	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);	// rule 10
-	factor->AddRule({ sym }, semanticindex++);				// rule 11
+	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);	// rule 12
+	factor->AddRule({ sym }, semanticindex++);				// rule 13
 
 
 	LL1 ll1{{start, add_term, mul_term, pow_term, factor}};
