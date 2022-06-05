@@ -14,7 +14,14 @@
 #include <stack>
 
 
-Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
+Parser::Parser(
+	const std::tuple<
+		t_table,			// shift table
+		t_table,			// reduce table
+		t_table,			// jump table
+		t_mapIdIdx, 		// terminal indices
+		t_mapIdIdx,			// nonterminal indices
+		t_vecIdx>& init,	// semantic rule indices
 	const std::vector<t_semanticrule>& rules)
 	: m_tabActionShift{std::get<0>(init)},
 		m_tabActionReduce{std::get<1>(init)},
@@ -26,16 +33,22 @@ Parser::Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdId
 {}
 
 
-Parser::Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
-	const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
+Parser::Parser(
+	const std::tuple<
+		const t_table*,		// shift table
+		const t_table*,		// reduce table
+		const t_table*,		// jump table
+		const t_mapIdIdx*,	// terminal indices
+		const t_mapIdIdx*,	// nonterminal indices
+		const t_vecIdx*>& init,	// semantic rule indices
 	const std::vector<t_semanticrule>& rules)
 	: m_tabActionShift{*std::get<0>(init)},
-	m_tabActionReduce{*std::get<1>(init)},
-	m_tabJump{*std::get<2>(init)},
-	m_mapTermIdx{*std::get<3>(init)},
-	m_mapNonTermIdx{*std::get<4>(init)},
-	m_numRhsSymsPerRule{*std::get<5>(init)},
-	m_semantics{rules}
+		m_tabActionReduce{*std::get<1>(init)},
+		m_tabJump{*std::get<2>(init)},
+		m_mapTermIdx{*std::get<3>(init)},
+		m_mapNonTermIdx{*std::get<4>(init)},
+		m_numRhsSymsPerRule{*std::get<5>(init)},
+		m_semantics{rules}
 {}
 
 

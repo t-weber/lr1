@@ -24,9 +24,12 @@ public:
 	Table() = default;
 	~Table() = default;
 
-	Table(const t_cont<t_cont<T>>& cont, T errorval=0xffffffff, T acceptval=0xfffffffe,
-		  std::optional<std::size_t> ROWS=std::nullopt, std::optional<std::size_t> COLS=std::nullopt)
-		: m_data{}, m_rowsize{}, m_colsize{}, m_errorval{errorval}, m_acceptval{acceptval}
+	Table(const t_cont<t_cont<T>>& cont,
+		  T errorval=0xffffffff, T acceptval=0xfffffffe,
+		  std::optional<std::size_t> ROWS=std::nullopt,
+	   std::optional<std::size_t> COLS=std::nullopt)
+		: m_data{}, m_rowsize{}, m_colsize{},
+			m_errorval{errorval}, m_acceptval{acceptval}
 	{
 		m_rowsize = ROWS ? *ROWS : cont.size();
 		m_colsize = COLS ? *COLS : 0;

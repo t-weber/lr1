@@ -110,6 +110,20 @@ WordPtr Element::GetRhsAfterCursor() const
 }
 
 
+const SymbolPtr Element::GetSymbolAtCursor() const
+{
+	const Word* rhs = GetRhs();
+	if(!rhs)
+		return nullptr;
+
+	std::size_t cursor = GetCursor();
+	if(cursor >= rhs->NumSymbols())
+		return nullptr;
+
+	return rhs->GetSymbol(cursor);
+}
+
+
 void Element::AddLookahead(TerminalPtr term)
 {
 	m_lookaheads.insert(term);
@@ -312,6 +326,31 @@ std::pair<bool, std::size_t> Closure::HasElement(const ElementPtr elem, bool onl
 	}
 
 	return std::make_pair(false, 0);
+}
+
+
+/**
+ * get the element of the collection whose cursor points to the given symbol
+ */
+const ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
+{
+	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
+	{
+		const ElementPtr theelem = m_elems[idx];
+
+		const Word* rhs = theelem->GetRhs();
+		if(!rhs)
+			continue;
+		std::size_t cursor = theelem->GetCursor();
+
+		if(cursor >= rhs->NumSymbols())
+			continue;
+
+		if(rhs->GetSymbol(cursor)->GetId() == sym->GetId())
+			return theelem;
+	}
+
+	return nullptr;
 }
 
 
@@ -695,7 +734,8 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
  * creates the lr(1) parser tables
  */
 std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>
-Collection::CreateParseTables() const
+Collection::CreateParseTables(
+	const std::vector<t_conflictsolution>* conflictsol) const
 {
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = ERROR_VAL;
@@ -795,41 +835,77 @@ Collection::CreateParseTables() const
 	}
 
 
-	const auto tables = std::make_tuple(
+	auto tables = std::make_tuple(
 		t_table{_action_shift, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_action_reduce, errorVal, acceptVal, numStates, curTermIdx},
 		t_table{_jump, errorVal, acceptVal, numStates, curNonTermIdx},
 		mapTermIdx, mapNonTermIdx,
 		numRhsSymsPerRule);
 
-	// check for shift/reduce conflicts
+	// check for and try to resolve shift/reduce conflicts
 	for(std::size_t state=0; state<numStates; ++state)
 	{
+		ClosurePtr closureState = m_collection[state];
+
 		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
 		{
-			std::size_t shiftEntry = std::get<0>(tables)(state, termidx);
-			std::size_t reduceEntry = std::get<1>(tables)(state, termidx);
+			std::size_t& shiftEntry = std::get<0>(tables)(state, termidx);
+			std::size_t& reduceEntry = std::get<1>(tables)(state, termidx);
 			//const t_mapIdIdx& mapTermIdx = std::get<3>(tables);
-			
+
 			std::optional<std::string> termid;
+			ElementPtr conflictelem = nullptr;
 			if(auto termiter = seen_terminals.find(termidx);
 				termiter != seen_terminals.end())
-			termid = termiter->second->GetStrId();
+			{
+				termid = termiter->second->GetStrId();
+				conflictelem = closureState->
+					GetElementWithCursorAtSymbol(termiter->second);
+			}
 
 			// both have an entry?
 			if(shiftEntry!=errorVal && reduceEntry!=errorVal)
 			{
-				ClosurePtr closureState = m_collection[state];
+				bool solution_found = false;
 
-				std::ostringstream ostrErr;
-				ostrErr << "Shift/reduce conflict detected" 
-					<< " for " << *closureState;
-				if(termid)
-					ostrErr << "and terminal " << (*termid);
-				else
-					ostrErr << "and terminal index " << termidx;
-				ostrErr << "." << std::endl;
-				throw std::runtime_error(ostrErr.str());
+				// try to resolve conflict
+				if(conflictsol && conflictelem)
+				{
+					for(const t_conflictsolution& sol : *conflictsol)
+					{
+						if(std::get<0>(sol)->GetId() ==
+							conflictelem->GetLhs()->GetId() && 
+							std::get<1>(sol)->GetId() ==
+							conflictelem->GetSymbolAtCursor()->GetId())
+						{
+							if(std::get<2>(sol) == ConflictSolution::FORCE_SHIFT)
+								reduceEntry = errorVal;
+							else if(std::get<2>(sol) == ConflictSolution::FORCE_REDUCE)
+								shiftEntry = errorVal;
+							solution_found = true;
+							break;
+						}
+					}
+				}
+
+				if(!solution_found)
+				{
+					std::ostringstream ostrErr;
+					ostrErr << "Shift/reduce conflict detected" 
+						<< " for state " << state;
+					if(conflictelem)
+						ostrErr << ":\n\t" << *conflictelem << "\n";
+					if(termid)
+						ostrErr << " and terminal " << (*termid);
+					else
+						ostrErr << "and terminal index " << termidx;
+					ostrErr << " (can either shift to state " << shiftEntry
+						<< " or reduce using rule " << reduceEntry
+						<< ")." << std::endl;
+
+					//std::cerr << ostrErr.str() << std::endl;
+					throw std::runtime_error(ostrErr.str());
+				}
 			}
 		}
 	}

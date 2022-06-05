@@ -25,6 +25,19 @@ using ElementPtr = std::shared_ptr<Element>;
 using ClosurePtr = std::shared_ptr<Closure>;
 
 
+enum class ConflictSolution
+{
+	FORCE_SHIFT,
+	FORCE_REDUCE
+};
+
+
+using t_conflictsolution = std::tuple<
+	NonTerminalPtr,
+	TerminalPtr,
+	ConflictSolution>;
+
+
 
 /**
  * LR(1) element
@@ -44,6 +57,7 @@ public:
 	std::size_t GetCursor() const { return m_cursor; }
 	const Terminal::t_terminalset& GetLookaheads() const { return m_lookaheads; }
 	WordPtr GetRhsAfterCursor() const;
+	const SymbolPtr GetSymbolAtCursor() const;
 
 	void AddLookahead(TerminalPtr term);
 	void AddLookaheads(const Terminal::t_terminalset& las);
@@ -95,6 +109,7 @@ public:
 
 	std::size_t NumElements() const { return m_elems.size(); }
 	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
+	const ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
 	std::vector<SymbolPtr> GetPossibleTransitions() const;
 	ClosurePtr DoTransition(const SymbolPtr) const;
@@ -138,7 +153,8 @@ public:
 	Collection ConvertToSLR(const t_map_follow& follow) const;
 
 	std::tuple<t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables() const;
+		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables(
+			const std::vector<t_conflictsolution>* conflictsol = nullptr) const;
 
 	static bool SaveParseTables(const std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file);

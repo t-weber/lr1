@@ -109,9 +109,16 @@ int main()
 		collsSLR.WriteGraph("expr_simplified_slr_full", 1);
 		std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 
-		auto parsetables = collsLALR.CreateParseTables();
+		// solutions for conflicts
+		std::vector<t_conflictsolution> conflicts{{
+			std::make_tuple(expr, plus, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(expr, mult, ConflictSolution::FORCE_SHIFT),
+		}};
+
+		auto parsetables = collsLALR.CreateParseTables(&conflicts);
 		const t_mapIdIdx& mapTermIdx = std::get<3>(parsetables);
 		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
+
 
 
 		// rules for simplified grammar
