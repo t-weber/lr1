@@ -61,6 +61,9 @@ target_link_libraries(test1 lr1)
 add_executable(expr_test_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_test_simplified lr1 lr1-rt)
 
+add_executable(expr_test_prec tests/expr_prec.cpp)
+target_link_libraries(expr_test_prec lr1 lr1-rt)
+
 add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
 target_link_libraries(expr_test_simplified_ll1 lr1)
 

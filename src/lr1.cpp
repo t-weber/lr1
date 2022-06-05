@@ -719,6 +719,9 @@ Collection::CreateParseTables() const
 	std::size_t curNonTermIdx = 0;
 	std::size_t curTermIdx = 0;
 
+	// map terminal table index to terminal symbol
+	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
+
 
 	// translate symbol id to table index
 	auto get_idx = [&mapNonTermIdx, &mapTermIdx, &curNonTermIdx, &curTermIdx]
@@ -740,24 +743,19 @@ Collection::CreateParseTables() const
 		const ClosurePtr& stateTo = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
-		if(symTrans->IsTerminal())
-		{
-			std::size_t symIdx = get_idx(symTrans->GetId(), true);
+		bool symIsTerm = symTrans->IsTerminal();
+		std::vector<std::vector<std::size_t>>* tab =
+			symIsTerm ? &_action_shift : &_jump;
 
-			auto& _action_row = _action_shift[stateFrom->GetId()];
-			if(_action_row.size() <= symIdx)
-				_action_row.resize(symIdx+1, errorVal);
-			_action_row[symIdx] = stateTo->GetId();
-		}
-		else
-		{
-			std::size_t symIdx = get_idx(symTrans->GetId(), false);
+		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
+		if(symIsTerm)
+			seen_terminals.insert(std::make_pair(
+				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
 
-			auto& _jump_row = _jump[stateFrom->GetId()];
-			if(_jump_row.size() <= symIdx)
-				_jump_row.resize(symIdx+1, errorVal);
-			_jump_row[symIdx] = stateTo->GetId();
-		}
+		auto& _tab_row = (*tab)[stateFrom->GetId()];
+		if(_tab_row.size() <= symIdx)
+			_tab_row.resize(symIdx+1, errorVal);
+		_tab_row[symIdx] = stateTo->GetId();
 	}
 
 	for(const ClosurePtr& coll : m_collection)
@@ -811,10 +809,28 @@ Collection::CreateParseTables() const
 		{
 			std::size_t shiftEntry = std::get<0>(tables)(state, termidx);
 			std::size_t reduceEntry = std::get<1>(tables)(state, termidx);
+			//const t_mapIdIdx& mapTermIdx = std::get<3>(tables);
+			
+			std::optional<std::string> termid;
+			if(auto termiter = seen_terminals.find(termidx);
+				termiter != seen_terminals.end())
+			termid = termiter->second->GetStrId();
 
 			// both have an entry?
 			if(shiftEntry!=errorVal && reduceEntry!=errorVal)
-				throw std::runtime_error("Shift/reduce conflict detected.");
+			{
+				ClosurePtr closureState = m_collection[state];
+
+				std::ostringstream ostrErr;
+				ostrErr << "Shift/reduce conflict detected" 
+					<< " for " << *closureState;
+				if(termid)
+					ostrErr << "and terminal " << (*termid);
+				else
+					ostrErr << "and terminal index " << termidx;
+				ostrErr << "." << std::endl;
+				throw std::runtime_error(ostrErr.str());
+			}
 		}
 	}
 
@@ -934,6 +950,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 		}
 	}
 
-	ostr << ostrActionShift.str() << "\n" << ostrActionReduce.str() << "\n" << ostrJump.str() << "\n";
+	ostr << ostrActionShift.str() << "\n" 
+		<< ostrActionReduce.str() << "\n" 
+		<< ostrJump.str() << "\n";
 	return ostr;
 }

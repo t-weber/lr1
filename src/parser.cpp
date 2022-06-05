@@ -60,9 +60,19 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		std::size_t newrule = m_tabActionReduce(topstate, curtokidx);
 
 		if(newstate == ERROR_VAL && newrule == ERROR_VAL)
+		{
 			throw std::runtime_error("Undefined shift and reduce entries.");
+		}
 		else if(newstate != ERROR_VAL && newrule != ERROR_VAL)
-			throw std::runtime_error("Shift/reduce conflict.");
+		{
+			std::ostringstream ostrErr;
+			ostrErr << "Shift/reduce conflict between shift"
+				<< " from state " << topstate << " to state " << newstate
+				<< " and reduce using rule " << newrule << ".";
+			ostrErr << " Current token id is " << curtok->GetId()
+				<< "." << std::endl;
+			throw std::runtime_error(ostrErr.str());
+		}
 
 		// accept
 		else if(newrule == ACCEPT_VAL)
