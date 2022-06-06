@@ -120,7 +120,6 @@ int main()
 		const t_mapIdIdx& mapNonTermIdx = std::get<4>(parsetables);
 
 
-
 		// rules for simplified grammar
 		std::vector<t_semanticrule> rules{{
 			// rule 0
@@ -167,13 +166,38 @@ int main()
 
 		Parser parser{parsetables, rules};
 
-		std::string exprstr{"(2*3 + (5+4) * (1+2)) * 5+12"};
-		std::istringstream istr{exprstr};
-		auto tokens = get_all_tokens(istr, &mapTermIdx);
+		{
+			// test operator precedence
+			std::string exprstr{"(2*3 + (5+4) * (1+2)) * 5+12"};
+			std::istringstream istr{exprstr};
+			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
-		auto ast = cst_to_ast(parser.Parse(tokens));
-		std::cout << "AST for expression " << exprstr << ":\n";
-		ast->print(std::cout);
+			auto ast = cst_to_ast(parser.Parse(tokens));
+			std::cout << "AST for expression " << exprstr << ":\n";
+			ast->print(std::cout);
+		}
+
+		{
+			// test associativity -> forced reduce -> left associative
+			std::string exprstr{"1 + 2 + 3 + 4 + 5"};
+			std::istringstream istr{exprstr};
+			auto tokens = get_all_tokens(istr, &mapTermIdx);
+
+			auto ast = cst_to_ast(parser.Parse(tokens));
+			std::cout << "\nAST for expression " << exprstr << ":\n";
+			ast->print(std::cout);
+		}
+
+		{
+			// test associativity -> forced shift -> right associative
+			std::string exprstr{"1 * 2 * 3 * 4 * 5"};
+			std::istringstream istr{exprstr};
+			auto tokens = get_all_tokens(istr, &mapTermIdx);
+
+			auto ast = cst_to_ast(parser.Parse(tokens));
+			std::cout << "\nAST for expression " << exprstr << ":\n";
+			ast->print(std::cout);
+		}
 	}
 	catch(const std::exception& ex)
 	{
