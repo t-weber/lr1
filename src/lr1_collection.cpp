@@ -467,7 +467,7 @@ Collection::CreateParseTables(
 							*std::get<1>(sol) == *conflictelem->GetSymbolAtCursor())
 						{
 							// see if the given lookback terminal is in the closure's list
-							for(const TerminalPtr comefromTerm : comefromTerms)
+							for(const TerminalPtr& comefromTerm : comefromTerms)
 							{
 								if(*comefromTerm == *std::get<TerminalPtr>(std::get<0>(sol)))
 								{

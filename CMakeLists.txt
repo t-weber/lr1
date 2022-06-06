@@ -61,8 +61,8 @@ target_link_libraries(test1 lr1)
 add_executable(expr_test_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_test_simplified lr1 lr1-rt)
 
-add_executable(expr_test_prec tests/expr_prec.cpp)
-target_link_libraries(expr_test_prec lr1 lr1-rt)
+add_executable(expr_test_simplified_prec tests/expr_simplified_prec.cpp)
+target_link_libraries(expr_test_simplified_prec lr1 lr1-rt)
 
 add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
 target_link_libraries(expr_test_simplified_ll1 lr1)
@@ -77,4 +77,12 @@ target_link_libraries(expr_test_create lr1)
 add_executable(expr_test_run tests/expr.cpp)
 target_compile_definitions(expr_test_run PUBLIC -DRUN_PARSER)
 target_link_libraries(expr_test_run lr1-rt)
+
+add_executable(expr_test_prec_create tests/expr_prec.cpp)
+target_compile_definitions(expr_test_prec_create PUBLIC -DCREATE_PARSER)
+target_link_libraries(expr_test_prec_create lr1)
+
+add_executable(expr_test_prec_run tests/expr_prec.cpp)
+target_compile_definitions(expr_test_prec_run PUBLIC -DRUN_PARSER)
+target_link_libraries(expr_test_prec_run lr1-rt)
 # -----------------------------------------------------------------------------

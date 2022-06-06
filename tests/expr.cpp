@@ -1,5 +1,5 @@
 /**
- * test
+ * expression test
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 07-jun-2020
  * @license see 'LICENSE.EUPL' file
@@ -21,12 +21,12 @@ enum : std::size_t
 	START,
 	ADD_TERM,
 	MUL_TERM,
-	op_pow_TERM,
+	POW_TERM,
 	FACTOR
 };
 
 
-static NonTerminalPtr start, add_term, mul_term, op_pow_term, factor;
+static NonTerminalPtr start, add_term, mul_term, pow_term, factor;
 
 static TerminalPtr op_plus, op_minus, op_mult, op_div, op_mod, op_pow;
 static TerminalPtr bracket_open, bracket_close, comma;
@@ -38,7 +38,7 @@ static void create_grammar()
 	start = std::make_shared<NonTerminal>(START, "start");
 	add_term = std::make_shared<NonTerminal>(ADD_TERM, "add_term");
 	mul_term = std::make_shared<NonTerminal>(MUL_TERM, "mul_term");
-	op_pow_term = std::make_shared<NonTerminal>(op_pow_TERM, "op_pow_term");
+	pow_term = std::make_shared<NonTerminal>(POW_TERM, "pow_term");
 	factor = std::make_shared<NonTerminal>(FACTOR, "factor");
 
 	op_plus = std::make_shared<Terminal>('+', "+");
@@ -65,17 +65,17 @@ static void create_grammar()
 	// rule 3
 	add_term->AddRule({ mul_term }, semanticindex++);
 	// rule 4
-	mul_term->AddRule({ mul_term, op_mult, op_pow_term }, semanticindex++);
+	mul_term->AddRule({ mul_term, op_mult, pow_term }, semanticindex++);
 	// rule 5
-	mul_term->AddRule({ mul_term, op_div, op_pow_term }, semanticindex++);
+	mul_term->AddRule({ mul_term, op_div, pow_term }, semanticindex++);
 	// rule 6
-	mul_term->AddRule({ mul_term, op_mod, op_pow_term }, semanticindex++);
+	mul_term->AddRule({ mul_term, op_mod, pow_term }, semanticindex++);
 	// rule 7
-	mul_term->AddRule({ op_pow_term }, semanticindex++);
+	mul_term->AddRule({ pow_term }, semanticindex++);
 	// rule 8
-	op_pow_term->AddRule({ op_pow_term, op_pow, factor }, semanticindex++);
+	pow_term->AddRule({ pow_term, op_pow, factor }, semanticindex++);
 	// rule 9
-	op_pow_term->AddRule({ factor }, semanticindex++);
+	pow_term->AddRule({ factor }, semanticindex++);
 	// rule 10
 	factor->AddRule({ bracket_open, add_term, bracket_close }, semanticindex++);
 	// function calls
@@ -99,7 +99,8 @@ static void lr1_create_parser()
 {
 	try
 	{
-		std::vector<NonTerminalPtr> all_nonterminals{{start, add_term, mul_term, op_pow_term, factor}};
+		std::vector<NonTerminalPtr> all_nonterminals{{
+			start, add_term, mul_term, pow_term, factor}};
 
 		std::cout << "Productions:\n";
 		for(NonTerminalPtr nonterm : all_nonterminals)
@@ -261,15 +262,16 @@ static void lr1_run_parser()
 			// rule 8
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				std::size_t id = op_pow_term->GetId();
+				std::size_t id = pow_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_pow->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_pow->GetId());
 			},
 
 			// rule 9
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				std::size_t id = op_pow_term->GetId();
+				std::size_t id = pow_term->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
