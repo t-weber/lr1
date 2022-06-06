@@ -1,5 +1,6 @@
 /**
  * operator precedence and associativity test
+ * (solve conflicts on table generation)
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 05-jun-2022
  * @license see 'LICENSE.EUPL' file
@@ -20,6 +21,9 @@ enum : std::size_t
 	ADD_TERM,
 	MUL_TERM,
 };
+
+
+#define USE_LOOKBACK_LOOKAHEAD_SOLUTIONS
 
 
 int main()
@@ -111,8 +115,18 @@ int main()
 
 		// solutions for conflicts
 		std::vector<t_conflictsolution> conflicts{{
+#ifdef USE_LOOKBACK_LOOKAHEAD_SOLUTIONS
+			// left-associativity of operators
+			std::make_tuple(mult, mult, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(plus, plus, ConflictSolution::FORCE_REDUCE),
+
+			// operator precedence
+			std::make_tuple(mult, plus, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(plus, mult, ConflictSolution::FORCE_SHIFT),
+#else
 			std::make_tuple(expr, plus, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(expr, mult, ConflictSolution::FORCE_SHIFT),
+#endif
 		}};
 
 		auto parsetables = collsLALR.CreateParseTables(&conflicts);

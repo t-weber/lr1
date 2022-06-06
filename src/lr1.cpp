@@ -220,16 +220,18 @@ Closure::Closure() : m_elems{}, m_id{g_id++}
 }
 
 
-Closure::Closure(const Closure& coll) : m_elems{}
+Closure::Closure(const Closure& closure) : m_elems{}
 {
-	this->operator=(coll);
+	this->operator=(closure);
 }
 
 
-const Closure& Closure::operator=(const Closure& coll)
+const Closure& Closure::operator=(const Closure& closure)
 {
-	this->m_id = coll.m_id;
-	for(ElementPtr elem : coll.m_elems)
+	this->m_id = closure.m_id;
+	this->m_comefrom_transitions = closure.m_comefrom_transitions;
+
+	for(ElementPtr elem : closure.m_elems)
 		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
 
 	return *this;
@@ -384,25 +386,24 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
  */
 ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 {
-	ClosurePtr newcoll = std::make_shared<Closure>();
+	ClosurePtr newclosure = std::make_shared<Closure>();
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
 	{
 		const SymbolPtr sym = theelem->GetPossibleTransition();
-		if(!sym)
-			continue;
-		if(*sym != *transsym)
+		if(!sym || *sym != *transsym)
 			continue;
 
 		// copy element and perform transition
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 
-		newcoll->AddElement(newelem);
+		newclosure->AddElement(newelem);
+		newclosure->AddComefromTransition(std::make_tuple(transsym, this));
 	}
 
-	return newcoll;
+	return newclosure;
 }
 
 
@@ -412,16 +413,16 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
  */
 std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions() const
 {
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> colls;
+	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll;
 	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitions();
 
 	for(const SymbolPtr& transition : possible_transitions)
 	{
-		ClosurePtr coll = DoTransition(transition);
-		colls.emplace_back(std::make_tuple(transition, coll));
+		ClosurePtr closure = DoTransition(transition);
+		coll.emplace_back(std::make_tuple(transition, closure));
 	}
 
-	return colls;
+	return coll;
 }
 
 
@@ -447,11 +448,104 @@ std::size_t Closure::hash(bool only_core) const
 }
 
 
-std::ostream& operator<<(std::ostream& ostr, const Closure& coll)
+/**
+ * adds a reference to where a possible transition can come from
+ */
+void Closure::AddComefromTransition(const t_comefrom_transition& comefrom)
 {
-	ostr << "Closure/State " << coll.GetId() << ":\n";
-	for(std::size_t i=0; i<coll.NumElements(); ++i)
-		ostr << *coll.GetElement(i)<< "\n";
+	// do we already have this comefrom?
+	for(const t_comefrom_transition& oldcomefrom : m_comefrom_transitions)
+	{
+		if(*std::get<0>(comefrom) == *std::get<0>(oldcomefrom) &&
+			std::get<1>(comefrom)->GetId() == std::get<1>(oldcomefrom)->GetId())
+			return;
+	}
+
+	// add unique comefrom
+	m_comefrom_transitions.push_back(comefrom);
+}
+
+
+/**
+ * get all terminal symbols that lead to this closure
+ */
+std::vector<TerminalPtr> Closure::GetComefromTerminals() const
+{
+	std::vector<TerminalPtr> terms;
+
+	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
+	{
+		SymbolPtr sym = std::get<0>(comefrom);
+		const Closure* closure = std::get<1>(comefrom);
+
+		if(sym->IsTerminal())
+		{
+			TerminalPtr term = std::dynamic_pointer_cast<Terminal>(sym);
+			terms.emplace_back(std::move(term));
+		}
+		else if(closure)
+		{
+			// get terminals from comefrom closure
+			std::vector<TerminalPtr> _terms = closure->GetComefromTerminals();
+			terms.insert(terms.end(), _terms.begin(), _terms.end());
+		}
+	}
+
+	// remove duplicates
+	auto end = std::unique(terms.begin(), terms.end(),
+	[](TerminalPtr term1, TerminalPtr term2) -> bool
+	{
+		return *term1 == *term2;
+	});
+	if(end != terms.end())
+		terms.resize(end - terms.begin());
+
+	return terms;
+}
+
+
+/**
+ * removes duplicate comefrom transitions
+ */
+void Closure::CleanComefromTransitions()
+{
+	// remove duplicates
+	auto end = std::unique(m_comefrom_transitions.begin(), m_comefrom_transitions.end(),
+	[](const t_comefrom_transition& comefrom1, const t_comefrom_transition& comefrom2) -> bool
+	{
+		return *std::get<0>(comefrom1) == *std::get<0>(comefrom2) &&
+			std::get<1>(comefrom1)->GetId() == std::get<1>(comefrom2)->GetId();
+	});
+
+	if(end != m_comefrom_transitions.end())
+		m_comefrom_transitions.resize(end-m_comefrom_transitions.begin());
+}
+
+
+/**
+ * prints a closure
+ */
+std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
+{
+	ostr << "Closure/State " << closure.GetId() << ":\n";
+
+	// write elements of the closure
+	for(std::size_t i=0; i<closure.NumElements(); ++i)
+		ostr << "\t" << *closure.GetElement(i)<< "\n";
+
+	// write the closures where we can come from
+	const auto& comefroms = closure.GetComefromTransitions();
+	if(comefroms.size())
+	{
+		ostr << "Coming from possible transitions:\n";
+		for(std::size_t i=0; i<comefroms.size(); ++i)
+		{
+			const Closure::t_comefrom_transition& comefrom = comefroms[i];
+			ostr << "\tstate " << std::get<1>(comefrom)->GetId()
+				<< " via " << std::get<0>(comefrom)->GetStrId()
+				<< "." << std::endl;
+		}
+	}
 
 	return ostr;
 }
@@ -462,10 +556,10 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& coll)
 
 
 
-Collection::Collection(const ClosurePtr coll) : m_cache{}, m_collection{}, m_transitions{}
+Collection::Collection(const ClosurePtr closure) : m_cache{}, m_collection{}, m_transitions{}
 {
-	m_cache.insert(std::make_pair(coll->hash(), coll));
-	m_collection.push_back(coll);
+	m_cache.insert(std::make_pair(closure->hash(), closure));
+	m_collection.push_back(closure);
 }
 
 
@@ -478,15 +572,15 @@ Collection::Collection() : m_cache{}, m_collection{}, m_transitions{}
  * perform all possible transitions from all collection
  * @return [source closure id, transition symbol, destination closure]
  */
-void Collection::DoTransitions(const ClosurePtr coll_from)
+void Collection::DoTransitions(const ClosurePtr closure_from)
 {
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> colls = coll_from->DoTransitions();
+	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll = closure_from->DoTransitions();
 
 	// no more transitions?
-	if(colls.size() == 0)
+	if(coll.size() == 0)
 		return;
 
-	for(const auto& tup : colls)
+	for(const auto& tup : coll)
 	{
 		const SymbolPtr trans_sym = std::get<0>(tup);
 		const ClosurePtr coll_to = std::get<1>(tup);
@@ -495,7 +589,7 @@ void Collection::DoTransitions(const ClosurePtr coll_from)
 		auto cacheIter = m_cache.find(hash_to);
 		bool coll_to_new = (cacheIter == m_cache.end());
 
-		//std::cout << "transition " << coll_from->GetId() << " -> " << coll_to->GetId()
+		//std::cout << "transition " << closure_from->GetId() << " -> " << coll_to->GetId()
 		//	<< " via " << trans_sym->GetId() << ", new: " << coll_to_new << std::endl;
 		//std::cout << std::hex << coll_to->hash() << ", " << *coll_to << std::endl;
 
@@ -504,14 +598,14 @@ void Collection::DoTransitions(const ClosurePtr coll_from)
 			// new unique closure
 			m_cache.insert(std::make_pair(hash_to, coll_to));
 			m_collection.push_back(coll_to);
-			m_transitions.push_back(std::make_tuple(coll_from, coll_to, trans_sym));
+			m_transitions.push_back(std::make_tuple(closure_from, coll_to, trans_sym));
 
 			DoTransitions(coll_to);
 		}
 		else
 		{
 			// Closure already seen
-			m_transitions.push_back(std::make_tuple(coll_from, cacheIter->second, trans_sym));
+			m_transitions.push_back(std::make_tuple(closure_from, cacheIter->second, trans_sym));
 		}
 	}
 }
@@ -533,9 +627,9 @@ void Collection::Simplify()
 	if constexpr(do_sort)
 	{
 		std::sort(m_collection.begin(), m_collection.end(),
-		[](const ClosurePtr coll1, const ClosurePtr coll2) -> bool
+		[](const ClosurePtr closure1, const ClosurePtr closure2) -> bool
 		{
-			return coll1->GetId() < coll2->GetId();
+			return closure1->GetId() < closure2->GetId();
 		});
 
 		std::stable_sort(m_transitions.begin(), m_transitions.end(),
@@ -561,10 +655,10 @@ void Collection::Simplify()
 		std::set<std::size_t> already_seen;
 		std::size_t newid = 0;
 
-		for(ClosurePtr coll : m_collection)
+		for(ClosurePtr closure : m_collection)
 		{
-			std::size_t oldid = coll->GetId();
-			std::size_t hash = coll->hash();
+			std::size_t oldid = closure->GetId();
+			std::size_t hash = closure->hash();
 
 			if(already_seen.find(hash) != already_seen.end())
 				continue;
@@ -573,7 +667,7 @@ void Collection::Simplify()
 			if(iditer == idmap.end())
 				iditer = idmap.insert(std::make_pair(oldid, newid++)).first;
 
-			coll->SetId(iditer->second);
+			closure->SetId(iditer->second);
 			already_seen.insert(hash);
 		}
 	}
@@ -595,13 +689,13 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 	ofstr << "digraph G_lr1\n{\n";
 
 	// write states
-	for(const ClosurePtr& coll : m_collection)
+	for(const ClosurePtr& closure : m_collection)
 	{
-		ofstr << "\t" << coll->GetId() << " [label=\"";
+		ofstr << "\t" << closure->GetId() << " [label=\"";
 		if(write_full_coll)
-			ofstr << *coll;
+			ofstr << *closure;
 		else
-			ofstr << coll->GetId();
+			ofstr << closure->GetId();
 		ofstr << "\"];\n";
 	}
 
@@ -609,11 +703,11 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 	ofstr << "\n";
 	for(const t_transition& tup : m_transitions)
 	{
-		const ClosurePtr coll_from = std::get<0>(tup);
-		const ClosurePtr coll_to = std::get<1>(tup);
+		const ClosurePtr closure_from = std::get<0>(tup);
+		const ClosurePtr closure_to = std::get<1>(tup);
 		const SymbolPtr trans = std::get<2>(tup);
 
-		ofstr << "\t" << coll_from->GetId() << " -> " << coll_to->GetId()
+		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
 			<< " [label=\"" << trans->GetStrId() << "\"];\n";
 	}
 
@@ -647,36 +741,41 @@ std::size_t Collection::hash_transition(const Collection::t_transition& trans)
  */
 Collection Collection::ConvertToLALR() const
 {
-	Collection colls;
+	Collection coll;
 
 	// maps old closure pointer to new one
 	std::map<ClosurePtr, ClosurePtr> map;
 
 	// states
-	for(const ClosurePtr& coll : m_collection)
+	for(const ClosurePtr& closure : m_collection)
 	{
-		std::size_t hash = coll->hash(true);
-		auto iter = colls.m_cache.find(hash);
+		std::size_t hash = closure->hash(true);
+		auto iter = coll.m_cache.find(hash);
 
 		// closure core not yet seen
-		if(iter == colls.m_cache.end())
+		if(iter == coll.m_cache.end())
 		{
-			ClosurePtr newcoll = std::make_shared<Closure>(*coll);
-			map.insert(std::make_pair(coll, newcoll));
+			ClosurePtr newclosure = std::make_shared<Closure>(*closure);
+			map.insert(std::make_pair(closure, newclosure));
 
-			colls.m_cache.insert(std::make_pair(hash, newcoll));
-			colls.m_collection.push_back(newcoll);
+			coll.m_cache.insert(std::make_pair(hash, newclosure));
+			coll.m_collection.push_back(newclosure);
 		}
 
 		// closure core already seen
 		else
 		{
-			ClosurePtr collOld = iter->second;
-			map.insert(std::make_pair(coll, collOld));
+			ClosurePtr closureOld = iter->second;
+			map.insert(std::make_pair(closure, closureOld));
 
 			// unite lookaheads
-			for(std::size_t elemidx=0; elemidx<collOld->m_elems.size(); ++elemidx)
-				collOld->m_elems[elemidx]->AddLookaheads(coll->m_elems[elemidx]->GetLookaheads());
+			for(std::size_t elemidx=0; elemidx<closureOld->m_elems.size(); ++elemidx)
+				closureOld->m_elems[elemidx]->AddLookaheads(closure->m_elems[elemidx]->GetLookaheads());
+
+			// unite lookbacks
+			for(const Closure::t_comefrom_transition& comefrom
+				: closure->m_comefrom_transitions)
+				closureOld->AddComefromTransition(comefrom);
 		}
 	}
 
@@ -684,10 +783,11 @@ Collection Collection::ConvertToLALR() const
 	std::set<std::size_t> hashes;
 	for(const t_transition& tup : m_transitions)
 	{
-		ClosurePtr collFromConv = map[std::get<0>(tup)];
-		ClosurePtr collToConv = map[std::get<1>(tup)];
+		ClosurePtr closureFromConv = map[std::get<0>(tup)];
+		ClosurePtr closureToConv = map[std::get<1>(tup)];
 
-		t_transition trans = std::make_tuple(collFromConv, collToConv, std::get<2>(tup));
+		t_transition trans = std::make_tuple(
+			closureFromConv, closureToConv, std::get<2>(tup));
 
 		std::size_t hash = hash_transition(trans);
 
@@ -695,12 +795,30 @@ Collection Collection::ConvertToLALR() const
 		if(hashes.find(hash) != hashes.end())
 			continue;
 
-		colls.m_transitions.emplace_back(std::move(trans));
+		coll.m_transitions.emplace_back(std::move(trans));
 		hashes.insert(hash);
 	}
 
-	colls.Simplify();
-	return colls;
+	// update comefroms
+	for(ClosurePtr& closure : coll.m_collection)
+	{
+		for(Closure::t_comefrom_transition& comefrom
+			: closure->m_comefrom_transitions)
+		{
+			const Closure*& closure_from = std::get<1>(comefrom);
+			// find closure_from in map (TODO: use ClosurePtr and map.find())
+			for(const auto& [oldClosure, newClosure] : map)
+			{
+				if(oldClosure->GetId() == closure_from->GetId())
+					closure_from = newClosure.get();
+			}
+		}
+
+		closure->CleanComefromTransitions();
+	}
+
+	coll.Simplify();
+	return coll;
 }
 
 
@@ -710,12 +828,12 @@ Collection Collection::ConvertToLALR() const
 Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 {
 	// reduce number of states first
-	Collection colls = ConvertToLALR();
+	Collection coll = ConvertToLALR();
 
 	// replace the lookaheads of all LR elements with the follow sets of their lhs symbols
-	for(ClosurePtr& coll : colls.m_collection)
+	for(ClosurePtr& closure : coll.m_collection)
 	{
-		for(ElementPtr& elem : coll->m_elems)
+		for(ElementPtr& elem : closure->m_elems)
 		{
 			const NonTerminalPtr& lhs = elem->GetLhs();
 			const auto& iter = follow.find(lhs);
@@ -726,7 +844,7 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 		}
 	}
 
-	return colls;
+	return coll;
 }
 
 
@@ -735,7 +853,8 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
  */
 std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>
 Collection::CreateParseTables(
-	const std::vector<t_conflictsolution>* conflictsol) const
+	const std::vector<t_conflictsolution>* conflictsol,
+	bool stopOnConflicts) const
 {
 	const std::size_t numStates = m_collection.size();
 	const std::size_t errorVal = ERROR_VAL;
@@ -750,14 +869,11 @@ Collection::CreateParseTables(
 	_action_reduce.resize(numStates);
 	_jump.resize(numStates);
 
-	// maps the ids to table indices for the non-terminals
-	t_mapIdIdx mapNonTermIdx;
-	// maps the ids to table indices for the terminals
-	t_mapIdIdx mapTermIdx;
+	// maps the ids to table indices for the non-terminals and the terminals
+	t_mapIdIdx mapNonTermIdx, mapTermIdx;
 
 	// current counters
-	std::size_t curNonTermIdx = 0;
-	std::size_t curTermIdx = 0;
+	std::size_t curNonTermIdx = 0, curTermIdx = 0;
 
 	// map terminal table index to terminal symbol
 	std::unordered_map<std::size_t, TerminalPtr> seen_terminals{};
@@ -798,11 +914,11 @@ Collection::CreateParseTables(
 		_tab_row[symIdx] = stateTo->GetId();
 	}
 
-	for(const ClosurePtr& coll : m_collection)
+	for(const ClosurePtr& closure : m_collection)
 	{
-		for(std::size_t elemidx=0; elemidx < coll->NumElements(); ++elemidx)
+		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
 		{
-			const ElementPtr& elem = coll->GetElement(elemidx);
+			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 
@@ -817,7 +933,7 @@ Collection::CreateParseTables(
 				numRhsSymsPerRule.resize(rule+1);
 			numRhsSymsPerRule[rule] = numRhsSyms;
 
-			auto& _action_row = _action_reduce[coll->GetId()];
+			auto& _action_row = _action_reduce[closure->GetId()];
 
 			for(const auto& la : elem->GetLookaheads())
 			{
@@ -846,6 +962,7 @@ Collection::CreateParseTables(
 	for(std::size_t state=0; state<numStates; ++state)
 	{
 		ClosurePtr closureState = m_collection[state];
+		std::vector<TerminalPtr> comefromTerms = closureState->GetComefromTerminals();
 
 		for(std::size_t termidx=0; termidx<curTermIdx; ++termidx)
 		{
@@ -873,18 +990,48 @@ Collection::CreateParseTables(
 				{
 					for(const t_conflictsolution& sol : *conflictsol)
 					{
-						if(std::get<0>(sol)->GetId() ==
-							conflictelem->GetLhs()->GetId() && 
-							std::get<1>(sol)->GetId() ==
-							conflictelem->GetSymbolAtCursor()->GetId())
+						ConflictSolution solution = ConflictSolution::NONE;
+
+						// solution has a lhs nonterminal and a lookahead terminal
+						if(std::holds_alternative<NonTerminalPtr>(std::get<0>(sol)) &&
+							*std::get<NonTerminalPtr>(std::get<0>(sol)) == *conflictelem->GetLhs() &&
+							*std::get<1>(sol) == *conflictelem->GetSymbolAtCursor())
 						{
-							if(std::get<2>(sol) == ConflictSolution::FORCE_SHIFT)
-								reduceEntry = errorVal;
-							else if(std::get<2>(sol) == ConflictSolution::FORCE_REDUCE)
-								shiftEntry = errorVal;
-							solution_found = true;
-							break;
+							solution = std::get<2>(sol);
 						}
+
+						// solution has a lookback terminal and a lookahead terminal
+						else if(std::holds_alternative<TerminalPtr>(std::get<0>(sol)) &&
+							*std::get<1>(sol) == *conflictelem->GetSymbolAtCursor())
+						{
+							// see if the given lookback terminal is in the closure's list
+							for(const TerminalPtr comefromTerm : comefromTerms)
+							{
+								if(*comefromTerm == *std::get<TerminalPtr>(std::get<0>(sol)))
+								{
+									solution = std::get<2>(sol);
+									break;
+								}
+							}
+						}
+
+						switch(solution)
+						{
+							case ConflictSolution::FORCE_SHIFT:
+								reduceEntry = errorVal;
+								solution_found = true;
+								break;
+							case ConflictSolution::FORCE_REDUCE:
+								shiftEntry = errorVal;
+								solution_found = true;
+								break;
+							case ConflictSolution::NONE:
+								solution_found = false;
+								break;
+						}
+
+						if(solution_found)
+							break;
 					}
 				}
 
@@ -895,16 +1042,28 @@ Collection::CreateParseTables(
 						<< " for state " << state;
 					if(conflictelem)
 						ostrErr << ":\n\t" << *conflictelem << "\n";
+					if(comefromTerms.size())
+					{
+						ostrErr << " with look-back terminal(s): ";
+						for(std::size_t i=0; i<comefromTerms.size(); ++i)
+						{
+							ostrErr << comefromTerms[i]->GetStrId();
+							if(i < comefromTerms.size()-1)
+								ostrErr << ", ";
+						}
+					}
 					if(termid)
-						ostrErr << " and terminal " << (*termid);
+						ostrErr << " and look-ahead terminal " << (*termid);
 					else
 						ostrErr << "and terminal index " << termidx;
 					ostrErr << " (can either shift to state " << shiftEntry
 						<< " or reduce using rule " << reduceEntry
 						<< ")." << std::endl;
 
-					//std::cerr << ostrErr.str() << std::endl;
-					throw std::runtime_error(ostrErr.str());
+					if(stopOnConflicts)
+						throw std::runtime_error(ostrErr.str());
+					else
+						std::cerr << ostrErr.str() << std::endl;
 				}
 			}
 		}
@@ -964,20 +1123,20 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 }
 
 
-std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
+std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 {
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Collection\n";
 	ostr << "--------------------------------------------------------------------------------\n";
-	for(const ClosurePtr& coll : colls.m_collection)
-		ostr << *coll << "\n";
+	for(const ClosurePtr& closure : coll.m_collection)
+		ostr << *closure << "\n";
 	ostr << "\n";
 
 
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Transitions\n";
 	ostr << "--------------------------------------------------------------------------------\n";
-	for(const Collection::t_transition& tup : colls.m_transitions)
+	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
 		ostr << std::get<0>(tup)->GetId() << " -> " << std::get<1>(tup)->GetId()
 			<< " via " << std::get<2>(tup)->GetStrId() << "\n";
@@ -989,7 +1148,7 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 	ostr << "Tables\n";
 	ostr << "--------------------------------------------------------------------------------\n";
 	std::ostringstream ostrActionShift, ostrActionReduce, ostrJump;
-	for(const Collection::t_transition& tup : colls.m_transitions)
+	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
 		const ClosurePtr& stateFrom = std::get<0>(tup);
 		const ClosurePtr& stateTo = std::get<1>(tup);
@@ -1007,15 +1166,15 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& colls)
 		}
 	}
 
-	for(const ClosurePtr& coll : colls.m_collection)
+	for(const ClosurePtr& closure : coll.m_collection)
 	{
-		for(std::size_t elemidx=0; elemidx < coll->NumElements(); ++elemidx)
+		for(std::size_t elemidx=0; elemidx < closure->NumElements(); ++elemidx)
 		{
-			const ElementPtr& elem = coll->GetElement(elemidx);
+			const ElementPtr& elem = closure->GetElement(elemidx);
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			ostrActionReduce << "action_reduce[ state " << coll->GetId() << ", ";
+			ostrActionReduce << "action_reduce[ state " << closure->GetId() << ", ";
 			for(const auto& la : elem->GetLookaheads())
 				ostrActionReduce << la->GetStrId() << " ";
 			ostrActionReduce << "] = ";

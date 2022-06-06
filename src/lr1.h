@@ -14,6 +14,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <variant>
 #include <functional>
 #include <iostream>
 
@@ -27,13 +28,16 @@ using ClosurePtr = std::shared_ptr<Closure>;
 
 enum class ConflictSolution
 {
+	NONE,
 	FORCE_SHIFT,
 	FORCE_REDUCE
 };
 
 
 using t_conflictsolution = std::tuple<
-	NonTerminalPtr,
+	// either use nonterminal lhs or terminal lookback token
+	std::variant<NonTerminalPtr, TerminalPtr>,
+	// terminal lookahead token
 	TerminalPtr,
 	ConflictSolution>;
 
@@ -94,7 +98,12 @@ private:
  */
 class Closure
 {
+public:
 	friend class Collection;
+
+	// backtracing of transitions that lead to this closure
+	using t_comefrom_transition = std::tuple<SymbolPtr, const Closure*>; // TODO: use ClosurePtr
+
 
 public:
 	Closure();
@@ -115,6 +124,12 @@ public:
 	ClosurePtr DoTransition(const SymbolPtr) const;
 	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions() const;
 
+	void AddComefromTransition(const t_comefrom_transition& comefrom);
+	void CleanComefromTransitions();
+	const std::vector<t_comefrom_transition>& GetComefromTransitions() const
+	{ return m_comefrom_transitions; }
+	std::vector<TerminalPtr> GetComefromTerminals() const;
+
 	std::size_t hash(bool only_core=false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);
@@ -126,16 +141,19 @@ private:
 
 private:
 	std::vector<ElementPtr> m_elems;
-	std::size_t m_id = 0;	// Closure id
+	std::size_t m_id = 0;	// closure id
 
-	// global Closure id counter
+	// global closure id counter
 	static std::size_t g_id;
+
+	// transition that led to this closure
+	std::vector<t_comefrom_transition> m_comefrom_transitions{};
 };
 
 
 
 /**
- * LR(1) collection
+ * LR(1) collection of closures
  */
 class Collection
 {
@@ -154,7 +172,8 @@ public:
 
 	std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx> CreateParseTables(
-			const std::vector<t_conflictsolution>* conflictsol = nullptr) const;
+			const std::vector<t_conflictsolution>* conflictsol = nullptr,
+			bool stopOnConflicts = true) const;
 
 	static bool SaveParseTables(const std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file);
