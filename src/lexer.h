@@ -13,14 +13,12 @@
 #include <map>
 #include <utility>
 #include <optional>
-#include <variant>
 
 #include "ast.h"
+#include "lval.h"
 #include "common.h"
 
 
-using t_real = double;
-using t_lval = std::optional<std::variant<t_real, std::string>>;
 using t_tok = std::size_t;
 
 

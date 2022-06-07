@@ -9,6 +9,8 @@
 #include "lr1.h"
 #include "lexer.h"
 #include "parser.h"
+#include "ast.h"
+#include "ast_printer.h"
 
 #include <iostream>
 #include <sstream>
@@ -185,9 +187,10 @@ int main()
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
-			auto ast = cst_to_ast(parser.Parse(tokens));
+			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 			std::cout << "AST for expression " << exprstr << ":\n";
-			ast->print(std::cout);
+			ASTPrinter printer{std::cout};
+			ast->accept(&printer);
 		}
 
 		{
@@ -196,9 +199,10 @@ int main()
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
-			auto ast = cst_to_ast(parser.Parse(tokens));
+			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 			std::cout << "\nAST for expression " << exprstr << ":\n";
-			ast->print(std::cout);
+			ASTPrinter printer{std::cout};
+			ast->accept(&printer);
 		}
 
 		{
@@ -207,9 +211,10 @@ int main()
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
-			auto ast = cst_to_ast(parser.Parse(tokens));
+			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 			std::cout << "\nAST for expression " << exprstr << ":\n";
-			ast->print(std::cout);
+			ASTPrinter printer{std::cout};
+			ast->accept(&printer);
 		}
 	}
 	catch(const std::exception& ex)

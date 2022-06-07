@@ -347,9 +347,10 @@ static void lr1_run_parser()
 			}
 			std::cout << "\n";
 
-			auto ast = cst_to_ast(parser.Parse(tokens));
+			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 			std::cout << "AST:\n";
-			ast->print(std::cout);
+			ASTPrinter printer{std::cout};
+			ast->accept(&printer);
 		}
 	}
 	catch(const std::exception& err)

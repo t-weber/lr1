@@ -45,7 +45,8 @@ add_library(lr1-rt STATIC
 	src/symbol.cpp src/symbol.h
 	src/lexer.cpp src/lexer.h
 	src/parser.cpp src/parser.h
-	src/ast.cpp src/ast.h
+	src/ast.h
+	src/ast_printer.cpp src/ast_printer.h
 	src/helpers.h src/common.h
 )
 

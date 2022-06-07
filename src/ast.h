@@ -14,9 +14,17 @@
 #include <iostream>
 #include <sstream>
 
+#include "lval.h"
 
+
+// forward declarations
 class ASTBase;
 using t_astbaseptr = std::shared_ptr<ASTBase>;
+
+template<class t_lval> class ASTToken;
+class ASTDelegate;
+class ASTUnary;
+class ASTBinary;
 
 
 enum class ASTType
@@ -27,7 +35,26 @@ enum class ASTType
 	BINARY,
 };
 
-extern std::string get_ast_typename(ASTType);
+
+
+/**
+ * visitor for easier extensibility
+ */
+class ASTVisitor
+{
+public:
+	virtual ~ASTVisitor() = default;
+
+	//template<class t_lval> virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTToken<void*>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTDelegate* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTUnary* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTBinary* ast, std::size_t level) const = 0;
+};
+
 
 
 /**
@@ -53,7 +80,26 @@ public:
 	virtual t_astbaseptr GetChild(std::size_t) const { return nullptr; }
 	virtual void SetChild(std::size_t, const t_astbaseptr&) { }
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* extrainfo=nullptr) const;
+	virtual void accept(const ASTVisitor* visitor, std::size_t level = 0) const = 0;
+
+
+	/**
+	 * converts the concrete syntax tree to an abstract one
+	 */
+	static t_astbaseptr cst_to_ast(t_astbaseptr cst)
+	{
+		if(cst == nullptr)
+			return nullptr;
+
+		for(std::size_t i=0; i<cst->NumChildren(); ++i)
+			cst->SetChild(i, cst_to_ast(cst->GetChild(i)));
+
+		// skip delegate nodes
+		if(cst->GetType() == ASTType::DELEGATE)
+			return cst->GetChild(0);
+
+		return cst;
+	}
 
 
 private:
@@ -65,19 +111,40 @@ private:
 };
 
 
+
+/**
+ * visitor acceptor
+ */
+template<class t_ast_sub>
+class ASTBaseAcceptor : public ASTBase
+{
+public:
+	ASTBaseAcceptor(std::size_t id, std::optional<std::size_t> tableidx=std::nullopt)
+		: ASTBase{id, tableidx}
+	{}
+
+	virtual void accept(const ASTVisitor* visitor, std::size_t level = 0) const override
+	{
+		const t_ast_sub *sub = static_cast<const t_ast_sub*>(this);
+		visitor->visit(sub, level);
+	}
+};
+
+
+
 /**
  * terminal symbols from lexer
  */
 template<class t_lval>
-class ASTToken : public ASTBase
+class ASTToken : public ASTBaseAcceptor<ASTToken<t_lval>>
 {
 public:
 	ASTToken(std::size_t id, std::size_t tableidx)
-		: ASTBase{id, tableidx}, m_lval{std::nullopt}
+		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lval{std::nullopt}
 	{}
 
 	ASTToken(std::size_t id, std::size_t tableidx, t_lval lval)
-		: ASTBase{id, tableidx}, m_lval{lval}
+		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lval{lval}
 	{}
 
 	virtual ~ASTToken() = default;
@@ -91,28 +158,21 @@ public:
 	const t_lval& GetLexerValue() const { return *m_lval; }
 	constexpr bool HasLexerValue() const { return m_lval.operator bool(); }
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override
-	{
-		std::ostringstream _ostr;
-		if(HasLexerValue())
-			_ostr << ", value = " << GetLexerValue();
-		ASTBase::print(ostr, indent, _ostr.str().c_str());
-	}
-
 
 private:
 	std::optional<t_lval> m_lval;
 };
 
 
+
 /**
  * node delegating to one child
  */
-class ASTDelegate : public ASTBase
+class ASTDelegate : public ASTBaseAcceptor<ASTDelegate>
 {
 public:
 	ASTDelegate(std::size_t id, std::size_t tableidx, const t_astbaseptr& arg1)
-		: ASTBase{id, tableidx}, m_arg1{arg1}
+		: ASTBaseAcceptor<ASTDelegate>{id, tableidx}, m_arg1{arg1}
 	{}
 
 	virtual ~ASTDelegate() = default;
@@ -137,14 +197,15 @@ private:
 };
 
 
+
 /**
  * node for unary operations
  */
-class ASTUnary : public ASTBase
+class ASTUnary : public ASTBaseAcceptor<ASTUnary>
 {
 public:
 	ASTUnary(std::size_t id, std::size_t tableidx, const t_astbaseptr& arg1, std::size_t opid)
-	: ASTBase{id, tableidx}, m_arg1{arg1}, m_opid{opid}
+		: ASTBaseAcceptor<ASTUnary>{id, tableidx}, m_arg1{arg1}, m_opid{opid}
 	{}
 
 	virtual ~ASTUnary() = default;
@@ -164,7 +225,6 @@ public:
 			m_arg1 = ast;
 	}
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override;
 
 private:
 	t_astbaseptr m_arg1;
@@ -172,16 +232,17 @@ private:
 };
 
 
+
 /**
  * node for binary operations
  */
-class ASTBinary : public ASTBase
+class ASTBinary : public ASTBaseAcceptor<ASTBinary>
 {
 public:
 	ASTBinary(std::size_t id, std::size_t tableidx,
 		const t_astbaseptr& arg1, const t_astbaseptr& arg2,
 		std::size_t opid)
-		: ASTBase{id, tableidx}, m_arg1{arg1}, m_arg2{arg2}, m_opid{opid}
+		: ASTBaseAcceptor<ASTBinary>{id, tableidx}, m_arg1{arg1}, m_arg2{arg2}, m_opid{opid}
 	{}
 
 	virtual ~ASTBinary() = default;
@@ -210,18 +271,11 @@ public:
 		}
 	}
 
-	virtual void print(std::ostream& ostr, std::size_t indent=0, const char* =nullptr) const override;
 
 private:
 	t_astbaseptr m_arg1, m_arg2;
 	std::size_t m_opid;
 };
-
-
-/**
- * convert concrete syntax tree to abstract one
- */
-extern t_astbaseptr cst_to_ast(t_astbaseptr cst);
 
 
 // semantic rule: returns an ast pointer and gets a vector of ast pointers

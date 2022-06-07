@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <map>
+#include <variant>
 
 
 #define ERROR_VAL 0xffffffff	/* 'error' table entry */
