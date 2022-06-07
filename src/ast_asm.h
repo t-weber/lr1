@@ -1,24 +1,45 @@
 /**
- * ast printer
+ * ast asm generator
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 14-jun-2020
  * @license see 'LICENSE.EUPL' file
  */
 
-#ifndef __LR1_AST_PRINTER_H__
-#define __LR1_AST_PRINTER_H__
+#ifndef __LR1_AST_ASM_H__
+#define __LR1_AST_ASM_H__
 
+#include <unordered_map>
+#include <tuple>
 #include <iostream>
+#include <cstdint>
 
 #include "lval.h"
 #include "ast.h"
 
 
+enum class OpCode : std::int8_t
+{
+	PUSH = 0x01,
 
-class ASTPrinter : public ASTVisitor
+	UADD = 0x10,
+	USUB = 0x11,
+	ADD = 0x12,
+	SUB = 0x13,
+	MUL = 0x14,
+	DIV = 0x15,
+	MOD = 0x16,
+	POW = 0x17,
+};
+
+
+class ASTAsm : public ASTVisitor
 {
 public:
-	ASTPrinter(std::ostream& ostr = std::cout);
+	ASTAsm(std::ostream& ostr = std::cout,
+		std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops = nullptr);
+
+	ASTAsm(const ASTAsm&) = delete;
+	const ASTAsm& operator=(const ASTAsm&) = delete;
 
 	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const override;
 	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const override;
@@ -28,17 +49,14 @@ public:
 	virtual void visit(const ASTUnary* ast, std::size_t level) const override;
 	virtual void visit(const ASTBinary* ast, std::size_t level) const override;
 
-
-	static std::string get_ast_typename(ASTType ty);
-
-
-protected:
-	void print_base(const ASTBase* ast, std::size_t level,
-		const char *extrainfo = nullptr) const;
+	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
+	void SetBinary(bool bin) { m_binary = bin; }
 
 
 private:
-	std::ostream& m_ostr{std::cout};
+	std::ostream* m_ostr{&std::cout};
+	const std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *m_ops{nullptr};
+	bool m_binary{false};
 };
 
 

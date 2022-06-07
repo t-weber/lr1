@@ -8,7 +8,7 @@ project(lr1)
 cmake_minimum_required(VERSION 3.0)
 
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_definitions(-Wall -Wextra -Weffc++)
@@ -47,6 +47,7 @@ add_library(lr1-rt STATIC
 	src/parser.cpp src/parser.h
 	src/ast.h
 	src/ast_printer.cpp src/ast_printer.h
+	src/ast_asm.cpp src/ast_asm.h
 	src/helpers.h src/common.h
 )
 

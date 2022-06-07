@@ -9,10 +9,13 @@
 #include "lexer.h"
 #include "ast.h"
 #include "ast_printer.h"
+#include "ast_asm.h"
 
+#include <unordered_map>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <cstdint>
 
 
 enum : std::size_t
@@ -45,7 +48,6 @@ static void create_grammar()
 	comma = std::make_shared<Terminal>(',', ",");
 	sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
 	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
-
 
 	std::size_t semanticindex = 0;
 
@@ -376,9 +378,33 @@ static void lr1_run_parser()
 			std::cout << "\n";
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+
 			std::cout << "AST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
+
+			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
+			{{
+				std::make_pair('+', std::make_tuple("add", OpCode::ADD)),
+				std::make_pair('-', std::make_tuple("sub", OpCode::SUB)),
+				std::make_pair('*', std::make_tuple("mul", OpCode::MUL)),
+				std::make_pair('/', std::make_tuple("div", OpCode::DIV)),
+				std::make_pair('%', std::make_tuple("mod", OpCode::MOD)),
+				std::make_pair('^', std::make_tuple("pow", OpCode::POW)),
+			}};
+
+			std::ostringstream ostrAsm;
+			ASTAsm astasm{ostrAsm, &ops};
+			ast->accept(&astasm);
+
+			std::ostringstream ostrAsmBin(
+				std::ios_base::out | std::ios_base::binary);
+			astasm.SetStream(&ostrAsmBin);
+			astasm.SetBinary(true);
+			ast->accept(&astasm);
+			std::cout << "Generated code ("
+				<< ostrAsmBin.str().size() << " bytes):\n"
+				<< ostrAsm.str();
 		}
 	}
 	catch(const std::exception& err)
