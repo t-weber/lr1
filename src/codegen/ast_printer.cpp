@@ -77,6 +77,13 @@ void ASTPrinter::visit(const ASTToken<t_real>* ast, std::size_t level) const
 }
 
 
+void ASTPrinter::visit(const ASTToken<t_int>* ast, std::size_t level) const
+{
+	std::string tok = print_token(ast);
+	print_base(ast, level, tok.c_str());
+}
+
+
 void ASTPrinter::visit(const ASTToken<std::string>* ast, std::size_t level) const
 {
 	std::string tok = print_token(ast);

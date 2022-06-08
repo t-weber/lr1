@@ -15,23 +15,7 @@
 
 #include "lval.h"
 #include "ast.h"
-
-
-enum class OpCode : std::int8_t
-{
-	HALT = 0x00,
-
-	PUSH = 0x01,
-
-	UADD = 0x10,
-	USUB = 0x11,
-	ADD = 0x12,
-	SUB = 0x13,
-	MUL = 0x14,
-	DIV = 0x15,
-	MOD = 0x16,
-	POW = 0x17,
-};
+#include "../vm/opcodes.h"
 
 
 class ASTAsm : public ASTVisitor
@@ -45,6 +29,7 @@ public:
 
 	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const override;
 	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const override;
+	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) const override;
 	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) const override;
 	virtual void visit(const ASTToken<void*>* ast, std::size_t level) const override;
 	virtual void visit(const ASTDelegate* ast, std::size_t level) const override;

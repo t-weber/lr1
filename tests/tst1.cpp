@@ -4,9 +4,9 @@
  * @date 12-jul-2020
  * @license see 'LICENSE.EUPL' file
  */
-#include "lr1.h"
-#include "lexer.h"
-#include "parser.h"
+#include "parsergen/lr1.h"
+#include "codegen/lexer.h"
+#include "codegen/parser.h"
 
 #include <iostream>
 #include <sstream>

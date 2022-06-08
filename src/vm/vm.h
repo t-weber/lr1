@@ -11,8 +11,8 @@
 #include <memory>
 #include <cstdint>
 
-#include "ast_asm.h"
-#include "lval.h"
+#include "../codegen/lval.h"
+#include "opcodes.h"
 
 
 class VM
@@ -22,9 +22,11 @@ public:
 	using t_byte = std::uint8_t;
 	using t_addr = std::uint16_t;
 	using t_real = ::t_real;
+	using t_int = ::t_int;
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
 	static constexpr const t_addr m_addrsize = sizeof(t_addr);
 	static constexpr const t_addr m_realsize = sizeof(t_real);
+	static constexpr const t_addr m_intsize = sizeof(t_int);
 	t_addr m_memsize = 1024;
 
 

@@ -49,6 +49,7 @@ public:
 	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTToken<void*>* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTDelegate* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTUnary* ast, std::size_t level) const = 0;

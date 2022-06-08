@@ -9,7 +9,7 @@
 #define __LR1_TYPES_H__
 
 #include "helpers.h"
-#include "ast.h"
+#include "../codegen/ast.h"
 
 #include <vector>
 #include <map>

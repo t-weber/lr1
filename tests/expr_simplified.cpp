@@ -8,11 +8,11 @@
  * 	- expression grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
  */
 
-#include "lr1.h"
-#include "lexer.h"
-#include "parser.h"
-#include "ast.h"
-#include "ast_printer.h"
+#include "parsergen/lr1.h"
+#include "codegen/lexer.h"
+#include "codegen/parser.h"
+#include "codegen/ast.h"
+#include "codegen/ast_printer.h"
 
 #include <iostream>
 #include <sstream>

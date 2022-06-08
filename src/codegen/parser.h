@@ -9,7 +9,7 @@
 #define __LR1_PARSER_H__
 
 #include "ast.h"
-#include "common.h"
+#include "../parsergen/common.h"
 
 
 /**

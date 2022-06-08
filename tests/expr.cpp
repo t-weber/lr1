@@ -8,8 +8,8 @@
  * 	- expression grammar from: https://de.wikipedia.org/wiki/LL(k)-Grammatik#Beispiel
  */
 
-#include "lr1.h"
-#include "lexer.h"
+#include "parsergen/lr1.h"
+#include "codegen/lexer.h"
 
 #include <iostream>
 #include <sstream>
@@ -173,13 +173,13 @@ static void lr1_create_parser()
 
 static void lr1_run_parser()
 {
-	std::cerr << "No parsing tables available, please run ./expr_test_create first and rebuild."
+	std::cerr << "No parsing tables available, please run ./expr_create first and rebuild."
 		<< std::endl;
 }
 
 #else
 
-#include "parser.h"
+#include "codegen/parser.h"
 #include "expr.tab"
 
 static void lr1_run_parser()

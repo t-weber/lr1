@@ -5,12 +5,12 @@
  * @license see 'LICENSE.EUPL' file
  */
 
-#include "lr1.h"
-#include "lexer.h"
-#include "ast.h"
-#include "ast_printer.h"
-#include "ast_asm.h"
-#include "vm.h"
+#include "parsergen/lr1.h"
+#include "codegen/lexer.h"
+#include "codegen/ast.h"
+#include "codegen/ast_printer.h"
+#include "codegen/ast_asm.h"
+#include "vm/vm.h"
 
 #include <unordered_map>
 #include <iostream>
@@ -212,13 +212,13 @@ static void lr1_create_parser()
 
 static void lr1_run_parser()
 {
-	std::cerr << "No parsing tables available, please run ./expr_test_create first and rebuild."
+	std::cerr << "No parsing tables available, please run ./expr_prec_create first and rebuild."
 		<< std::endl;
 }
 
 #else
 
-#include "parser.h"
+#include "codegen/parser.h"
 #include "expr_prec.tab"
 
 static void lr1_run_parser()
@@ -386,12 +386,12 @@ static void lr1_run_parser()
 
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
 			{{
-				std::make_pair('+', std::make_tuple("add", OpCode::ADD)),
-				std::make_pair('-', std::make_tuple("sub", OpCode::SUB)),
-				std::make_pair('*', std::make_tuple("mul", OpCode::MUL)),
-				std::make_pair('/', std::make_tuple("div", OpCode::DIV)),
-				std::make_pair('%', std::make_tuple("mod", OpCode::MOD)),
-				std::make_pair('^', std::make_tuple("pow", OpCode::POW)),
+				std::make_pair('+', std::make_tuple("addf", OpCode::ADDF)),
+				std::make_pair('-', std::make_tuple("subf", OpCode::SUBF)),
+				std::make_pair('*', std::make_tuple("mulf", OpCode::MULF)),
+				std::make_pair('/', std::make_tuple("divf", OpCode::DIVF)),
+				std::make_pair('%', std::make_tuple("modf", OpCode::MODF)),
+				std::make_pair('^', std::make_tuple("powf", OpCode::POWF)),
 			}};
 
 			std::ostringstream ostrAsm;

@@ -16,7 +16,7 @@
 
 #include "ast.h"
 #include "lval.h"
-#include "common.h"
+#include "../parsergen/common.h"
 
 
 using t_tok = std::size_t;

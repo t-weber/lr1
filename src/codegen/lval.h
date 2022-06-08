@@ -11,10 +11,12 @@
 #include <map>
 #include <variant>
 #include <string>
+#include <cstdint>
 
 
 using t_real = double;
-using t_lval = std::optional<std::variant<t_real, std::string>>;
+using t_int = std::int64_t;
+using t_lval = std::optional<std::variant<t_real, t_int, std::string>>;
 
 
 #endif

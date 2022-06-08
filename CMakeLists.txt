@@ -28,64 +28,75 @@ include_directories(
 
 # -----------------------------------------------------------------------------
 # parser creation library
-add_library(lr1 STATIC
-	src/symbol.cpp src/symbol.h
-	src/lr1_element.cpp src/lr1_closure.cpp src/lr1_collection.cpp src/lr1.h
-	src/ll1.cpp src/ll1.h
-	src/helpers.h src/common.h
+add_library(lr1-parsergen STATIC
+	src/parsergen/symbol.cpp src/parsergen/symbol.h
+	src/parsergen/lr1_element.cpp src/parsergen/lr1_closure.cpp
+	src/parsergen/lr1_collection.cpp src/parsergen/lr1.h
+	src/parsergen/ll1.cpp src/parsergen/ll1.h
+	src/parsergen/helpers.h src/parsergen/common.h
 )
 
-target_link_libraries(lr1 ${Boost_LIBRARIES})
+target_link_libraries(lr1-parsergen ${Boost_LIBRARIES})
 # -----------------------------------------------------------------------------
 
 
 # -----------------------------------------------------------------------------
-# parser runtime library
-add_library(lr1-rt STATIC
-	src/symbol.cpp src/symbol.h
-	src/lexer.cpp src/lexer.h
-	src/parser.cpp src/parser.h
-	src/ast.h
-	src/ast_printer.cpp src/ast_printer.h
-	src/ast_asm.cpp src/ast_asm.h
-	src/vm.cpp src/vm.h
-	src/helpers.h src/common.h
+# code generation library
+add_library(lr1-codegen STATIC
+	src/parsergen/symbol.cpp src/parsergen/symbol.h
+	src/parsergen/helpers.h src/parsergen/common.h
+	src/codegen/lexer.cpp src/codegen/lexer.h
+	src/codegen/parser.cpp src/codegen/parser.h
+	src/codegen/ast.h src/vm/opcodes.h
+	src/codegen/ast_printer.cpp src/codegen/ast_printer.h
+	src/codegen/ast_asm.cpp src/codegen/ast_asm.h
 )
 
-target_link_libraries(lr1-rt ${Boost_LIBRARIES})
+target_link_libraries(lr1-codegen ${Boost_LIBRARIES})
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# vm library
+add_library(lr1-vm STATIC
+	src/vm/vm.cpp src/vm/vm.h
+	src/vm/opcodes.h
+)
+
+target_link_libraries(lr1-vm ${Boost_LIBRARIES})
 # -----------------------------------------------------------------------------
 
 
 # -----------------------------------------------------------------------------
 # tests
 add_executable(test1 tests/tst1.cpp)
-target_link_libraries(test1 lr1)
+target_link_libraries(test1 lr1-parsergen)
 
-add_executable(expr_test_simplified tests/expr_simplified.cpp)
-target_link_libraries(expr_test_simplified lr1 lr1-rt)
+add_executable(expr_simplified tests/expr_simplified.cpp)
+target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)
 
-add_executable(expr_test_simplified_prec tests/expr_simplified_prec.cpp)
-target_link_libraries(expr_test_simplified_prec lr1 lr1-rt)
+add_executable(expr_simplified_prec tests/expr_simplified_prec.cpp)
+target_link_libraries(expr_simplified_prec lr1-parsergen lr1-codegen)
 
-add_executable(expr_test_simplified_ll1 tests/expr_simplified_ll1.cpp)
-target_link_libraries(expr_test_simplified_ll1 lr1)
+add_executable(expr_simplified_ll1 tests/expr_simplified_ll1.cpp)
+target_link_libraries(expr_simplified_ll1 lr1-parsergen)
 
-add_executable(expr_test_ll1 tests/expr_ll1.cpp)
-target_link_libraries(expr_test_ll1 lr1)
+add_executable(expr_ll1 tests/expr_ll1.cpp)
+target_link_libraries(expr_ll1 lr1-parsergen)
 
-add_executable(expr_test_create tests/expr.cpp)
-target_compile_definitions(expr_test_create PUBLIC -DCREATE_PARSER)
-target_link_libraries(expr_test_create lr1)
+add_executable(expr_create tests/expr.cpp)
+target_compile_definitions(expr_create PUBLIC -DCREATE_PARSER)
+target_link_libraries(expr_create lr1-parsergen)
 
-add_executable(expr_test_run tests/expr.cpp)
-target_compile_definitions(expr_test_run PUBLIC -DRUN_PARSER)
-target_link_libraries(expr_test_run lr1-rt)
+add_executable(expr_run tests/expr.cpp)
+target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
+target_link_libraries(expr_run lr1-codegen)
 
-add_executable(expr_test_prec_create tests/expr_prec.cpp)
-target_compile_definitions(expr_test_prec_create PUBLIC -DCREATE_PARSER)
-target_link_libraries(expr_test_prec_create lr1)
+add_executable(expr_prec_create tests/expr_prec.cpp)
+target_compile_definitions(expr_prec_create PUBLIC -DCREATE_PARSER)
+target_link_libraries(expr_prec_create lr1-parsergen)
 
-add_executable(expr_test_prec_run tests/expr_prec.cpp)
-target_compile_definitions(expr_test_prec_run PUBLIC -DRUN_PARSER)
-target_link_libraries(expr_test_prec_run lr1-rt)
+add_executable(expr_prec_run tests/expr_prec.cpp)
+target_compile_definitions(expr_prec_run PUBLIC -DRUN_PARSER)
+target_link_libraries(expr_prec_run lr1-codegen lr1-vm)
 # -----------------------------------------------------------------------------

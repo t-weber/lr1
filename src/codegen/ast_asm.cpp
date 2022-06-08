@@ -33,13 +33,33 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 
 	if(m_binary)
 	{
-		//m_ostr->put(std::to_underlying(OpCode::PUSH));
-		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSH));
+		//m_ostr->put(std::to_underlying(OpCode::PUSHF));
+		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHF));
 		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_real));
 	}
 	else
 	{
-		(*m_ostr) << "push " << val << std::endl;
+		(*m_ostr) << "pushf " << val << std::endl;
+	}
+}
+
+
+void ASTAsm::visit(const ASTToken<t_int>* ast,
+	[[maybe_unused]] std::size_t level) const
+{
+	if(!ast->HasLexerValue())
+		return;
+	t_int val = ast->GetLexerValue();
+
+	if(m_binary)
+	{
+		//m_ostr->put(std::to_underlying(OpCode::PUSHI));
+		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHI));
+		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_int));
+	}
+	else
+	{
+		(*m_ostr) << "pushi " << val << std::endl;
 	}
 }
 
@@ -57,7 +77,8 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 	}
 	else
 	{
-		(*m_ostr) << "push " << val << std::endl;
+		// TODO
+		(*m_ostr) << "pushstr " << val << std::endl;
 	}
 }
 
@@ -88,10 +109,10 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level) cons
 	if(m_binary)
 	{
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
-		if(op == OpCode::ADD)
-			op = OpCode::UADD;
-		if(op == OpCode::SUB)
-			op = OpCode::USUB;
+		if(op == OpCode::ADDF) op = OpCode::UADDF;
+		else if(op == OpCode::SUBF) op = OpCode::USUBF;
+		else if(op == OpCode::ADDI) op = OpCode::UADDI;
+		else if(op == OpCode::SUBI) op = OpCode::USUBI;
 		m_ostr->put(static_cast<std::int8_t>(op));
 	}
 	else
