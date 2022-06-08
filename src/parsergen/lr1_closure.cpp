@@ -44,7 +44,6 @@ const Closure& Closure::operator=(const Closure& closure)
 }
 
 
-
 /**
  * adds an element and generates the rest of the closure
  */
@@ -174,10 +173,12 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 		if(!sym)
 			continue;
 
-		bool sym_already_seen = std::find_if(syms.begin(), syms.end(), [sym](const SymbolPtr sym2)->bool
-		{
-			return *sym == *sym2;
-		}) != syms.end();
+		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
+			[sym](const SymbolPtr sym2) -> bool
+			{
+				return *sym == *sym2;
+			}) != syms.end();
+
 		if(sym && !sym_already_seen)
 			syms.emplace_back(sym);
 	}

@@ -1,7 +1,7 @@
 /**
  * test
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 12-jul-2020
+ * @date 8-jun-2022
  * @license see 'LICENSE.EUPL' file
  */
 #include "parsergen/lr1.h"
@@ -12,17 +12,16 @@
 #include <sstream>
 #include <iomanip>
 
-enum : std::size_t { PROD_SPRIME, PROD_S, PROD_A, PROD_B, };
+enum : std::size_t { PROD_SPRIME, PROD_S, PROD_AS, PROD_A, };
 
 int main()
 {
 	auto Sprime = std::make_shared<NonTerminal>(PROD_SPRIME, "S'");
 	auto S = std::make_shared<NonTerminal>(PROD_SPRIME, "S");
+	auto As = std::make_shared<NonTerminal>(PROD_AS, "As");
 	auto A = std::make_shared<NonTerminal>(PROD_A, "A");
-	auto B = std::make_shared<NonTerminal>(PROD_B, "B");
 
 	auto a = std::make_shared<Terminal>('a', "a");
-	auto b = std::make_shared<Terminal>('b', "b");
 
 
 	// productions
@@ -30,15 +29,14 @@ int main()
 
 	Sprime->AddRule({ S }, semanticindex++);
 
-	S->AddRule({ A }, semanticindex++);
-	S->AddRule({ B }, semanticindex++);
+	S->AddRule({ As }, semanticindex++);
+
+	As->AddRule({ A, As }, semanticindex++);
+	As->AddRule({ g_eps }, semanticindex++);
 
 	A->AddRule({ a }, semanticindex++);
-	//B->AddRule({ B, b }, semanticindex++);
-	B->AddRule({ b, B }, semanticindex++);
-	B->AddRule({ g_eps }, semanticindex++);
 
-	std::vector<NonTerminalPtr> all_nonterminals{{ Sprime, S, A, B }};
+	std::vector<NonTerminalPtr> all_nonterminals{{ Sprime, S, As, A }};
 
 	std::cout << "Productions:\n";
 	for(NonTerminalPtr nonterm : all_nonterminals)
@@ -81,15 +79,14 @@ int main()
 		Sprime, 0, 0, Terminal::t_terminalset{{ g_end }});
 	ClosurePtr coll = std::make_shared<Closure>();
 	coll->AddElement(elem);
-	//std::cout << "\n\n" << *coll << std::endl;
 
 	Collection colls{coll};
 	colls.DoTransitions();
-	colls.WriteGraph("tst1", 1);
+	colls.WriteGraph("tst2", 1);
 	std::cout << "\n\nLR(1):\n" << colls << std::endl;
 
 	Collection collsLALR = colls.ConvertToLALR();
-	collsLALR.WriteGraph("tst1_lalr", 1);
+	collsLALR.WriteGraph("tst2_lalr", 1);
 	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
 
 	return 0;

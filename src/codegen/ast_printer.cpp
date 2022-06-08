@@ -19,6 +19,7 @@ std::string ASTPrinter::get_ast_typename(ASTType ty)
 		case ASTType::DELEGATE: return "delegate";
 		case ASTType::UNARY: return "unary";
 		case ASTType::BINARY: return "binary";
+		case ASTType::LIST: return "list";
 	}
 
 	return "<unknown>";
@@ -122,4 +123,10 @@ void ASTPrinter::visit(const ASTBinary* ast, std::size_t level) const
 	if(ast->GetOpId() < 256)
 		_ostr << " (" << (char)ast->GetOpId() << ")";
 	print_base(ast, level, _ostr.str().c_str());
+}
+
+
+void ASTPrinter::visit(const ASTList* ast, std::size_t level) const
+{
+	print_base(ast, level);
 }

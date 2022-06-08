@@ -72,6 +72,9 @@ target_link_libraries(lr1-vm ${Boost_LIBRARIES})
 add_executable(test1 tests/tst1.cpp)
 target_link_libraries(test1 lr1-parsergen)
 
+add_executable(test2 tests/tst2.cpp)
+target_link_libraries(test2 lr1-parsergen)
+
 add_executable(expr_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)
 
@@ -99,4 +102,12 @@ target_link_libraries(expr_prec_create lr1-parsergen)
 add_executable(expr_prec_run tests/expr_prec.cpp)
 target_compile_definitions(expr_prec_run PUBLIC -DRUN_PARSER)
 target_link_libraries(expr_prec_run lr1-codegen lr1-vm)
+
+add_executable(script_create src/tools/script.cpp)
+target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
+target_link_libraries(script_create lr1-parsergen)
+
+add_executable(script_run src/tools/script.cpp)
+target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
+target_link_libraries(script_run lr1-codegen lr1-vm)
 # -----------------------------------------------------------------------------

@@ -40,7 +40,8 @@ get_matching_tokens(const std::string& str)
 
 	{	// tokens represented by themselves
 		if(str == "+" || str == "-" || str == "*" || str == "/" ||
-			str == "%" || str == "^" || str == "(" || str == ")" || str == ",")
+			str == "%" || str == "^" || str == "(" || str == ")" ||
+			str == "," || str == ";")
 			matches.push_back(std::make_tuple((t_tok)str[0], std::nullopt));
 	}
 
@@ -122,7 +123,8 @@ template<std::size_t IDX> struct _Lval_LoopFunc
 /**
  * get all tokens and attributes
  */
-std::vector<t_toknode> get_all_tokens(std::istream& istr, const t_mapIdIdx* mapTermIdx)
+std::vector<t_toknode> get_all_tokens(
+	std::istream& istr, const t_mapIdIdx* mapTermIdx)
 {
 	std::vector<t_toknode> vec;
 

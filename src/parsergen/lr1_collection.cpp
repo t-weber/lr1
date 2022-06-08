@@ -66,8 +66,9 @@ void Collection::DoTransitions(const ClosurePtr closure_from)
 		}
 		else
 		{
-			// Closure already seen
-			m_transitions.push_back(std::make_tuple(closure_from, cacheIter->second, trans_sym));
+			// closure already seen
+			m_transitions.push_back(std::make_tuple(
+				closure_from, cacheIter->second, trans_sym));
 		}
 	}
 }
@@ -232,7 +233,8 @@ Collection Collection::ConvertToLALR() const
 
 			// unite lookaheads
 			for(std::size_t elemidx=0; elemidx<closureOld->m_elems.size(); ++elemidx)
-				closureOld->m_elems[elemidx]->AddLookaheads(closure->m_elems[elemidx]->GetLookaheads());
+				closureOld->m_elems[elemidx]->AddLookaheads(
+					closure->m_elems[elemidx]->GetLookaheads());
 
 			// unite lookbacks
 			for(const Closure::t_comefrom_transition& comefrom
@@ -300,7 +302,8 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 			const NonTerminalPtr& lhs = elem->GetLhs();
 			const auto& iter = follow.find(lhs);
 			if(iter == follow.end())
-				throw std::runtime_error{"Could not find follow set of \"" + lhs->GetStrId() + "\"."};
+				throw std::runtime_error{
+					"Could not find follow set of \"" + lhs->GetStrId() + "\"."};
 			const Terminal::t_terminalset& followLhs = iter->second;
 			elem->SetLookaheads(followLhs);
 		}
@@ -500,7 +503,7 @@ Collection::CreateParseTables(
 				if(!solution_found)
 				{
 					std::ostringstream ostrErr;
-					ostrErr << "Shift/reduce conflict detected" 
+					ostrErr << "Shift/reduce conflict detected"
 						<< " for state " << state;
 					if(conflictelem)
 						ostrErr << ":\n\t" << *conflictelem << "\n";
@@ -647,8 +650,8 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		}
 	}
 
-	ostr << ostrActionShift.str() << "\n" 
-		<< ostrActionReduce.str() << "\n" 
+	ostr << ostrActionShift.str() << "\n"
+		<< ostrActionReduce.str() << "\n"
 		<< ostrJump.str() << "\n";
 	return ostr;
 }

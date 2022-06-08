@@ -74,7 +74,13 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 
 		if(newstate == ERROR_VAL && newrule == ERROR_VAL)
 		{
-			throw std::runtime_error("Undefined shift and reduce entries.");
+			std::ostringstream ostrErr;
+			ostrErr << "Undefined shift and reduce entries"
+				<< " from state " << topstate << ".";
+			ostrErr << " Current token id is " << curtok->GetId()
+				<< "." << std::endl;
+
+			throw std::runtime_error(ostrErr.str());
 		}
 		else if(newstate != ERROR_VAL && newrule != ERROR_VAL)
 		{
@@ -84,6 +90,7 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 				<< " and reduce using rule " << newrule << ".";
 			ostrErr << " Current token id is " << curtok->GetId()
 				<< "." << std::endl;
+
 			throw std::runtime_error(ostrErr.str());
 		}
 

@@ -147,3 +147,8 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level) con
 		(*m_ostr) << std::endl;
 	}
 }
+
+
+void ASTAsm::visit(const ASTList* ast, [[maybe_unused]] std::size_t level) const
+{
+}

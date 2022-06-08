@@ -147,12 +147,22 @@ void Element::SetLookaheads(const Terminal::t_terminalset& las)
  */
 const SymbolPtr Element::GetPossibleTransition() const
 {
-	if(m_cursor >= m_rhs->size())
-		return nullptr;
-	SymbolPtr sym = (*m_rhs)[m_cursor];
-	if(sym->IsEps())
-		return nullptr;
-	return sym;
+	std::size_t skip_eps = 0;
+
+	while(true)
+	{
+		if(m_cursor + skip_eps >= m_rhs->size())
+			return nullptr;
+
+		SymbolPtr sym = (*m_rhs)[m_cursor + skip_eps];
+		if(sym->IsEps())
+		{
+			++skip_eps;
+			continue;
+		}
+
+		return sym;
+	}
 }
 
 
@@ -168,7 +178,17 @@ void Element::AdvanceCursor()
  */
 bool Element::IsCursorAtEnd() const
 {
-	return m_cursor >= m_rhs->size();
+	std::size_t skip_eps = 0;
+	for(skip_eps = 0; skip_eps + m_cursor < m_rhs->size(); ++skip_eps)
+	{
+		SymbolPtr sym = (*m_rhs)[m_cursor + skip_eps];
+		if(sym->IsEps())
+			continue;
+		else
+			break;
+	}
+
+	return m_cursor + skip_eps >= m_rhs->size();
 }
 
 
@@ -190,8 +210,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 			ostr << " ";
 	}
 
-	// cursor at end?
-	if(elem.GetCursor() == rhs->size())
+	if(elem.IsCursorAtEnd())
 		ostr << ".";
 
 	ostr << ", ";

@@ -25,6 +25,7 @@ template<class t_lval> class ASTToken;
 class ASTDelegate;
 class ASTUnary;
 class ASTBinary;
+class ASTList;
 
 
 enum class ASTType
@@ -33,6 +34,7 @@ enum class ASTType
 	DELEGATE,
 	UNARY,
 	BINARY,
+	LIST,
 };
 
 
@@ -54,6 +56,7 @@ public:
 	virtual void visit(const ASTDelegate* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTUnary* ast, std::size_t level) const = 0;
 	virtual void visit(const ASTBinary* ast, std::size_t level) const = 0;
+	virtual void visit(const ASTList* ast, std::size_t level) const = 0;
 };
 
 
@@ -277,6 +280,54 @@ private:
 	t_astbaseptr m_arg1, m_arg2;
 	std::size_t m_opid;
 };
+
+
+/**
+ * list node, e.g. for statements
+ */
+class ASTList : public ASTBaseAcceptor<ASTList>
+{
+public:
+	ASTList(std::size_t id, std::size_t tableidx)
+		: ASTBaseAcceptor<ASTList>{id, tableidx}
+	{}
+
+	virtual ~ASTList() = default;
+
+	virtual ASTType GetType() const override { return ASTType::LIST; }
+
+	virtual std::size_t NumChildren() const override
+	{
+		return m_children.size();
+	}
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		if(i >= m_children.size())
+			return nullptr;
+		return m_children[i];
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		if(i >= m_children.size())
+			return;
+		m_children[i] = ast;
+	}
+
+	void AddChild(const t_astbaseptr& ast, bool front = false)
+	{
+		if(front)
+			m_children.insert(m_children.begin(), ast);
+		else
+			m_children.push_back(ast);
+	}
+
+
+private:
+	std::vector<t_astbaseptr> m_children{};
+};
+
 
 
 // semantic rule: returns an ast pointer and gets a vector of ast pointers
