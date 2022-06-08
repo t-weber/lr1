@@ -19,6 +19,8 @@
 
 enum class OpCode : std::int8_t
 {
+	HALT = 0x00,
+
 	PUSH = 0x01,
 
 	UADD = 0x10,

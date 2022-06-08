@@ -10,6 +10,7 @@
 #include "ast.h"
 #include "ast_printer.h"
 #include "ast_asm.h"
+#include "vm.h"
 
 #include <unordered_map>
 #include <iostream>
@@ -405,6 +406,11 @@ static void lr1_run_parser()
 			std::cout << "Generated code ("
 				<< ostrAsmBin.str().size() << " bytes):\n"
 				<< ostrAsm.str();
+
+			VM vm(1024);
+			vm.SetMem(0, ostrAsmBin.str());
+			vm.Run();
+			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
 		}
 	}
 	catch(const std::exception& err)

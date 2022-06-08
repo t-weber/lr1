@@ -48,6 +48,7 @@ add_library(lr1-rt STATIC
 	src/ast.h
 	src/ast_printer.cpp src/ast_printer.h
 	src/ast_asm.cpp src/ast_asm.h
+	src/vm.cpp src/vm.h
 	src/helpers.h src/common.h
 )
 
