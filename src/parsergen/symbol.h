@@ -57,7 +57,7 @@ public:
 
 private:
 	std::size_t m_id = 0;
-	std::string m_strid;
+	std::string m_strid{};
 
 	bool m_iseps = false;
 	bool m_isend = false;
@@ -86,7 +86,7 @@ public:
 	Terminal() = delete;
 	virtual ~Terminal() = default;
 
-	virtual bool IsTerminal() const override { return 1; }
+	virtual bool IsTerminal() const override { return true; }
 
 	/**
 	 * get the semantic rule index
@@ -124,7 +124,7 @@ public:
 	NonTerminal() = delete;
 	virtual ~NonTerminal() = default;
 
-	virtual bool IsTerminal() const override { return 0; }
+	virtual bool IsTerminal() const override { return false; }
 
 	/**
 	 * add multiple alternative production rules
@@ -222,7 +222,7 @@ public:
 	/**
 	 * number of symbols in the word
 	 */
-	std::size_t NumSymbols() const { return m_syms.size(); }
+	std::size_t NumSymbols(bool count_eps = true) const;
 	std::size_t size() const { return NumSymbols(); }
 
 	/**

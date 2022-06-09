@@ -18,13 +18,12 @@
 #include <iomanip>
 #include <cstdint>
 
-#define DEBUG_PARSERGEN 1
-#define DEBUG_CODEGEN 1
+#define DEBUG_PARSERGEN  1
+#define DEBUG_CODEGEN    1
 
 
 enum : std::size_t
 {
-	START_PRIME,
 	START,
 	STMTS,
 	STMT,
@@ -32,7 +31,7 @@ enum : std::size_t
 };
 
 
-static NonTerminalPtr start_prime, start, stmts, stmt, expr;
+static NonTerminalPtr start, stmts, stmt, expr;
 
 static TerminalPtr op_plus, op_minus, op_mult, op_div, op_mod, op_pow;
 static TerminalPtr bracket_open, bracket_close, comma, stmt_end;
@@ -41,7 +40,6 @@ static TerminalPtr sym, ident;
 
 static void create_grammar()
 {
-	start_prime = std::make_shared<NonTerminal>(START, "start_prime");
 	start = std::make_shared<NonTerminal>(START, "start");
 	stmts = std::make_shared<NonTerminal>(STMTS, "stmts");
 	stmt = std::make_shared<NonTerminal>(STMT, "stmt");
@@ -62,48 +60,46 @@ static void create_grammar()
 
 	std::size_t semanticindex = 0;
 
-	// rule 0: start_prime -> start
-	start_prime->AddRule({ start }, semanticindex++);
-	// rule 1: start -> stmts
+	// rule 0: start -> stmts
 	start->AddRule({ stmts }, semanticindex++);
 
-	// rule 2: expr -> expr + expr
+	// rule 1: expr -> expr + expr
 	expr->AddRule({ expr, op_plus, expr }, semanticindex++);
-	// rule 3: expr -> expr - expr
+	// rule 2: expr -> expr - expr
 	expr->AddRule({ expr, op_minus, expr }, semanticindex++);
-	// rule 4: expr -> expr * expr
+	// rule 3: expr -> expr * expr
 	expr->AddRule({ expr, op_mult, expr }, semanticindex++);
-	// rule 5: expr -> expr / expr
+	// rule 4: expr -> expr / expr
 	expr->AddRule({ expr, op_div, expr }, semanticindex++);
-	// rule 6: expr -> expr % expr
+	// rule 5: expr -> expr % expr
 	expr->AddRule({ expr, op_mod, expr }, semanticindex++);
-	// rule 7: expr -> expr ^ expr
+	// rule 6: expr -> expr ^ expr
 	expr->AddRule({ expr, op_pow, expr }, semanticindex++);
-	// rule 8: expr -> ( expr )
+	// rule 7: expr -> ( expr )
 	expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex++);
 	// function calls
-	// rule 9: expr -> ident()
+	// rule 8: expr -> ident()
 	expr->AddRule({ ident, bracket_open, bracket_close }, semanticindex++);
-	// rule 10: expr -> ident(expr)
+	// rule 9: expr -> ident(expr)
 	expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex++);
-	// rule 11: expr -> ident(expr, expr)
+	// rule 10: expr -> ident(expr, expr)
 	expr->AddRule({ ident, bracket_open, expr, comma, expr, bracket_close },
 		semanticindex++);
-	// rule 12: expr -> symbol
+	// rule 11: expr -> symbol
 	expr->AddRule({ sym }, semanticindex++);
-	// rule 13: expr -> ident
+	// rule 12: expr -> ident
 	expr->AddRule({ ident }, semanticindex++);
-	// rule 14, unary-: expr -> -expr
+	// rule 13, unary-: expr -> -expr
 	expr->AddRule({ op_minus, expr }, semanticindex++);
-	// rule 15, unary+: expr -> +expr
+	// rule 14, unary+: expr -> +expr
 	expr->AddRule({ op_plus, expr }, semanticindex++);
 
-	// rule 16: stmts -> stmt stmts
+	// rule 15: stmts -> stmt stmts
 	stmts->AddRule({ stmt, stmts }, semanticindex++);
-	// rule 17: stmts -> eps
+	// rule 16: stmts -> eps
 	stmts->AddRule({ g_eps }, semanticindex++);
 
-	// rule 18: stmt -> expr ;
+	// rule 17: stmt -> expr ;
 	stmt->AddRule({ expr, stmt_end }, semanticindex++);
 }
 
@@ -116,7 +112,7 @@ static void lr1_create_parser()
 	try
 	{
 		std::vector<NonTerminalPtr> all_nonterminals{{
-			start_prime, start, stmts, stmt, expr }};
+			start, stmts, stmt, expr }};
 
 #if DEBUG_PARSERGEN != 0
 		std::cout << "Productions:\n";
@@ -143,7 +139,7 @@ static void lr1_create_parser()
 		std::cout << "FOLLOW sets:\n";
 		t_map_follow follow;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
-			calc_follow(all_nonterminals, start_prime, nonterminal, first, follow);
+			calc_follow(all_nonterminals, start, nonterminal, first, follow);
 
 		for(const auto& pair : follow)
 		{
@@ -156,7 +152,7 @@ static void lr1_create_parser()
 #endif
 
 		ElementPtr elem = std::make_shared<Element>(
-			start_prime, 0, 0, Terminal::t_terminalset{{ g_end }});
+			start, 0, 0, Terminal::t_terminalset{{ g_end }});
 		ClosurePtr closure = std::make_shared<Closure>();
 		closure->AddElement(elem);
 
@@ -257,15 +253,7 @@ static void lr1_run_parser()
 
 		// semantic rules for the grammar
 		std::vector<t_semanticrule> rules{{
-			// rule 0: start_prime -> start
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-			{
-				std::size_t id = start_prime->GetId();
-				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
-			},
-
-			// rule 1: start -> stmts
+			// rule 0: start -> stmts
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = start->GetId();
@@ -273,7 +261,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 2: expr -> expr + expr
+			// rule 1: expr -> expr + expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -281,7 +269,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_plus->GetId());
 			},
 
-			// rule 3: expr -> expr - expr
+			// rule 2: expr -> expr - expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -289,7 +277,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_minus->GetId());
 			},
 
-			// rule 4: expr -> expr * expr
+			// rule 3: expr -> expr * expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -297,7 +285,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mult->GetId());
 			},
 
-			// rule 5: expr -> expr / expr
+			// rule 4: expr -> expr / expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -305,7 +293,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_div->GetId());
 			},
 
-			// rule 6: expr -> expr % expr
+			// rule 5: expr -> expr % expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -313,7 +301,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mod->GetId());
 			},
 
-			// rule 7: expr -> expr ^ expr
+			// rule 6: expr -> expr ^ expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -322,7 +310,7 @@ static void lr1_run_parser()
 					id, tableidx, args[0], args[2], op_pow->GetId());
 			},
 
-			// rule 8: expr -> ( expr )
+			// rule 7: expr -> ( expr )
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -330,7 +318,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
 			},
 
-			// rule 9: expr -> ident()
+			// rule 8: expr -> ident()
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
@@ -338,7 +326,7 @@ static void lr1_run_parser()
 				return nullptr;
 			},
 
-			// rule 10: expr -> ident(expr)
+			// rule 9: expr -> ident(expr)
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
@@ -346,7 +334,7 @@ static void lr1_run_parser()
 				return nullptr;
 			},
 
-			// rule 11: expr -> ident(expr, expr)
+			// rule 10: expr -> ident(expr, expr)
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
@@ -354,7 +342,7 @@ static void lr1_run_parser()
 				return nullptr;
 			},
 
-			// rule 12: expr -> symbol
+			// rule 11: expr -> symbol
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -362,7 +350,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 13: expr -> ident
+			// rule 12: expr -> ident
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -370,7 +358,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 14, unary-: expr -> -expr
+			// rule 13, unary-: expr -> -expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -378,7 +366,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_minus->GetId());
 			},
 
-			// rule 15, unary+: expr -> +expr
+			// rule 14, unary+: expr -> +expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -386,7 +374,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_plus->GetId());
 			},
 
-			// rule 16: stmts -> stmt stmts
+			// rule 15: stmts -> stmt stmts
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto stmts_lst = dynamic_pointer_cast<ASTList>(args[1]);
@@ -394,7 +382,7 @@ static void lr1_run_parser()
 				return stmts_lst;
 			},
 
-			// rule 17, stmts -> eps
+			// rule 16, stmts -> eps
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmts->GetId();
@@ -402,7 +390,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTList>(id, tableidx);
 			},
 
-			// rule 18, stmt -> expr ;
+			// rule 17, stmt -> expr ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();

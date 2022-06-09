@@ -22,6 +22,7 @@ int main()
 	auto A = std::make_shared<NonTerminal>(PROD_A, "A");
 
 	auto a = std::make_shared<Terminal>('a', "a");
+	auto b = std::make_shared<Terminal>('b', "b");
 
 
 	// productions
@@ -31,10 +32,10 @@ int main()
 
 	S->AddRule({ As }, semanticindex++);
 
-	As->AddRule({ A, As }, semanticindex++);
+	As->AddRule({ As, A }, semanticindex++);
 	As->AddRule({ g_eps }, semanticindex++);
 
-	A->AddRule({ a }, semanticindex++);
+	A->AddRule({ a, b }, semanticindex++);
 
 	std::vector<NonTerminalPtr> all_nonterminals{{ Sprime, S, As, A }};
 
@@ -82,11 +83,11 @@ int main()
 
 	Collection colls{coll};
 	colls.DoTransitions();
-	colls.WriteGraph("tst2", 1);
+	colls.WriteGraph("left_recursion", 1);
 	std::cout << "\n\nLR(1):\n" << colls << std::endl;
 
 	Collection collsLALR = colls.ConvertToLALR();
-	collsLALR.WriteGraph("tst2_lalr", 1);
+	collsLALR.WriteGraph("left_recursion_lalr", 1);
 	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
 
 	return 0;

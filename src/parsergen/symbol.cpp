@@ -174,6 +174,30 @@ bool NonTerminal::HasEpsRule() const
 // ----------------------------------------------------------------------------
 
 
+/**
+  * number of symbols in the word
+  */
+std::size_t Word::NumSymbols(bool count_eps) const
+{
+	if(count_eps)
+	{
+		return m_syms.size();
+	}
+	else
+	{
+		std::size_t num = 0;
+
+		for(std::size_t i=0; i<m_syms.size(); ++i)
+		{
+			if(!m_syms[i]->IsEps())
+				++num;
+		}
+
+		return num;
+	}
+}
+
+
 bool Word::operator==(const Word& other) const
 {
 	if(this->NumSymbols() != other.NumSymbols())

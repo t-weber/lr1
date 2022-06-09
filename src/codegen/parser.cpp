@@ -16,12 +16,12 @@
 
 Parser::Parser(
 	const std::tuple<
-		t_table,			// shift table
-		t_table,			// reduce table
-		t_table,			// jump table
-		t_mapIdIdx, 		// terminal indices
-		t_mapIdIdx,			// nonterminal indices
-		t_vecIdx>& init,	// semantic rule indices
+		t_table,			// 0: shift table
+		t_table,			// 1: reduce table
+		t_table,			// 2: jump table
+		t_mapIdIdx, 		// 3: terminal indices
+		t_mapIdIdx,			// 4: nonterminal indices
+		t_vecIdx>& init,	// 5: semantic rule indices
 	const std::vector<t_semanticrule>& rules)
 	: m_tabActionShift{std::get<0>(init)},
 		m_tabActionReduce{std::get<1>(init)},
@@ -35,12 +35,12 @@ Parser::Parser(
 
 Parser::Parser(
 	const std::tuple<
-		const t_table*,		// shift table
-		const t_table*,		// reduce table
-		const t_table*,		// jump table
-		const t_mapIdIdx*,	// terminal indices
-		const t_mapIdIdx*,	// nonterminal indices
-		const t_vecIdx*>& init,	// semantic rule indices
+		const t_table*,		// 0: shift table
+		const t_table*,		// 1: reduce table
+		const t_table*,		// 2: jump table
+		const t_mapIdIdx*,	// 3: terminal indices
+		const t_mapIdIdx*,	// 4: nonterminal indices
+		const t_vecIdx*>& init,	// 5: semantic rule indices
 	const std::vector<t_semanticrule>& rules)
 	: m_tabActionShift{*std::get<0>(init)},
 		m_tabActionReduce{*std::get<1>(init)},
@@ -123,7 +123,12 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 		{
 			std::size_t numSyms = m_numRhsSymsPerRule[newrule];
 			if constexpr(debug)
-				std::cout << "reducing " << numSyms << " symbol(s) via rule " << newrule << std::endl;
+			{
+				std::cout << "reducing " << numSyms
+					<< " symbol(s) via rule " << newrule
+					<< ", top state: " << topstate
+					<< std::endl;
+			}
 
 			// take the symbols from the stack and create an argument vector for the semantic rule
 			std::vector<t_astbaseptr> args;
@@ -145,6 +150,13 @@ t_astbaseptr Parser::Parse(const std::vector<t_toknode>& input) const
 			topstate = states.top();
 			std::size_t jumpstate = m_tabJump(topstate, reducedSym->GetTableIdx());
 			states.push(jumpstate);
+
+			if constexpr(debug)
+			{
+				std::cout << "jumping from state " << topstate
+					<< " to state " << jumpstate
+					<< std::endl;
+			}
 		}
 	}
 

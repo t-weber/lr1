@@ -51,13 +51,13 @@ void Closure::AddElement(const ElementPtr elem)
 {
 	//std::cout << "adding " << *elem << std::endl;
 
-	// full element already in Closure?
+	// full element already in closure?
 	if(HasElement(elem, false).first)
 		return;
 
-	// core element already in Closure?
-	auto [core_in_coll, core_idx] = HasElement(elem, true);
-	if(core_in_coll)
+	// core element already in closure?
+	if(auto [core_in_closure, core_idx] = HasElement(elem, true);
+		core_in_closure)
 	{
 		// add new lookahead
 		m_elems[core_idx]->AddLookaheads(elem->GetLookaheads());
@@ -100,18 +100,18 @@ void Closure::AddElement(const ElementPtr elem)
 				calc_first(tmpNT, tmp_first);
 
 				Terminal::t_terminalset first_la;
-				if(tmp_first.size())	// should always be 1
+				for(const auto& set_first_pair : tmp_first)
 				{
-					const Terminal::t_terminalset& set_first = tmp_first.begin()->second;
-					if(set_first.size())	// should always be 1
+					const Terminal::t_terminalset& set_first = set_first_pair.second;
+					for(TerminalPtr la : set_first)
 					{
-						TerminalPtr la = *set_first.begin();
 						//std::cout << "lookahead: " << la->GetId() << std::endl;
 						first_la.insert(la);
 					}
 				}
 
-				AddElement(std::make_shared<Element>(nonterm, nonterm_rhsidx, 0, first_la));
+				AddElement(std::make_shared<Element>(
+					nonterm, nonterm_rhsidx, 0, first_la));
 			}
 		}
 	}
@@ -173,6 +173,7 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 		if(!sym)
 			continue;
 
+		// do we already have this symbol?
 		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
 			[sym](const SymbolPtr sym2) -> bool
 			{

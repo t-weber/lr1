@@ -72,8 +72,11 @@ target_link_libraries(lr1-vm ${Boost_LIBRARIES})
 add_executable(test1 tests/tst1.cpp)
 target_link_libraries(test1 lr1-parsergen)
 
-add_executable(test2 tests/tst2.cpp)
-target_link_libraries(test2 lr1-parsergen)
+add_executable(left_recursion tests/left_recursion.cpp)
+target_link_libraries(left_recursion lr1-parsergen)
+
+add_executable(right_recursion tests/right_recursion.cpp)
+target_link_libraries(right_recursion lr1-parsergen)
 
 add_executable(expr_simplified tests/expr_simplified.cpp)
 target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)

@@ -168,10 +168,16 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 	{
 		const ClosurePtr closure_from = std::get<0>(tup);
 		const ClosurePtr closure_to = std::get<1>(tup);
-		const SymbolPtr trans = std::get<2>(tup);
+		const SymbolPtr symTrans = std::get<2>(tup);
+
+		//bool symIsTerm = symTrans->IsTerminal();
+		bool symIsEps = symTrans->IsEps();
+
+		if(symIsEps)
+			continue;
 
 		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
-			<< " [label=\"" << trans->GetStrId() << "\"];\n";
+			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
 	}
 
 	ofstr << "}" << std::endl;
@@ -365,13 +371,20 @@ Collection::CreateParseTables(
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
 		bool symIsTerm = symTrans->IsTerminal();
+		bool symIsEps = symTrans->IsEps();
+
+		if(symIsEps)
+			continue;
+
 		std::vector<std::vector<std::size_t>>* tab =
 			symIsTerm ? &_action_shift : &_jump;
 
 		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
 		if(symIsTerm)
+		{
 			seen_terminals.insert(std::make_pair(
 				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
+		}
 
 		auto& _tab_row = (*tab)[stateFrom->GetId()];
 		if(_tab_row.size() <= symIdx)
@@ -393,7 +406,7 @@ Collection::CreateParseTables(
 			std::size_t rule = *rulenr;
 
 			const Word* rhs = elem->GetRhs();
-			std::size_t numRhsSyms = rhs->NumSymbols();
+			std::size_t numRhsSyms = rhs->NumSymbols(false);
 			if(numRhsSymsPerRule.size() <= rule)
 				numRhsSymsPerRule.resize(rule+1);
 			numRhsSymsPerRule[rule] = numRhsSyms;
@@ -619,7 +632,13 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 		const ClosurePtr& stateTo = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
-		if(symTrans->IsTerminal())
+		bool symIsTerm = symTrans->IsTerminal();
+		bool symIsEps = symTrans->IsEps();
+
+		if(symIsEps)
+			continue;
+
+		if(symIsTerm)
 		{
 			ostrActionShift << "action_shift[ state " << stateFrom->GetId() << ", "
 				<< symTrans->GetStrId() << " ] = state " << stateTo->GetId() << "\n";
