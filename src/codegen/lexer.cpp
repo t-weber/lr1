@@ -41,7 +41,7 @@ get_matching_tokens(const std::string& str)
 	{	// tokens represented by themselves
 		if(str == "+" || str == "-" || str == "*" || str == "/" ||
 			str == "%" || str == "^" || str == "(" || str == ")" ||
-			str == "," || str == ";")
+			str == "," || str == ";" || str == "=")
 			matches.push_back(std::make_tuple((t_tok)str[0], std::nullopt));
 	}
 

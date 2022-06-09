@@ -33,7 +33,8 @@ enum : std::size_t
 
 static NonTerminalPtr start, stmts, stmt, expr;
 
-static TerminalPtr op_plus, op_minus, op_mult, op_div, op_mod, op_pow;
+static TerminalPtr op_assign, op_plus, op_minus,
+	op_mult, op_div, op_mod, op_pow;
 static TerminalPtr bracket_open, bracket_close, comma, stmt_end;
 static TerminalPtr sym, ident;
 
@@ -45,6 +46,7 @@ static void create_grammar()
 	stmt = std::make_shared<NonTerminal>(STMT, "stmt");
 	expr = std::make_shared<NonTerminal>(EXPR, "expr");
 
+	op_assign = std::make_shared<Terminal>('=', "=");
 	op_plus = std::make_shared<Terminal>('+', "+");
 	op_minus = std::make_shared<Terminal>('-', "-");
 	op_mult = std::make_shared<Terminal>('*', "*");
@@ -93,13 +95,15 @@ static void create_grammar()
 	expr->AddRule({ op_minus, expr }, semanticindex++);
 	// rule 14, unary+: expr -> +expr
 	expr->AddRule({ op_plus, expr }, semanticindex++);
+	// rule 15, assignment: expr -> ident = expr
+	expr->AddRule({ ident, op_assign, expr }, semanticindex++);
 
-	// rule 15: stmts -> stmt stmts
+	// rule 16: stmts -> stmt stmts
 	stmts->AddRule({ stmt, stmts }, semanticindex++);
-	// rule 16: stmts -> eps
+	// rule 17: stmts -> eps
 	stmts->AddRule({ g_eps }, semanticindex++);
 
-	// rule 17: stmt -> expr ;
+	// rule 18: stmt -> expr ;
 	stmt->AddRule({ expr, stmt_end }, semanticindex++);
 }
 
@@ -185,6 +189,7 @@ static void lr1_create_parser()
 
 			// right-associativity of operators
 			std::make_tuple(op_pow, op_pow, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_assign, ConflictSolution::FORCE_SHIFT),
 
 			// operator precedence
 			std::make_tuple(op_mult, op_plus, ConflictSolution::FORCE_REDUCE),
@@ -210,6 +215,13 @@ static void lr1_create_parser()
 			std::make_tuple(op_mult, op_pow, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_div, op_pow, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_mod, op_pow, ConflictSolution::FORCE_SHIFT),
+
+			std::make_tuple(op_assign, op_plus, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_minus, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_mult, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_div, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_mod, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_pow, ConflictSolution::FORCE_SHIFT),
         }};
 
 		auto parsetables = collsLALR.CreateParseTables(&conflicts);
@@ -374,7 +386,16 @@ static void lr1_run_parser()
 				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_plus->GetId());
 			},
 
-			// rule 15: stmts -> stmt stmts
+			// rule 15, assignment: expr -> ident = expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_assign->GetId());
+			},
+
+			// rule 16: stmts -> stmt stmts
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto stmts_lst = dynamic_pointer_cast<ASTList>(args[1]);
@@ -382,7 +403,7 @@ static void lr1_run_parser()
 				return stmts_lst;
 			},
 
-			// rule 16, stmts -> eps
+			// rule 17, stmts -> eps
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmts->GetId();
@@ -390,7 +411,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTList>(id, tableidx);
 			},
 
-			// rule 17, stmt -> expr ;
+			// rule 18, stmt -> expr ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();

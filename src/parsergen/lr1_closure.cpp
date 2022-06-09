@@ -103,9 +103,11 @@ void Closure::AddElement(const ElementPtr elem)
 				for(const auto& set_first_pair : tmp_first)
 				{
 					const Terminal::t_terminalset& set_first = set_first_pair.second;
-					for(TerminalPtr la : set_first)
+					for(const TerminalPtr& la : set_first)
 					{
 						//std::cout << "lookahead: " << la->GetId() << std::endl;
+						if(la->IsEps())
+							continue;
 						first_la.insert(la);
 					}
 				}
