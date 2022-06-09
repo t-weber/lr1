@@ -45,30 +45,36 @@ void Collection::DoTransitions(const ClosurePtr closure_from)
 	for(const auto& tup : coll)
 	{
 		const SymbolPtr trans_sym = std::get<0>(tup);
-		const ClosurePtr coll_to = std::get<1>(tup);
-		std::size_t hash_to = coll_to->hash();
+		const ClosurePtr closure_to = std::get<1>(tup);
+		std::size_t hash_to = closure_to->hash();
 
 		auto cacheIter = m_cache.find(hash_to);
-		bool coll_to_new = (cacheIter == m_cache.end());
+		bool new_closure = (cacheIter == m_cache.end());
 
-		//std::cout << "transition " << closure_from->GetId() << " -> " << coll_to->GetId()
-		//	<< " via " << trans_sym->GetId() << ", new: " << coll_to_new << std::endl;
-		//std::cout << std::hex << coll_to->hash() << ", " << *coll_to << std::endl;
+		//std::cout << "transition " << closure_from->GetId() << " -> " << closure_to->GetId()
+		//	<< " via " << trans_sym->GetId() << ", new: " << new_closure << std::endl;
+		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
 
-		if(coll_to_new)
+		if(new_closure)
 		{
 			// new unique closure
-			m_cache.insert(std::make_pair(hash_to, coll_to));
-			m_collection.push_back(coll_to);
-			m_transitions.push_back(std::make_tuple(closure_from, coll_to, trans_sym));
+			m_cache.insert(std::make_pair(hash_to, closure_to));
+			m_collection.push_back(closure_to);
+			m_transitions.push_back(std::make_tuple(closure_from, closure_to, trans_sym));
 
-			DoTransitions(coll_to);
+			DoTransitions(closure_to);
 		}
 		else
 		{
-			// closure already seen
+			// reuse closure that has already been seen
+			ClosurePtr closure_to_existing = cacheIter->second;
+
 			m_transitions.push_back(std::make_tuple(
-				closure_from, cacheIter->second, trans_sym));
+				closure_from, closure_to_existing, trans_sym));
+
+			// also add the comefrom symbol to the closure
+			closure_to_existing->AddComefromTransition(
+				std::make_tuple(trans_sym, closure_from.get()));
 		}
 	}
 }

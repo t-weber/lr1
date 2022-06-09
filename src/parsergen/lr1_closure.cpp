@@ -276,9 +276,13 @@ void Closure::AddComefromTransition(const t_comefrom_transition& comefrom)
 /**
  * get all terminal symbols that lead to this closure
  */
-std::vector<TerminalPtr> Closure::GetComefromTerminals() const
+std::vector<TerminalPtr> Closure::GetComefromTerminals(
+	std::shared_ptr<std::unordered_set<std::size_t>> seen_closures) const
 {
 	std::vector<TerminalPtr> terms;
+
+	if(!seen_closures)
+		seen_closures = std::make_shared<std::unordered_set<std::size_t>>();
 
 	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
 	{
@@ -292,18 +296,31 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals() const
 		}
 		else if(closure)
 		{
-			// get terminals from comefrom closure
-			std::vector<TerminalPtr> _terms = closure->GetComefromTerminals();
-			terms.insert(terms.end(), _terms.begin(), _terms.end());
+			// closure not yet seen?
+			std::size_t hash = closure->hash();
+			if(seen_closures->find(hash) == seen_closures->end())
+			{
+				seen_closures->insert(hash);
+
+				// get terminals from comefrom closure
+				std::vector<TerminalPtr> _terms = closure->GetComefromTerminals(seen_closures);
+				terms.insert(terms.end(), _terms.begin(), _terms.end());
+			}
 		}
 	}
 
 	// remove duplicates
+	std::stable_sort(terms.begin(), terms.end(),
+		[](TerminalPtr term1, TerminalPtr term2) -> bool
+		{
+			return term1->hash() < term2->hash();
+			//return term1->GetId() < term2->GetId();
+		});
 	auto end = std::unique(terms.begin(), terms.end(),
-	[](TerminalPtr term1, TerminalPtr term2) -> bool
-	{
-		return *term1 == *term2;
-	});
+		[](TerminalPtr term1, TerminalPtr term2) -> bool
+		{
+			return *term1 == *term2;
+		});
 	if(end != terms.end())
 		terms.resize(end - terms.begin());
 
@@ -317,12 +334,24 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals() const
 void Closure::CleanComefromTransitions()
 {
 	// remove duplicates
+	std::stable_sort(m_comefrom_transitions.begin(), m_comefrom_transitions.end(),
+		[](const t_comefrom_transition& comefrom1,
+			const t_comefrom_transition& comefrom2) -> bool
+		{
+			// symbol
+			bool sym_equ = std::get<0>(comefrom1)->hash() == std::get<0>(comefrom2)->hash();
+			if(sym_equ)
+				return std::get<1>(comefrom1)->GetId() < std::get<1>(comefrom2)->GetId();
+			else
+				return std::get<0>(comefrom1)->hash() < std::get<0>(comefrom2)->hash();
+		});
 	auto end = std::unique(m_comefrom_transitions.begin(), m_comefrom_transitions.end(),
-	[](const t_comefrom_transition& comefrom1, const t_comefrom_transition& comefrom2) -> bool
-	{
-		return *std::get<0>(comefrom1) == *std::get<0>(comefrom2) &&
-			std::get<1>(comefrom1)->GetId() == std::get<1>(comefrom2)->GetId();
-	});
+		[](const t_comefrom_transition& comefrom1,
+			const t_comefrom_transition& comefrom2) -> bool
+		{
+			return *std::get<0>(comefrom1) == *std::get<0>(comefrom2) &&
+				std::get<1>(comefrom1)->GetId() == std::get<1>(comefrom2)->GetId();
+		});
 
 	if(end != m_comefrom_transitions.end())
 		m_comefrom_transitions.resize(end-m_comefrom_transitions.begin());
@@ -344,7 +373,7 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 	const auto& comefroms = closure.GetComefromTransitions();
 	if(comefroms.size())
 	{
-		ostr << "Coming from possible transitions:\n";
+		ostr << "Coming from:\n";
 		for(std::size_t i=0; i<comefroms.size(); ++i)
 		{
 			const Closure::t_comefrom_transition& comefrom = comefroms[i];

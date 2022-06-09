@@ -378,7 +378,7 @@ static void lr1_run_parser()
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto stmts_lst = dynamic_pointer_cast<ASTList>(args[1]);
-				stmts_lst->AddChild(args[0]);
+				stmts_lst->AddChild(args[0], true);
 				return stmts_lst;
 			},
 

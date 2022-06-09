@@ -151,4 +151,6 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level) con
 
 void ASTAsm::visit(const ASTList* ast, [[maybe_unused]] std::size_t level) const
 {
+	for(std::size_t i=0; i<ast->NumChildren(); ++i)
+		ast->GetChild(i)->accept(this, level+1);
 }

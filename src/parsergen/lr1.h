@@ -11,7 +11,7 @@
 #include "symbol.h"
 #include "common.h"
 
-#include <set>
+#include <unordered_set>
 #include <map>
 #include <vector>
 #include <variant>
@@ -128,7 +128,8 @@ public:
 	void CleanComefromTransitions();
 	const std::vector<t_comefrom_transition>& GetComefromTransitions() const
 	{ return m_comefrom_transitions; }
-	std::vector<TerminalPtr> GetComefromTerminals() const;
+	std::vector<TerminalPtr> GetComefromTerminals(
+		std::shared_ptr<std::unordered_set<std::size_t>> seen_closures = nullptr) const;
 
 	std::size_t hash(bool only_core=false) const;
 
