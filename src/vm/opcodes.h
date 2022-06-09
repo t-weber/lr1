@@ -8,16 +8,33 @@
 #ifndef __LR1_OPCODES_H__
 #define __LR1_OPCODES_H__
 
-
 #include <cstdint>
+
+
+using t_vm_addr = std::uint16_t;
+
+
+enum class Register : std::int8_t
+{
+	MEM = 0x00,
+
+	IP = 0x01,
+	SP = 0x02,
+	BP = 0x03,
+};
 
 
 enum class OpCode : std::int8_t
 {
 	HALT = 0x00,
+	INVALID = 0x01,
 
-	PUSHF = 0x01,
-	PUSHI = 0x02,
+	// memory operations
+	PUSHF = 0x02,
+	PUSHI = 0x03,
+	PUSHADDR = 0x04,
+	MOVREGI = 0x05,
+	MOVREGF = 0x06,
 
 	// real arithmetics
 	UADDF = 0x10,

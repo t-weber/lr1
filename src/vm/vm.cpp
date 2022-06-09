@@ -36,6 +36,7 @@ bool VM::Run()
 				break;
 			}
 
+			// push direct read data onto stack
 			case OpCode::PUSHF:
 			{
 				// get data value from memory
@@ -47,6 +48,7 @@ bool VM::Run()
 				break;
 			}
 
+			// push direct int data onto stack
 			case OpCode::PUSHI:
 			{
 				// get data value from memory
@@ -55,6 +57,63 @@ bool VM::Run()
 
 				//std::cout << "push " << val << std::endl;
 				Push<t_int, m_intsize>(val);
+				break;
+			}
+
+			// push direct address onto stack
+			case OpCode::PUSHADDR:
+			{
+				// get data value from memory
+				t_addr val = *reinterpret_cast<t_addr*>(&m_mem[m_ip]);
+				m_ip += m_addrsize;
+
+				//std::cout << "push " << val << std::endl;
+				Push<t_addr, m_addrsize>(val);
+				break;
+			}
+
+			case OpCode::MOVREGF:
+			{
+				// first byte: register info
+				t_byte regval = *reinterpret_cast<t_byte*>(&m_mem[m_ip]);
+				m_ip += m_bytesize;
+
+				// address (offset)
+				//t_addr addr = *reinterpret_cast<t_addr*>(&m_mem[m_ip]);
+				//m_ip += m_addrsize;
+				t_addr addr = Pop<t_addr, m_addrsize>();
+
+				// get absolute address using base address from register
+				Register thereg = static_cast<Register>(regval & 0b01111111);
+				switch(thereg)
+				{
+					case Register::MEM: break;
+					case Register::IP: addr += m_ip; break;
+					case Register::SP: addr += m_sp; break;
+					case Register::BP: addr += m_bp; break;
+				}
+
+				// first bit: direction
+				if(regval & 0b10000000)	// to address in register
+				{
+					// pop data and write it to memory
+					t_real val = Pop<t_real, m_realsize>();
+					*reinterpret_cast<t_real*>(&m_mem[addr]) = val;
+
+					//std::cout << "Wrote " << val << " to 0x" << std::hex << addr << std::endl;
+				}
+				else	// from address in register
+				{
+					// read and push data from memory
+					t_real val = *reinterpret_cast<t_real*>(&m_mem[addr]);
+					Push<t_real, m_realsize>(val);
+				}
+
+				break;
+			}
+
+			case OpCode::MOVREGI:
+			{
 				break;
 			}
 
@@ -222,7 +281,8 @@ bool VM::Run()
 
 			default:
 			{
-				std::cerr << "Error: Invalid opcode " << std::hex << _op << std::endl;
+				std::cerr << "Error: Invalid opcode " << std::hex
+					<< static_cast<t_addr>(_op) << std::endl;
 				return false;
 			}
 		}
@@ -240,6 +300,7 @@ void VM::Reset()
 {
 	m_ip = 0;
 	m_sp = m_memsize;
+	m_bp = m_sp - m_framesize;
 
 	std::memset(m_mem.get(), 0, m_memsize);
 }

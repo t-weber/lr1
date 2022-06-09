@@ -392,7 +392,7 @@ static void lr1_run_parser()
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTBinary>(
-					id, tableidx, args[0], args[2], op_assign->GetId());
+					id, tableidx, args[2], args[0], op_assign->GetId());
 			},
 
 			// rule 16: stmts -> stmt stmts
@@ -461,6 +461,7 @@ static void lr1_run_parser()
 				std::make_pair('/', std::make_tuple("divf", OpCode::DIVF)),
 				std::make_pair('%', std::make_tuple("modf", OpCode::MODF)),
 				std::make_pair('^', std::make_tuple("powf", OpCode::POWF)),
+				std::make_pair('=', std::make_tuple("assignf", OpCode::INVALID)),
 			}};
 
 #if DEBUG_CODEGEN != 0

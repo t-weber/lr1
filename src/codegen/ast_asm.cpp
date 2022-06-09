@@ -73,12 +73,14 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 	if(m_binary)
 	{
-		// TODO
+		// TODO: get variable address and push it
+		t_vm_addr addr = 0x00;
+		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHADDR));
+		m_ostr->write(reinterpret_cast<const char*>(&addr), sizeof(t_vm_addr));
 	}
 	else
 	{
-		// TODO
-		(*m_ostr) << "pushstr " << val << std::endl;
+		(*m_ostr) << "pushaddr " << val << std::endl;
 	}
 }
 
@@ -128,15 +130,36 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level) cons
 
 void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level) const
 {
-	ast->GetChild(0)->accept(this, level+1);
-	ast->GetChild(1)->accept(this, level+1);
+	ast->GetChild(0)->accept(this, level+1); // operand 1
+	ast->GetChild(1)->accept(this, level+1); // operand 2
 
 	std::size_t opid = ast->GetOpId();
 
 	if(m_binary)
 	{
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
-		m_ostr->put(static_cast<std::int8_t>(op));
+		if(op != OpCode::INVALID)	// use opcode directly
+		{
+			m_ostr->put(static_cast<std::int8_t>(op));
+		}
+		else	// decide on special cases
+		{
+			switch(opid)
+			{
+				case '=':	// variable assignment
+				{
+					int8_t op_regdata = static_cast<int8_t>(Register::BP);
+					m_ostr->put(static_cast<std::int8_t>(OpCode::MOVREGF));
+					m_ostr->put(static_cast<std::int8_t>(op_regdata | 0b10000000));
+					break;
+				}
+
+				default:
+				{
+					break;
+				}
+			}
+		}
 	}
 	else
 	{

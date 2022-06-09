@@ -20,14 +20,19 @@ class VM
 public:
 	// types and constants
 	using t_byte = std::uint8_t;
-	using t_addr = std::uint16_t;
+	using t_addr = ::t_vm_addr;
 	using t_real = ::t_real;
 	using t_int = ::t_int;
+
+	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
 	static constexpr const t_addr m_addrsize = sizeof(t_addr);
 	static constexpr const t_addr m_realsize = sizeof(t_real);
 	static constexpr const t_addr m_intsize = sizeof(t_int);
-	t_addr m_memsize = 1024;
+
+	// memory sizes and ranges
+	t_addr m_memsize = 0x1000;
+	t_addr m_framesize = 0x100;
 
 
 public:
@@ -41,9 +46,11 @@ public:
 	void SetMem(t_addr addr, const std::string& data);
 
 	t_addr GetSP() const { return m_sp; }
+	t_addr GetBP() const { return m_bp; }
 	t_addr GetIP() const { return m_ip; }
 
 	void SetSP(t_addr sp) { m_sp = sp; }
+	void SetBP(t_addr bp) { m_bp = bp; }
 	void SetIP(t_addr ip) { m_ip = ip; }
 
 
@@ -85,6 +92,7 @@ private:
 	// registers
 	t_addr m_ip{};	// instruction pointer
 	t_addr m_sp{};	// stack pointer
+	t_addr m_bp{};  // base pointer for local variables
 };
 
 

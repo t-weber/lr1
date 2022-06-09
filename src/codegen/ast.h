@@ -255,6 +255,7 @@ public:
 	std::size_t GetOpId() const { return m_opid; }
 
 	virtual std::size_t NumChildren() const override { return 2; }
+
 	virtual t_astbaseptr GetChild(std::size_t i) const override
 	{
 		switch(i)
