@@ -48,10 +48,12 @@ public:
 
 	t_addr GetSP() const { return m_sp; }
 	t_addr GetBP() const { return m_bp; }
+	t_addr GetGBP() const { return m_gbp; }
 	t_addr GetIP() const { return m_ip; }
 
 	void SetSP(t_addr sp) { m_sp = sp; }
 	void SetBP(t_addr bp) { m_bp = bp; }
+	void SetGBP(t_addr bp) { m_gbp = bp; }
 	void SetIP(t_addr ip) { m_ip = ip; }
 
 
@@ -66,6 +68,12 @@ public:
 
 
 protected:
+	/**
+	 * pop an address from the stack
+	 */
+	t_addr PopAddress();
+
+
 	/**
 	 * read a value from memory
 	 */
@@ -131,46 +139,39 @@ protected:
 	template<class t_val, t_addr valsize>
 	void OpDeref()
 	{
-		t_addr addr = Pop<t_addr, m_addrsize>();
-		t_val val = ReadMem<t_val>(m_bp + addr);
+		t_addr addr = PopAddress();
+		t_val val = ReadMem<t_val>(addr);
 		Push<t_val, valsize>(val);
 	}
 
 
+	/**
+	 * get value from the stack and write it to memory
+	 */
 	template<class t_val, t_addr valsize>
-	void OpMovReg()
+	void OpWriteMem()
 	{
-		// first byte: register info
-		t_byte regval = ReadMem<t_byte>(m_ip);
-		m_ip += m_bytesize;
+		// variable address
+		t_addr addr = PopAddress();
 
-		t_addr addr = Pop<t_addr, m_addrsize>();
+		// pop data and write it to memory
+		t_val val = Pop<t_val, valsize>();
+		WriteMem<t_val>(addr, val);
+	}
 
-		// get absolute address using base address from register
-		Register thereg = static_cast<Register>(regval & 0b01111111);
-		switch(thereg)
-		{
-			case Register::MEM: break;
-			case Register::IP: addr += m_ip; break;
-			case Register::SP: addr += m_sp; break;
-			case Register::BP: addr += m_bp; break;
-		}
 
-		// first bit: direction
-		if(regval & 0b10000000) // to address in register
-		{
-			// pop data and write it to memory
-			t_val val = Pop<t_val, valsize>();
-			WriteMem<t_val>(addr, val);
+	/**
+	 * read a value from memory and push it on the stack
+	 */
+	template<class t_val, t_addr valsize>
+	void OpReadMem()
+	{
+		// variable address
+		t_addr addr = PopAddress();
 
-			//std::cout << "Wrote " << val << " to 0x" << std::hex << addr << std::endl;
-		}
-		else    // from address in register
-		{
-			// read and push data from memory
-			t_val val = ReadMem<t_val>(addr);
-			Push<t_val, valsize>(val);
-		}
+		// read and push data from memory
+		t_val val = ReadMem<t_val>(addr);
+		Push<t_val, valsize>(val);
 	}
 
 
@@ -194,7 +195,7 @@ protected:
 		t_val val2 = Pop<t_val, valsize>();
 		t_val val1 = Pop<t_val, valsize>();
 
-		t_val result;
+		t_val result{};
 		if constexpr(op == '+')
 			result = val1 + val2;
 		else if constexpr(op == '-')
@@ -235,6 +236,7 @@ private:
 	t_addr m_ip{};	// instruction pointer
 	t_addr m_sp{};	// stack pointer
 	t_addr m_bp{};  // base pointer for local variables
+	t_addr m_gbp{}; // global base pointer
 };
 
 

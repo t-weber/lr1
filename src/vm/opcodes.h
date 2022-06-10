@@ -19,9 +19,10 @@ enum class Register : t_vm_byte
 {
 	MEM = 0x00,
 
-	IP = 0x01,
-	SP = 0x02,
-	BP = 0x03,
+	IP = 0x01,		// instruction pointer
+	SP = 0x02,		// stack pointer
+	BP = 0x03,		// frame base pointer for local variables
+	GBP = 0x04,		// global base pointer
 };
 
 
@@ -32,15 +33,17 @@ enum class OpCode : t_vm_byte
 	INVALID = 0x02,
 
 	// real memory operations
-	PUSHF = 0x02,
 	PUSHADDR = 0x03,
-	MOVREGF = 0x04,
+	PUSHF = 0x04,
 	DEREFF = 0x05,
+	WRMEMF = 0x06,
+	RDMEMF = 0x07,
 
 	// int memory operations
-	PUSHI = 0x06,
-	MOVREGI = 0x07,
-	DEREFI = 0x08,
+	PUSHI = 0x08,
+	DEREFI = 0x09,
+	WRMEMI = 0x0a,
+	RDMEMI = 0x0b,
 
 	// real arithmetics
 	USUBF = 0x10,

@@ -22,6 +22,7 @@
 class Element;
 class Closure;
 class Collection;
+
 using ElementPtr = std::shared_ptr<Element>;
 using ClosurePtr = std::shared_ptr<Closure>;
 
@@ -71,9 +72,12 @@ public:
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
 
-	bool IsEqual(const Element& elem, bool only_core=false, bool full_equal=true) const;
-	bool operator==(const Element& other) const { return IsEqual(other, false); }
-	bool operator!=(const Element& other) const { return !operator==(other); }
+	bool IsEqual(const Element& elem, bool only_core=false,
+		bool full_equal=true) const;
+	bool operator==(const Element& other) const
+	{ return IsEqual(other, false); }
+	bool operator!=(const Element& other) const
+	{ return !operator==(other); }
 
 	std::size_t hash(bool only_core=false) const;
 
@@ -81,14 +85,14 @@ public:
 
 
 private:
-	NonTerminalPtr m_lhs = nullptr;
-	const Word* m_rhs = nullptr;
-	std::optional<std::size_t> m_semanticrule = std::nullopt;
+	NonTerminalPtr m_lhs{nullptr};
+	const Word* m_rhs{nullptr};
+	std::optional<std::size_t> m_semanticrule{std::nullopt};
 
-	std::size_t m_rhsidx = 0;	// rule index
-	std::size_t m_cursor = 0;	// pointing before element at this index
+	std::size_t m_rhsidx{0};  // rule index
+	std::size_t m_cursor{0};  // pointing before element at this index
 
-	Terminal::t_terminalset m_lookaheads;
+	Terminal::t_terminalset m_lookaheads{};
 };
 
 
@@ -102,7 +106,8 @@ public:
 	friend class Collection;
 
 	// backtracing of transitions that lead to this closure
-	using t_comefrom_transition = std::tuple<SymbolPtr, const Closure*>; // TODO: use ClosurePtr
+	using t_comefrom_transition = std::tuple<
+		SymbolPtr, const Closure*>; // TODO: use ClosurePtr
 
 
 public:
@@ -114,7 +119,8 @@ public:
 	std::size_t GetId() const { return m_id; }
 
 	void AddElement(const ElementPtr elem);
-	std::pair<bool, std::size_t> HasElement(const ElementPtr elem, bool only_core=false) const;
+	std::pair<bool, std::size_t> HasElement(
+		const ElementPtr elem, bool only_core=false) const;
 
 	std::size_t NumElements() const { return m_elems.size(); }
 	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
@@ -141,11 +147,10 @@ private:
 
 
 private:
-	std::vector<ElementPtr> m_elems;
-	std::size_t m_id = 0;	// closure id
+	std::vector<ElementPtr> m_elems{};
+	std::size_t m_id{0};      // closure id
 
-	// global closure id counter
-	static std::size_t g_id;
+	static std::size_t g_id;  // global closure id counter
 
 	// transition that led to this closure
 	std::vector<t_comefrom_transition> m_comefrom_transitions{};
@@ -192,11 +197,11 @@ protected:
 
 
 private:
-	std::map<std::size_t, ClosurePtr> m_cache;	// closure hashes
-	std::vector<ClosurePtr> m_collection;		// collection
+	std::map<std::size_t, ClosurePtr> m_cache{};  // closure hashes
+	std::vector<ClosurePtr> m_collection{};       // collection
 
 	// transitions between collection, [from, to, transition symbol]
-	std::vector<t_transition> m_transitions;
+	std::vector<t_transition> m_transitions{};
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
 };

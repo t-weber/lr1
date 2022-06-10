@@ -84,6 +84,9 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		}
 
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR));
+		// register with base address
+		m_ostr->put(static_cast<t_vm_byte>(sym->loc));
+		// relative address
 		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
 
 		// dereference it, if the variable is on the rhs of an assignment
@@ -160,21 +163,7 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 		}
 		else	// decide on special cases
 		{
-			switch(opid)
-			{
-				case '=':	// variable assignment
-				{
-					t_vm_byte op_regdata = static_cast<t_vm_byte>(Register::BP);
-					m_ostr->put(static_cast<t_vm_byte>(OpCode::MOVREGF));
-					m_ostr->put(static_cast<t_vm_byte>(op_regdata | 0b10000000));
-					break;
-				}
-
-				default:
-				{
-					break;
-				}
-			}
+				// TODO
 		}
 	}
 	else

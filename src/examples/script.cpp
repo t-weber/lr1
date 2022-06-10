@@ -21,6 +21,7 @@
 
 #define DEBUG_PARSERGEN  1
 #define DEBUG_CODEGEN    1
+#define USE_LALR         1
 
 
 enum : std::size_t
@@ -163,12 +164,16 @@ static void lr1_create_parser()
 
 		Collection colls{ closure };
 		colls.DoTransitions();
-		Collection collsLALR = colls.ConvertToLALR();
 
 #if DEBUG_PARSERGEN != 0
+#if USE_LALR != 0
+		Collection collsLALR = colls.ConvertToLALR();
 		collsLALR.WriteGraph("script_lalr", 1);
-		//std::cout << "\n\nLR(1):\n" << colls << std::endl;
 		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+#else
+		colls.WriteGraph("script", 1);
+		std::cout << "\n\nLR(1):\n" << colls << std::endl;
+#endif
 #endif
 
 		// solutions for conflicts
@@ -225,8 +230,13 @@ static void lr1_create_parser()
 			std::make_tuple(op_assign, op_pow, ConflictSolution::FORCE_SHIFT),
         }};
 
+#if USE_LALR != 0
 		auto parsetables = collsLALR.CreateParseTables(&conflicts);
 		collsLALR.SaveParseTables(parsetables, "script.tab");
+#else
+		auto parsetables = colls.CreateParseTables(&conflicts);
+		colls.SaveParseTables(parsetables, "script.tab");
+#endif
 	}
 	catch(const std::exception& err)
 	{
@@ -242,7 +252,7 @@ static void lr1_create_parser()
 
 #if !__has_include("script.tab")
 
-static bool lr1_run_parser(const char* script_file = nullptr)
+static bool lr1_run_parser([[maybe_unused]] const char* script_file = nullptr)
 {
 	std::cerr << "No parsing tables available, please run ./script_create first and rebuild."
 		<< std::endl;
@@ -494,7 +504,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				std::make_pair('/', std::make_tuple("divf", OpCode::DIVF)),
 				std::make_pair('%', std::make_tuple("modf", OpCode::MODF)),
 				std::make_pair('^', std::make_tuple("powf", OpCode::POWF)),
-				std::make_pair('=', std::make_tuple("assignf", OpCode::INVALID)),
+				std::make_pair('=', std::make_tuple("wrmemf", OpCode::WRMEMF)),
 			}};
 
 #if DEBUG_CODEGEN != 0

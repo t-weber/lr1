@@ -61,15 +61,14 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 	std::size_t line = 1;
 
 	// find longest matching token
-	while(1)
+	while(!(eof = istr.eof()))
 	{
-		eof = istr.eof();
-		if(eof)
-			break;
-
 		char c = istr.get();
 		if(c == std::char_traits<char>::eof())
-			return std::make_tuple((t_tok)Token::END, std::nullopt);
+		{
+			eof = true;
+			break;
+		}
 		//std::cout << "Input: " << c << " (0x" << std::hex << int(c) << ")." << std::endl;
 
 		// if outside any other match...
@@ -101,7 +100,10 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 			longest_matching = matching;
 
 			if(istr.peek() == std::char_traits<char>::eof())
+			{
+				eof = true;
 				break;
+			}
 		}
 		else
 		{

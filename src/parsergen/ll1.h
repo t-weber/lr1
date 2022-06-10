@@ -42,7 +42,8 @@ public:
 	void CalcTable();
 	void PrintRecursiveDescentPseudocode(std::ostream& ostr = std::cout) const;
 
-	const std::vector<NonTerminalPtr>& GetNonTerminals() const { return m_nonterminals; }
+	const std::vector<NonTerminalPtr>& GetNonTerminals() const
+	{ return m_nonterminals; }
 	const t_map_first& GetFirst() const { return m_first; }
 	const t_map_follow& GetFollow() const { return m_follow; }
 	const t_map_ll1& GetTable() const { return m_table; }
@@ -52,19 +53,20 @@ public:
 
 protected:
 	static Terminal::t_terminalset GetLookaheads(
-		const Terminal::t_terminalset& first, const Terminal::t_terminalset& follow);
+		const Terminal::t_terminalset& first,
+		const Terminal::t_terminalset& follow);
 
 
 private:
-	std::vector<NonTerminalPtr> m_nonterminals;
-	NonTerminalPtr m_start = nullptr;
+	std::vector<NonTerminalPtr> m_nonterminals{};
+	NonTerminalPtr m_start{nullptr};
 
-	t_map_first m_first;
-	t_map_first_perrule m_first_per_rule;
+	t_map_first m_first{};
+	t_map_first_perrule m_first_per_rule{};
 
-	t_map_follow m_follow;
+	t_map_follow m_follow{};
 
-	t_map_ll1 m_table;
+	t_map_ll1 m_table{};
 };
 
 #endif

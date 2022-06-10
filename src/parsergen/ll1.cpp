@@ -31,7 +31,8 @@ void LL1::RemoveLeftRecursion(
 	std::vector<NonTerminalPtr> newnonterminals;
 	for(NonTerminalPtr ptr : m_nonterminals)
 	{
-		NonTerminalPtr newptr = ptr->RemoveLeftRecursion(newIdBegin, primerule, semanticruleidx);
+		NonTerminalPtr newptr = ptr->RemoveLeftRecursion(
+			newIdBegin, primerule, semanticruleidx);
 		if(newptr)
 			newnonterminals.emplace_back(newptr);
 	}
@@ -56,12 +57,14 @@ void LL1::CalcTable()
 
 		if(iterFirsts == m_first_per_rule.end())
 		{
-			std::cerr << nonterm->GetStrId() << " has no FIRST set." << std::endl;
+			std::cerr << nonterm->GetStrId()
+				<< " has no FIRST set." << std::endl;
 			continue;
 		}
 		if(iterFollows == m_follow.end())
 		{
-			std::cerr << nonterm->GetStrId() << " has no FOLLOW set." << std::endl;
+			std::cerr << nonterm->GetStrId()
+				<< " has no FOLLOW set." << std::endl;
 			continue;
 		}
 
@@ -81,7 +84,8 @@ void LL1::CalcTable()
 				if(!semanticrule)
 				{
 					std::cerr << "No semantic rule for table["
-						<< nonterm->GetStrId() << ", " << term->GetStrId() << "]." << std::endl;
+						<< nonterm->GetStrId() << ", "
+						<< term->GetStrId() << "]." << std::endl;
 					continue;
 				}
 
@@ -108,12 +112,14 @@ void LL1::PrintRecursiveDescentPseudocode(std::ostream& ostr) const
 
 		if(iterFirsts == m_first_per_rule.end())
 		{
-			std::cerr << nonterm->GetStrId() << " has no FIRST set." << std::endl;
+			std::cerr << nonterm->GetStrId()
+				<< " has no FIRST set." << std::endl;
 			continue;
 		}
 		if(iterFollows == m_follow.end())
 		{
-			std::cerr << nonterm->GetStrId() << " has no FOLLOW set." << std::endl;
+			std::cerr << nonterm->GetStrId()
+				<< " has no FOLLOW set." << std::endl;
 			continue;
 		}
 
@@ -155,9 +161,14 @@ void LL1::PrintRecursiveDescentPseudocode(std::ostream& ostr) const
 					TerminalPtr rhsterm = std::dynamic_pointer_cast<Terminal>(rhssym);
 
 					if(!rhsterm->IsEps())
-						ostr << "\t\tmatch_token(la, '" << rhssym->GetStrId() << "');\n";
+					{
+						ostr << "\t\tmatch_token(la, '"
+							<< rhssym->GetStrId() << "');\n";
+					}
 					else
+					{
 						ostr << "\t\t// eps\n";
+					}
 				}
 				else
 				{
@@ -166,7 +177,10 @@ void LL1::PrintRecursiveDescentPseudocode(std::ostream& ostr) const
 			}
 
 			if(semanticrule)
-				ostr << "\n\t\t//\n\t\t// place semantic rule " << *semanticrule << " here\n\t\t//\n";
+			{
+				ostr << "\n\t\t//\n\t\t// place semantic rule "
+					<< *semanticrule << " here\n\t\t//\n";
+			}
 
 			ostr << "\t}\n";
 		}
@@ -247,7 +261,9 @@ std::ostream& operator<<(std::ostream& ostr, const LL1& ll1)
 		{
 			TerminalPtr term = termpair.first;
 			std::size_t rule = termpair.second;
-			ostr << "table[" << nonterm->GetStrId() << ", " << term->GetStrId() << "] = rule " << rule << "\n";
+			ostr << "table[" << nonterm->GetStrId()
+				<< ", " << term->GetStrId()
+				<< "] = rule " << rule << "\n";
 		}
 	}
 

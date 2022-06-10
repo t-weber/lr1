@@ -108,10 +108,10 @@ public:
 
 private:
 	// symbol id (from symbol.h)
-	std::size_t m_id;
+	std::size_t m_id{};
 
 	// index used in parse tables (from lr1.h)
-	std::optional<std::size_t> m_tableidx;
+	std::optional<std::size_t> m_tableidx{};
 };
 
 
@@ -167,7 +167,7 @@ public:
 
 
 private:
-	std::optional<t_lval> m_lexval; // lexer value
+	std::optional<t_lval> m_lexval{}; // lexer value
 	bool m_islval{false}; // names an l-value variable (on lhs of assignment)
 };
 
@@ -201,7 +201,7 @@ public:
 
 
 private:
-	t_astbaseptr m_arg1;
+	t_astbaseptr m_arg1{};
 };
 
 
@@ -235,8 +235,8 @@ public:
 
 
 private:
-	t_astbaseptr m_arg1;
-	std::size_t m_opid;
+	t_astbaseptr m_arg1{};
+	std::size_t m_opid{};
 };
 
 
@@ -282,8 +282,8 @@ public:
 
 
 private:
-	t_astbaseptr m_arg1, m_arg2;
-	std::size_t m_opid;
+	t_astbaseptr m_arg1{}, m_arg2{};
+	std::size_t m_opid{};
 };
 
 

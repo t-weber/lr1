@@ -18,14 +18,16 @@
 #include <boost/functional/hash.hpp>
 
 
-Collection::Collection(const ClosurePtr closure) : m_cache{}, m_collection{}, m_transitions{}
+Collection::Collection(const ClosurePtr closure)
+	: m_cache{}, m_collection{}, m_transitions{}
 {
 	m_cache.insert(std::make_pair(closure->hash(), closure));
 	m_collection.push_back(closure);
 }
 
 
-Collection::Collection() : m_cache{}, m_collection{}, m_transitions{}
+Collection::Collection()
+	: m_cache{}, m_collection{}, m_transitions{}
 {
 }
 
@@ -36,7 +38,8 @@ Collection::Collection() : m_cache{}, m_collection{}, m_transitions{}
  */
 void Collection::DoTransitions(const ClosurePtr closure_from)
 {
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll = closure_from->DoTransitions();
+	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll =
+		closure_from->DoTransitions();
 
 	// no more transitions?
 	if(coll.size() == 0)
@@ -60,7 +63,8 @@ void Collection::DoTransitions(const ClosurePtr closure_from)
 			// new unique closure
 			m_cache.insert(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.push_back(std::make_tuple(closure_from, closure_to, trans_sym));
+			m_transitions.push_back(std::make_tuple(
+				closure_from, closure_to, trans_sym));
 
 			DoTransitions(closure_to);
 		}
@@ -314,8 +318,12 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 			const NonTerminalPtr& lhs = elem->GetLhs();
 			const auto& iter = follow.find(lhs);
 			if(iter == follow.end())
+			{
 				throw std::runtime_error{
-					"Could not find follow set of \"" + lhs->GetStrId() + "\"."};
+					"Could not find follow set of \"" +
+					lhs->GetStrId() + "\"."};
+			}
+
 			const Terminal::t_terminalset& followLhs = iter->second;
 			elem->SetLookaheads(followLhs);
 		}

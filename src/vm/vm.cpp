@@ -57,24 +57,40 @@ bool VM::Run()
 			// push direct address onto stack
 			case OpCode::PUSHADDR:
 			{
-				// get data value from memory
+				// get address base register from memory
+				t_byte regval = ReadMem<t_byte>(m_ip);
+				m_ip += m_bytesize;
+
+				// get address from memory
 				t_addr val = ReadMem<t_addr>(m_ip);
 				m_ip += m_addrsize;
 
-				//std::cout << "push " << val << std::endl;
 				Push<t_addr, m_addrsize>(val);
+				Push<t_byte, m_bytesize>(regval);
 				break;
 			}
 
-			case OpCode::MOVREGF:
+			case OpCode::WRMEMF:
 			{
-				OpMovReg<t_real, m_realsize>();
+				OpWriteMem<t_real, m_realsize>();
 				break;
 			}
 
-			case OpCode::MOVREGI:
+			case OpCode::WRMEMI:
 			{
-				OpMovReg<t_int, m_intsize>();
+				OpWriteMem<t_int, m_intsize>();
+				break;
+			}
+
+			case OpCode::RDMEMF:
+			{
+				OpReadMem<t_real, m_realsize>();
+				break;
+			}
+
+			case OpCode::RDMEMI:
+			{
+				OpReadMem<t_int, m_intsize>();
 				break;
 			}
 
@@ -205,11 +221,40 @@ bool VM::Run()
 }
 
 
+/**
+ * pop an address from the stack
+ * an address consists of the index of an register
+ * holding the base address and an offset address
+ */
+VM::t_addr VM::PopAddress()
+{
+	// get register info from stack
+	t_byte regval = Pop<t_byte, m_bytesize>();
+
+	// get address from stack
+	t_addr addr = Pop<t_addr, m_addrsize>();
+
+	// get absolute address using base address from register
+	Register thereg = static_cast<Register>(regval);
+	switch(thereg)
+	{
+		case Register::MEM: break;
+		case Register::IP: addr += m_ip; break;
+		case Register::SP: addr += m_sp; break;
+		case Register::BP: addr += m_bp; break;
+		case Register::GBP: addr += m_gbp; break;
+	}
+
+	return addr;
+}
+
+
 void VM::Reset()
 {
 	m_ip = 0;
 	m_sp = m_memsize;
 	m_bp = m_sp - m_framesize;
+	m_gbp = m_bp;
 
 	std::memset(m_mem.get(), 0, m_memsize);
 }

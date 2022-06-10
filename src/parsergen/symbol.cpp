@@ -15,6 +15,7 @@
 #include <boost/functional/hash.hpp>
 
 
+// special terminal symbols
 const TerminalPtr g_eps = std::make_shared<Terminal>(EPS_IDENT, "eps", true, false);
 const TerminalPtr g_end = std::make_shared<Terminal>(END_IDENT, "end", false, true);
 
@@ -37,7 +38,8 @@ bool Symbol::operator==(const Symbol& other) const
 }
 
 
-bool Symbol::CompareSymbols::operator()(const SymbolPtr sym1, const SymbolPtr sym2) const
+bool Symbol::CompareSymbols::operator()(
+	const SymbolPtr sym1, const SymbolPtr sym2) const
 {
 	/*
 	 const std::string& id1 = sym1->GetStrId();
@@ -203,17 +205,17 @@ bool Word::operator==(const Word& other) const
 	if(this->NumSymbols() != other.NumSymbols())
 		return false;
 
-	bool bMatch = true;
+	bool match = true;
 	for(std::size_t i=0; i<NumSymbols(); ++i)
 	{
 		if(*m_syms[i] != *other.m_syms[i])
 		{
-			bMatch = false;
+			match = false;
 			break;
 		}
 	}
 
-	return bMatch;
+	return match;
 }
 
 
@@ -288,19 +290,19 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 					calc_first(symnonterm, _first, _first_perrule);
 
 				// add first set except eps
-				bool bHasEps = false;
+				bool has_eps = false;
 				for(const TerminalPtr& symprod : _first[symnonterm])
 				{
-					bool bInsert = true;
+					bool insert = true;
 					if(symprod->IsEps())
 					{
-						bHasEps = true;
+						has_eps = true;
 
 						// if last non-terminal is reached -> add epsilon
-						bInsert = (iSym == rule.NumSymbols()-1);
+						insert = (iSym == rule.NumSymbols()-1);
 					}
 
-					if(bInsert)
+					if(insert)
 					{
 						first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
 						first_perrule[iRule].insert(std::dynamic_pointer_cast<Terminal>(symprod));
@@ -308,7 +310,7 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 				}
 
 				// no epsilon in production -> end
-				if(!bHasEps)
+				if(!has_eps)
 					break;
 			}
 		}
@@ -361,7 +363,8 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 						// add terminal to follow set
 						if(rule[_iSym]->IsTerminal() && !rule[_iSym]->IsEps())
 						{
-							follow.insert(std::dynamic_pointer_cast<Terminal>(rule[_iSym]));
+							follow.insert(std::dynamic_pointer_cast<Terminal>(
+								rule[_iSym]));
 							break;
 						}
 
@@ -376,8 +379,11 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 									follow.insert(symfirst);
 							}
 
-							if(!std::dynamic_pointer_cast<NonTerminal>(rule[_iSym])->HasEpsRule())
+							if(!std::dynamic_pointer_cast<NonTerminal>(
+								rule[_iSym])->HasEpsRule())
+							{
 								break;
+							}
 						}
 					}
 
@@ -391,17 +397,25 @@ void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 					{
 						// terminal
 						if(rule[iNextSym]->IsTerminal() && !rule[iNextSym]->IsEps())
+						{
 							break;
+						}
 
 						// non-terminal
-						if(!std::dynamic_pointer_cast<NonTerminal>(rule[iNextSym])->HasEpsRule())
+						if(!std::dynamic_pointer_cast<NonTerminal>(
+							rule[iNextSym])->HasEpsRule())
+						{
 							break;
+						}
 					}
 
 					if(bLastSym || iNextSym==rule.NumSymbols())
 					{
 						if(_nonterm != nonterm)
-							calc_follow(allnonterms, start, _nonterm, _first, _follow);
+						{
+							calc_follow(allnonterms, start,
+								_nonterm, _first, _follow);
+						}
 						const auto& __follow = _follow[_nonterm];
 						follow.insert(__follow.begin(), __follow.end());
 					}

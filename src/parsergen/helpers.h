@@ -14,15 +14,19 @@
 #include <iomanip>
 
 
-template<class T=std::size_t, template<class...> class t_cont = std::vector>
+template<
+	class T=std::size_t, template<class...>
+		class t_cont = std::vector>
 class Table
 {
 public:
 	using value_type = T;
 	using container_type = t_cont<T>;
 
+
 	Table() = default;
 	~Table() = default;
+
 
 	Table(const t_cont<t_cont<T>>& cont,
 		  T errorval=0xffffffff, T acceptval=0xfffffffe,
@@ -51,6 +55,7 @@ public:
 				this->operator()(row, col) = (col < controw.size() ? controw[col] : errorval);
 		}
 	}
+
 
 	Table(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS}
 	{}

@@ -19,8 +19,10 @@ class Parser
 {
 public:
 	// directly takes the input from Collection::CreateParseTables
-	Parser(const std::tuple<t_table, t_table, t_table, t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
-		   const std::vector<t_semanticrule>& rules);
+	Parser(const std::tuple<
+		t_table, t_table, t_table,
+		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
+		const std::vector<t_semanticrule>& rules);
 
 	Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
 		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
@@ -35,19 +37,19 @@ public:
 
 private:
 	// parse tables
-	t_table m_tabActionShift;
-	t_table m_tabActionReduce;
-	t_table m_tabJump;
+	t_table m_tabActionShift{};
+	t_table m_tabActionReduce{};
+	t_table m_tabJump{};
 
 	// mappings from symbol id to table index
-	t_mapIdIdx m_mapTermIdx;
-	t_mapIdIdx m_mapNonTermIdx;
+	t_mapIdIdx m_mapTermIdx{};
+	t_mapIdIdx m_mapNonTermIdx{};
 
 	// number of symbols on right hand side of a rule
-	t_vecIdx m_numRhsSymsPerRule;
+	t_vecIdx m_numRhsSymsPerRule{};
 
 	// semantic rules
-	std::vector<t_semanticrule> m_semantics;
+	std::vector<t_semanticrule> m_semantics{};
 };
 
 

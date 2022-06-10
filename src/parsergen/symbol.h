@@ -30,6 +30,7 @@ using NonTerminalPtr = std::shared_ptr<NonTerminal>;
 using WordPtr = std::shared_ptr<Word>;
 
 
+
 /**
  * symbol base class
  */
@@ -56,11 +57,11 @@ public:
 
 
 private:
-	std::size_t m_id = 0;
+	std::size_t m_id{0};
 	std::string m_strid{};
 
-	bool m_iseps = false;
-	bool m_isend = false;
+	bool m_iseps{false};
+	bool m_isend{false};
 
 
 public:
@@ -108,7 +109,7 @@ public:
 
 private:
 	// semantic rule
-	std::optional<std::size_t> m_semantic;
+	std::optional<std::size_t> m_semantic{};
 };
 
 
@@ -129,7 +130,8 @@ public:
 	/**
 	 * add multiple alternative production rules
 	 */
-	void AddRule(const Word& rule, std::optional<std::size_t> semanticruleidx = std::nullopt)
+	void AddRule(const Word& rule,
+		std::optional<std::size_t> semanticruleidx = std::nullopt)
 	{
 		m_rules.push_back(rule);
 		m_semantics.push_back(semanticruleidx);
@@ -185,10 +187,10 @@ public:
 
 private:
 	// production syntactic rules
-	std::vector<Word> m_rules;
+	std::vector<Word> m_rules{};
 
 	// production semantic rule indices
-	std::vector<std::optional<std::size_t>> m_semantics;
+	std::vector<std::optional<std::size_t>> m_semantics{};
 };
 
 
@@ -243,7 +245,7 @@ public:
 
 
 private:
-	std::vector<SymbolPtr> m_syms;
+	std::vector<SymbolPtr> m_syms{};
 };
 
 
@@ -261,9 +263,12 @@ extern const TerminalPtr g_eps, g_end;
 
 
 
-using t_map_first = std::map<SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
-using t_map_first_perrule = std::map<SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbols>;
-using t_map_follow = std::map<SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+using t_map_first = std::map<
+	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+using t_map_first_perrule = std::map<
+	SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbols>;
+using t_map_follow = std::map<
+	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
 
 
 /**
@@ -279,5 +284,6 @@ extern void calc_first(const NonTerminalPtr nonterm,
 extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
 	const t_map_first&  _first, t_map_follow& _follow);
+
 
 #endif

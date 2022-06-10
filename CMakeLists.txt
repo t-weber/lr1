@@ -76,11 +76,11 @@ target_link_libraries(lr1-vm ${Boost_LIBRARIES})
 # -----------------------------------------------------------------------------
 # examples
 if(BUILD_EXAMPLES)
-	add_executable(script_create src/tools/script.cpp)
+	add_executable(script_create src/examples/script.cpp)
 	target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
 	target_link_libraries(script_create lr1-parsergen)
 
-	add_executable(script_run src/tools/script.cpp)
+	add_executable(script_run src/examples/script.cpp)
 	target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
 	target_link_libraries(script_run lr1-codegen lr1-vm)
 endif()

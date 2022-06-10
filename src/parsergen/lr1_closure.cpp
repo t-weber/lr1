@@ -22,8 +22,7 @@ std::size_t Closure::g_id = 0;
 
 
 Closure::Closure() : m_elems{}, m_id{g_id++}
-{
-}
+{}
 
 
 Closure::Closure(const Closure& closure) : m_elems{}
@@ -123,7 +122,8 @@ void Closure::AddElement(const ElementPtr elem)
 /**
  * checks if an element is already in the closure and returns its index
  */
-std::pair<bool, std::size_t> Closure::HasElement(const ElementPtr elem, bool only_core) const
+std::pair<bool, std::size_t> Closure::HasElement(
+	const ElementPtr elem, bool only_core) const
 {
 	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
 	{
@@ -140,7 +140,8 @@ std::pair<bool, std::size_t> Closure::HasElement(const ElementPtr elem, bool onl
 /**
  * get the element of the collection whose cursor points to the given symbol
  */
-const ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
+const ElementPtr Closure::GetElementWithCursorAtSymbol(
+	const SymbolPtr& sym) const
 {
 	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
 	{
@@ -217,7 +218,8 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 
 
 /**
- * perform all possible transitions from this closure and get the corresponding lr(1) collection
+ * perform all possible transitions from this closure
+ * and get the corresponding lr(1) collection
  * @return [transition symbol, destination closure]
  */
 std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions() const
@@ -244,10 +246,11 @@ std::size_t Closure::hash(bool only_core) const
 	for(ElementPtr elem : m_elems)
 		hashes.emplace_back(elem->hash(only_core));
 
-	std::sort(hashes.begin(), hashes.end(), [](std::size_t hash1, std::size_t hash2) -> bool
-	{
-		return hash1 < hash2;
-	});
+	std::sort(hashes.begin(), hashes.end(),
+		[](std::size_t hash1, std::size_t hash2) -> bool
+		{
+			return hash1 < hash2;
+		});
 
 
 	std::size_t fullhash = 0;
@@ -341,13 +344,21 @@ void Closure::CleanComefromTransitions()
 			const t_comefrom_transition& comefrom2) -> bool
 		{
 			// symbol
-			bool sym_equ = std::get<0>(comefrom1)->hash() == std::get<0>(comefrom2)->hash();
+			bool sym_equ = std::get<0>(comefrom1)->hash() ==
+				std::get<0>(comefrom2)->hash();
 			if(sym_equ)
-				return std::get<1>(comefrom1)->GetId() < std::get<1>(comefrom2)->GetId();
+			{
+				return std::get<1>(comefrom1)->GetId() <
+					std::get<1>(comefrom2)->GetId();
+			}
 			else
-				return std::get<0>(comefrom1)->hash() < std::get<0>(comefrom2)->hash();
+			{
+				return std::get<0>(comefrom1)->hash() <
+					std::get<0>(comefrom2)->hash();
+			}
 		});
-	auto end = std::unique(m_comefrom_transitions.begin(), m_comefrom_transitions.end(),
+	auto end = std::unique(m_comefrom_transitions.begin(),
+		m_comefrom_transitions.end(),
 		[](const t_comefrom_transition& comefrom1,
 			const t_comefrom_transition& comefrom2) -> bool
 		{

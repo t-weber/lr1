@@ -14,13 +14,19 @@
 #include "../vm/opcodes.h"
 
 
+/**
+ * information about a variable in the symbol table
+ */
 struct SymInfo
 {
-	t_vm_addr addr{0};
-	Register loc{Register::BP};
+	t_vm_addr addr{0};           // relative address of the variable
+	Register loc{Register::BP};  // register with the base address
 };
 
 
+/**
+ * symbol table mapping an identified to an address
+ */
 class SymTab
 {
 public:

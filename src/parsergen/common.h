@@ -16,11 +16,11 @@
 #include <variant>
 
 
-#define ERROR_VAL 0xffffffff	/* 'error' table entry */
-#define ACCEPT_VAL 0xfffffffe	/* 'accept' table entry */
+#define ERROR_VAL  0xffffffff  /* 'error' table entry */
+#define ACCEPT_VAL 0xfffffffe  /* 'accept' table entry */
 
-#define EPS_IDENT 0xffffff00	/* epsilon token id*/
-#define END_IDENT 0xffffff01	/* end token id*/
+#define EPS_IDENT  0xffffff00  /* epsilon token id*/
+#define END_IDENT  0xffffff01  /* end token id*/
 
 
 using t_toknode = t_astbaseptr;

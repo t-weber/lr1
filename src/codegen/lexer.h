@@ -24,17 +24,18 @@ using t_tok = std::size_t;
 
 enum class Token : t_tok
 {
-	REAL	= 1000,
-	IDENT	= 1001,
+	REAL  = 1000,
+	IDENT = 1001,
 
-	END	= END_IDENT,
+	END   = END_IDENT,
 };
 
 
 /**
  * find all matching tokens for input string
  */
-extern std::vector<std::tuple<t_tok, t_lval>> get_matching_tokens(const std::string& str);
+extern std::vector<std::tuple<t_tok, t_lval>> get_matching_tokens(
+	const std::string& str);
 
 
 /**
