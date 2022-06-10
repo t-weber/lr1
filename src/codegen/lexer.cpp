@@ -53,11 +53,12 @@ get_matching_tokens(const std::string& str)
 /**
  * get next token and attribute
  */
-std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
+std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline)
 {
 	std::string input;
 	std::vector<std::tuple<t_tok, t_lval>> longest_matching;
 	bool eof = false;
+	std::size_t line = 1;
 
 	// find longest matching token
 	while(1)
@@ -67,6 +68,9 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 			break;
 
 		char c = istr.get();
+		if(c == std::char_traits<char>::eof())
+			return std::make_tuple((t_tok)Token::END, std::nullopt);
+		//std::cout << "Input: " << c << " (0x" << std::hex << int(c) << ")." << std::endl;
 
 		// if outside any other match...
 		if(longest_matching.size() == 0)
@@ -74,9 +78,20 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 			// ...ignore white spaces
 			if(c==' ' || c=='\t')
 				continue;
+
 			// ...end on new line
 			if(c=='\n')
-				return std::make_tuple((t_tok)Token::END, std::nullopt);
+			{
+				if(end_on_newline)
+				{
+					return std::make_tuple((t_tok)Token::END, std::nullopt);
+				}
+				else
+				{
+					++line;
+					continue;
+				}
+			}
 		}
 
 		input += c;
@@ -98,10 +113,21 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr)
 
 	if(longest_matching.size() == 0 && eof)
 		return std::make_tuple((t_tok)Token::END, std::nullopt);
+
 	if(longest_matching.size() == 0)
-		throw std::runtime_error("Invalid input in lexer: \"" + input + "\".");
+	{
+		std::ostringstream ostrErr;
+		ostrErr << "Line " << line << ": Invalid input in lexer: \""
+			<< input << "\"" << " (length: " << input.length() << ").";
+		throw std::runtime_error(ostrErr.str());
+	}
+
 	if(longest_matching.size() > 1)
-		std::cerr << "Warning: Ambiguous match in lexer for token \"" << input << "\"." << std::endl;
+	{
+		std::cerr << "Warning, line " << line
+			<< ": Ambiguous match in lexer for token \""
+			<< input << "\"." << std::endl;
+	}
 
 	return longest_matching[0];
 }
@@ -114,8 +140,12 @@ template<std::size_t IDX> struct _Lval_LoopFunc
 		std::size_t tableidx, const t_lval& lval) const
 	{
 		using t_val = std::variant_alternative_t<IDX, typename t_lval::value_type>;
+
 		if(std::holds_alternative<t_val>(*lval))
-			vec->emplace_back(std::make_shared<ASTToken<t_val>>(id, tableidx, std::get<IDX>(*lval)));
+		{
+			vec->emplace_back(std::make_shared<ASTToken<t_val>>(
+				id, tableidx, std::get<IDX>(*lval)));
+		}
 	};
 };
 
@@ -124,13 +154,14 @@ template<std::size_t IDX> struct _Lval_LoopFunc
  * get all tokens and attributes
  */
 std::vector<t_toknode> get_all_tokens(
-	std::istream& istr, const t_mapIdIdx* mapTermIdx)
+	std::istream& istr, const t_mapIdIdx* mapTermIdx,
+	bool end_on_newline)
 {
 	std::vector<t_toknode> vec;
 
 	while(1)
 	{
-		auto tup = get_next_token(istr);
+		auto tup = get_next_token(istr, end_on_newline);
 		std::size_t id = std::get<0>(tup);
 		const t_lval& lval = std::get<1>(tup);
 
@@ -147,8 +178,11 @@ std::vector<t_toknode> get_all_tokens(
 		if(lval)
 		{
 			// find the correct type in the variant
-			auto seq = std::make_index_sequence<std::variant_size_v<typename t_lval::value_type>>();
-			constexpr_loop<_Lval_LoopFunc>(seq, std::make_tuple(&vec, id, tableidx, lval));
+			auto seq = std::make_index_sequence<
+				std::variant_size_v<typename t_lval::value_type>>();
+
+			constexpr_loop<_Lval_LoopFunc>(
+				seq, std::make_tuple(&vec, id, tableidx, lval));
 		}
 		else
 		{

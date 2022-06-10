@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <cstdint>
 
@@ -241,10 +242,11 @@ static void lr1_create_parser()
 
 #if !__has_include("script.tab")
 
-static void lr1_run_parser()
+static bool lr1_run_parser(const char* script_file = nullptr)
 {
 	std::cerr << "No parsing tables available, please run ./script_create first and rebuild."
 		<< std::endl;
+	return false;
 }
 
 #else
@@ -252,7 +254,7 @@ static void lr1_run_parser()
 #include "codegen/parser.h"
 #include "script.tab"
 
-static void lr1_run_parser()
+static bool lr1_run_parser(const char* script_file = nullptr)
 {
 	try
 	{
@@ -429,13 +431,38 @@ static void lr1_run_parser()
 
 		Parser parser{parsetables, rules};
 
-		while(1)
+		bool loop_input = true;
+		while(loop_input)
 		{
-			std::string exprstr;
-			std::cout << "\nExpression: ";
-			std::getline(std::cin, exprstr);
-			std::istringstream istr{exprstr};
-			auto tokens = get_all_tokens(istr, &mapTermIdx);
+			std::unique_ptr<std::istream> istr;
+
+			if(script_file)
+			{
+				// read script from file
+				istr = std::make_unique<std::ifstream>(script_file);
+				loop_input = false;
+
+				if(!*istr)
+				{
+					std::cerr << "Error: Cannot open file \""
+						<< script_file << "\"." << std::endl;
+					return false;
+				}
+
+				std::cout << "Running \"" << script_file << "\"." << std::endl;
+			}
+			else
+			{
+				// read statements from command line
+				std::cout << "\nStatement: ";
+				std::string script;
+				std::getline(std::cin, script);
+				istr = std::make_unique<std::istringstream>(script);
+			}
+
+			// tokenise script
+			bool end_on_newline = (script_file == nullptr);
+			auto tokens = get_all_tokens(*istr, &mapTermIdx, end_on_newline);
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "Tokens: ";
@@ -497,7 +524,10 @@ static void lr1_run_parser()
 	catch(const std::exception& err)
 	{
 		std::cerr << "Error: " << err.what() << std::endl;
+		return false;
 	}
+
+	return true;
 }
 
 #endif
@@ -505,7 +535,7 @@ static void lr1_run_parser()
 
 
 
-int main()
+int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
 #ifdef CREATE_PARSER
 	create_grammar();
@@ -513,8 +543,12 @@ int main()
 #endif
 
 #ifdef RUN_PARSER
+	const char* script_file = nullptr;
+	if(argc >= 2)
+			script_file = argv[1];
+
 	create_grammar();
-	lr1_run_parser();
+	lr1_run_parser(script_file);
 #endif
 
 	return 0;

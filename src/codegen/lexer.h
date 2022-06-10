@@ -40,14 +40,16 @@ extern std::vector<std::tuple<t_tok, t_lval>> get_matching_tokens(const std::str
 /**
  * get next token and attribute
  */
-extern std::tuple<t_tok, t_lval> get_next_token(std::istream& istr = std::cin);
+extern std::tuple<t_tok, t_lval> get_next_token(
+	std::istream& istr = std::cin, bool end_on_newline = true);
 
 
 /**
  * get all tokens and attributes
  */
 extern std::vector<t_toknode> get_all_tokens(
-	std::istream& istr = std::cin, const t_mapIdIdx* mapTermIdx = nullptr);
+	std::istream& istr = std::cin, const t_mapIdIdx* mapTermIdx = nullptr,
+	bool end_on_newline = true);
 
 
 #endif
