@@ -27,7 +27,8 @@ enum class Register : std::int8_t
 enum class OpCode : std::int8_t
 {
 	HALT = 0x00,
-	INVALID = 0x01,
+	NOP = 0x01,
+	INVALID = 0x02,
 
 	// real memory operations
 	PUSHF = 0x02,
@@ -41,26 +42,24 @@ enum class OpCode : std::int8_t
 	DEREFI = 0x08,
 
 	// real arithmetics
-	UADDF = 0x10,
-	USUBF = 0x11,
-	ADDF = 0x12,
-	SUBF = 0x13,
-	MULF = 0x14,
-	DIVF = 0x15,
-	MODF = 0x16,
-	POWF = 0x17,
-	FTOI = 0x18,
+	USUBF = 0x10,
+	ADDF = 0x11,
+	SUBF = 0x12,
+	MULF = 0x13,
+	DIVF = 0x14,
+	MODF = 0x15,
+	POWF = 0x16,
+	FTOI = 0x17,
 
 	// int arithmetics
-	UADDI = 0x20,
-	USUBI = 0x21,
-	ADDI = 0x22,
-	SUBI = 0x23,
-	MULI = 0x24,
-	DIVI = 0x25,
-	MODI = 0x26,
-	POWI = 0x27,
-	ITOF = 0x28,
+	USUBI = 0x20,
+	ADDI = 0x21,
+	SUBI = 0x22,
+	MULI = 0x23,
+	DIVI = 0x24,
+	MODI = 0x25,
+	POWI = 0x26,
+	ITOF = 0x27,
 };
 
 

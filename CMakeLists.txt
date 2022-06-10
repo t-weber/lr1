@@ -4,14 +4,19 @@
 # @license see 'LICENSE.EUPL' file
 #
 
-project(lr1)
 cmake_minimum_required(VERSION 3.0)
 
+project(lr1)
+enable_language(CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_definitions(-Wall -Wextra -Weffc++)
+
+
+option(BUILD_EXAMPLES "build example programs" TRUE)
+option(BUILD_TESTS "build test programs" TRUE)
 
 
 find_package(Boost REQUIRED)
@@ -69,49 +74,57 @@ target_link_libraries(lr1-vm ${Boost_LIBRARIES})
 
 
 # -----------------------------------------------------------------------------
+# examples
+if(BUILD_EXAMPLES)
+	add_executable(script_create src/tools/script.cpp)
+	target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
+	target_link_libraries(script_create lr1-parsergen)
+
+	add_executable(script_run src/tools/script.cpp)
+	target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
+	target_link_libraries(script_run lr1-codegen lr1-vm)
+endif()
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
 # tests
-add_executable(test1 tests/tst1.cpp)
-target_link_libraries(test1 lr1-parsergen)
+if(BUILD_TESTS)
+	add_executable(test1 tests/tst1.cpp)
+	target_link_libraries(test1 lr1-parsergen)
 
-add_executable(left_recursion tests/left_recursion.cpp)
-target_link_libraries(left_recursion lr1-parsergen)
+	add_executable(left_recursion tests/left_recursion.cpp)
+	target_link_libraries(left_recursion lr1-parsergen)
 
-add_executable(right_recursion tests/right_recursion.cpp)
-target_link_libraries(right_recursion lr1-parsergen)
+	add_executable(right_recursion tests/right_recursion.cpp)
+	target_link_libraries(right_recursion lr1-parsergen)
 
-add_executable(expr_simplified tests/expr_simplified.cpp)
-target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)
+	add_executable(expr_simplified tests/expr_simplified.cpp)
+	target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)
 
-add_executable(expr_simplified_prec tests/expr_simplified_prec.cpp)
-target_link_libraries(expr_simplified_prec lr1-parsergen lr1-codegen)
+	add_executable(expr_simplified_prec tests/expr_simplified_prec.cpp)
+	target_link_libraries(expr_simplified_prec lr1-parsergen lr1-codegen)
 
-add_executable(expr_simplified_ll1 tests/expr_simplified_ll1.cpp)
-target_link_libraries(expr_simplified_ll1 lr1-parsergen)
+	add_executable(expr_simplified_ll1 tests/expr_simplified_ll1.cpp)
+	target_link_libraries(expr_simplified_ll1 lr1-parsergen)
 
-add_executable(expr_ll1 tests/expr_ll1.cpp)
-target_link_libraries(expr_ll1 lr1-parsergen)
+	add_executable(expr_ll1 tests/expr_ll1.cpp)
+	target_link_libraries(expr_ll1 lr1-parsergen)
 
-add_executable(expr_create tests/expr.cpp)
-target_compile_definitions(expr_create PUBLIC -DCREATE_PARSER)
-target_link_libraries(expr_create lr1-parsergen)
+	add_executable(expr_create tests/expr.cpp)
+	target_compile_definitions(expr_create PUBLIC -DCREATE_PARSER)
+	target_link_libraries(expr_create lr1-parsergen)
 
-add_executable(expr_run tests/expr.cpp)
-target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
-target_link_libraries(expr_run lr1-codegen)
+	add_executable(expr_run tests/expr.cpp)
+	target_compile_definitions(expr_run PUBLIC -DRUN_PARSER)
+	target_link_libraries(expr_run lr1-codegen)
 
-add_executable(expr_prec_create tests/expr_prec.cpp)
-target_compile_definitions(expr_prec_create PUBLIC -DCREATE_PARSER)
-target_link_libraries(expr_prec_create lr1-parsergen)
+	add_executable(expr_prec_create tests/expr_prec.cpp)
+	target_compile_definitions(expr_prec_create PUBLIC -DCREATE_PARSER)
+	target_link_libraries(expr_prec_create lr1-parsergen)
 
-add_executable(expr_prec_run tests/expr_prec.cpp)
-target_compile_definitions(expr_prec_run PUBLIC -DRUN_PARSER)
-target_link_libraries(expr_prec_run lr1-codegen lr1-vm)
-
-add_executable(script_create src/tools/script.cpp)
-target_compile_definitions(script_create PUBLIC -DCREATE_PARSER)
-target_link_libraries(script_create lr1-parsergen)
-
-add_executable(script_run src/tools/script.cpp)
-target_compile_definitions(script_run PUBLIC -DRUN_PARSER)
-target_link_libraries(script_run lr1-codegen lr1-vm)
+	add_executable(expr_prec_run tests/expr_prec.cpp)
+	target_compile_definitions(expr_prec_run PUBLIC -DRUN_PARSER)
+	target_link_libraries(expr_prec_run lr1-codegen lr1-vm)
+endif()
 # -----------------------------------------------------------------------------

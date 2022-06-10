@@ -9,7 +9,6 @@
 
 #include <iostream>
 #include <cstring>
-#include <cmath>
 
 
 VM::VM(t_addr memsize) : m_memsize{memsize}
@@ -36,27 +35,22 @@ bool VM::Run()
 				break;
 			}
 
-			// push direct read data onto stack
+			case OpCode::NOP:
+			{
+				break;
+			}
+
+			// push direct real data onto stack
 			case OpCode::PUSHF:
 			{
-				// get data value from memory
-				t_real val = *reinterpret_cast<t_real*>(&m_mem[m_ip]);
-				m_ip += m_realsize;
-
-				//std::cout << "push " << val << std::endl;
-				Push<t_real, m_realsize>(val);
+				OpPush<t_real, m_realsize>();
 				break;
 			}
 
 			// push direct int data onto stack
 			case OpCode::PUSHI:
 			{
-				// get data value from memory
-				t_int val = *reinterpret_cast<t_int*>(&m_mem[m_ip]);
-				m_ip += m_intsize;
-
-				//std::cout << "push " << val << std::endl;
-				Push<t_int, m_intsize>(val);
+				OpPush<t_int, m_intsize>();
 				break;
 			}
 
@@ -64,7 +58,7 @@ bool VM::Run()
 			case OpCode::PUSHADDR:
 			{
 				// get data value from memory
-				t_addr val = *reinterpret_cast<t_addr*>(&m_mem[m_ip]);
+				t_addr val = ReadMem<t_addr>(m_ip);
 				m_ip += m_addrsize;
 
 				//std::cout << "push " << val << std::endl;
@@ -74,226 +68,123 @@ bool VM::Run()
 
 			case OpCode::MOVREGF:
 			{
-				// first byte: register info
-				t_byte regval = *reinterpret_cast<t_byte*>(&m_mem[m_ip]);
-				m_ip += m_bytesize;
-
-				// address (offset)
-				//t_addr addr = *reinterpret_cast<t_addr*>(&m_mem[m_ip]);
-				//m_ip += m_addrsize;
-				t_addr addr = Pop<t_addr, m_addrsize>();
-
-				// get absolute address using base address from register
-				Register thereg = static_cast<Register>(regval & 0b01111111);
-				switch(thereg)
-				{
-					case Register::MEM: break;
-					case Register::IP: addr += m_ip; break;
-					case Register::SP: addr += m_sp; break;
-					case Register::BP: addr += m_bp; break;
-				}
-
-				// first bit: direction
-				if(regval & 0b10000000)	// to address in register
-				{
-					// pop data and write it to memory
-					t_real val = Pop<t_real, m_realsize>();
-					*reinterpret_cast<t_real*>(&m_mem[addr]) = val;
-
-					//std::cout << "Wrote " << val << " to 0x" << std::hex << addr << std::endl;
-				}
-				else	// from address in register
-				{
-					// read and push data from memory
-					t_real val = *reinterpret_cast<t_real*>(&m_mem[addr]);
-					Push<t_real, m_realsize>(val);
-				}
-
+				OpMovReg<t_real, m_realsize>();
 				break;
 			}
 
 			case OpCode::MOVREGI:
 			{
+				OpMovReg<t_int, m_intsize>();
 				break;
 			}
 
 			// pop an address and push the value it points to
 			case OpCode::DEREFF:
 			{
-				t_addr addr = Pop<t_addr, m_addrsize>();
-				t_real val = *reinterpret_cast<t_real*>(&m_mem[m_bp + addr]);
-				Push<t_real, m_realsize>(val);
+				OpDeref<t_real, m_realsize>();
 				break;
 			}
 
 			// pop an address and push the value it points to
 			case OpCode::DEREFI:
 			{
-				t_addr addr = Pop<t_addr, m_addrsize>();
-				t_int val = *reinterpret_cast<t_int*>(&m_mem[m_bp + addr]);
-				Push<t_int, m_intsize>(val);
-				break;
-			}
-
-			case OpCode::UADDF:
-			{
+				OpDeref<t_int, m_intsize>();
 				break;
 			}
 
 			case OpCode::USUBF:
 			{
-				t_real val = Pop<t_real, m_realsize>();
-
-				//std::cout << " - " << val << std::endl;
-				Push<t_real, m_realsize>(-val);
+				OpUMinus<t_real, m_realsize>();
 				break;
 			}
 
 			case OpCode::ADDF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " + " << val2 << std::endl;
-				Push<t_real, m_realsize>(val1 + val2);
+				OpArithmetic<t_real, m_realsize, '+'>();
 				break;
 			}
 
 			case OpCode::SUBF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " - " << val2 << std::endl;
-				Push<t_real, m_realsize>(val1 - val2);
+				OpArithmetic<t_real, m_realsize, '-'>();
 				break;
 			}
 
 			case OpCode::MULF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " * " << val2 << std::endl;
-				Push<t_real, m_realsize>(val1 * val2);
+				OpArithmetic<t_real, m_realsize, '*'>();
 				break;
 			}
 
 			case OpCode::DIVF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " / " << val2 << std::endl;
-				Push<t_real, m_realsize>(val1 / val2);
+				OpArithmetic<t_real, m_realsize, '/'>();
 				break;
 			}
 
 			case OpCode::MODF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " % " << val2 << std::endl;
-				Push<t_real, m_realsize>(std::fmod(val1, val2));
+				OpArithmetic<t_real, m_realsize, '%'>();
 				break;
 			}
 
 			case OpCode::POWF:
 			{
-				t_real val2 = Pop<t_real, m_realsize>();
-				t_real val1 = Pop<t_real, m_realsize>();
-
-				//std::cout << val1 << " ^ " << val2 << std::endl;
-				Push<t_real, m_realsize>(std::pow(val1, val2));
-				break;
-			}
-
-			case OpCode::UADDI:
-			{
+				OpArithmetic<t_real, m_realsize, '^'>();
 				break;
 			}
 
 			case OpCode::USUBI:
 			{
-				t_int val = Pop<t_int, m_intsize>();
-
-				//std::cout << " - " << val << std::endl;
-				Push<t_int, m_intsize>(-val);
+				OpUMinus<t_int, m_intsize>();
 				break;
 			}
 
 			case OpCode::ADDI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " + " << val2 << std::endl;
-				Push<t_int, m_intsize>(val1 + val2);
+				OpArithmetic<t_int, m_intsize, '+'>();
 				break;
 			}
 
 			case OpCode::SUBI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " - " << val2 << std::endl;
-				Push<t_int, m_intsize>(val1 - val2);
+				OpArithmetic<t_int, m_intsize, '-'>();
 				break;
 			}
 
 			case OpCode::MULI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " * " << val2 << std::endl;
-				Push<t_int, m_intsize>(val1 * val2);
+				OpArithmetic<t_int, m_intsize, '*'>();
 				break;
 			}
 
 			case OpCode::DIVI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " / " << val2 << std::endl;
-				Push<t_int, m_intsize>(val1 / val2);
+				OpArithmetic<t_int, m_intsize, '/'>();
 				break;
 			}
 
 			case OpCode::MODI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " % " << val2 << std::endl;
-				Push<t_int, m_intsize>(val1 % val2);
+				OpArithmetic<t_int, m_intsize, '%'>();
 				break;
 			}
 
 			case OpCode::POWI:
 			{
-				t_int val2 = Pop<t_int, m_intsize>();
-				t_int val1 = Pop<t_int, m_intsize>();
-
-				//std::cout << val1 << " ^ " << val2 << std::endl;
-				Push<t_int, m_intsize>(std::pow(val1, val2));
+				OpArithmetic<t_int, m_intsize, '^'>();
 				break;
 			}
 
 			case OpCode::FTOI: // converts t_real to t_int
 			{
-				t_real val = Pop<t_real, m_realsize>();
-				Push<t_int, m_intsize>(static_cast<t_int>(val));
+				OpCast<t_int, t_real, m_intsize, m_realsize>();
 				break;
 			}
 
 			case OpCode::ITOF: // converts t_int to t_real
 			{
-				t_int val = Pop<t_int, m_intsize>();
-				Push<t_real, m_realsize>(static_cast<t_real>(val));
+				OpCast<t_real, t_int, m_realsize, m_intsize>();
 				break;
 			}
 
