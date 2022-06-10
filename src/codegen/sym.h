@@ -40,13 +40,13 @@ public:
 	const SymInfo* AddSymbol(const std::string& name,
 		t_vm_addr addr, Register loc = Register::BP)
 	{
-			SymInfo info
-			{
-				.addr = addr,
-				.loc = loc,
-			};
+		SymInfo info
+		{
+			.addr = addr,
+			.loc = loc,
+		};
 
-			return &m_syms.insert_or_assign(name, info).first->second;
+		return &m_syms.insert_or_assign(name, info).first->second;
 	}
 
 

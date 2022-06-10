@@ -34,7 +34,7 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 	if(m_binary)
 	{
 		//m_ostr->put(std::to_underlying(OpCode::PUSHF));
-		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHF));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHF));
 		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_real));
 	}
 	else
@@ -54,7 +54,7 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 	if(m_binary)
 	{
 		//m_ostr->put(std::to_underlying(OpCode::PUSHI));
-		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHI));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHI));
 		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_int));
 	}
 	else
@@ -83,12 +83,12 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			m_glob_stack += sizeof(t_real);
 		}
 
-		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHADDR));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR));
 		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
 
 		// dereference it, if the variable is on the rhs of an assignment
 		if(!lval)
-			m_ostr->put(static_cast<std::int8_t>(OpCode::DEREFF));
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREFF));
 	}
 	else
 	{
@@ -131,7 +131,7 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level)
 		else if(op == OpCode::SUBF) op = OpCode::USUBF;
 		else if(op == OpCode::ADDI) op = OpCode::NOP;
 		else if(op == OpCode::SUBI) op = OpCode::USUBI;
-		m_ostr->put(static_cast<std::int8_t>(op));
+		m_ostr->put(static_cast<t_vm_byte>(op));
 	}
 	else
 	{
@@ -156,7 +156,7 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
 		if(op != OpCode::INVALID)	// use opcode directly
 		{
-			m_ostr->put(static_cast<std::int8_t>(op));
+			m_ostr->put(static_cast<t_vm_byte>(op));
 		}
 		else	// decide on special cases
 		{
@@ -164,9 +164,9 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 			{
 				case '=':	// variable assignment
 				{
-					int8_t op_regdata = static_cast<int8_t>(Register::BP);
-					m_ostr->put(static_cast<std::int8_t>(OpCode::MOVREGF));
-					m_ostr->put(static_cast<std::int8_t>(op_regdata | 0b10000000));
+					t_vm_byte op_regdata = static_cast<t_vm_byte>(Register::BP);
+					m_ostr->put(static_cast<t_vm_byte>(OpCode::MOVREGF));
+					m_ostr->put(static_cast<t_vm_byte>(op_regdata | 0b10000000));
 					break;
 				}
 

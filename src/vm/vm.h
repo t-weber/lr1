@@ -10,7 +10,6 @@
 
 #include <type_traits>
 #include <memory>
-#include <cstdint>
 #include <cmath>
 
 #include "../codegen/lval.h"
@@ -21,7 +20,7 @@ class VM
 {
 public:
 	// types and constants
-	using t_byte = std::uint8_t;
+	using t_byte = ::t_vm_byte;
 	using t_addr = ::t_vm_addr;
 	using t_real = ::t_real;
 	using t_int = ::t_int;

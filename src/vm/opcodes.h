@@ -12,9 +12,10 @@
 
 
 using t_vm_addr = std::uint16_t;
+using t_vm_byte = std::int8_t;
 
 
-enum class Register : std::int8_t
+enum class Register : t_vm_byte
 {
 	MEM = 0x00,
 
@@ -24,7 +25,7 @@ enum class Register : std::int8_t
 };
 
 
-enum class OpCode : std::int8_t
+enum class OpCode : t_vm_byte
 {
 	HALT = 0x00,
 	NOP = 0x01,
