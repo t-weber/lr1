@@ -18,14 +18,14 @@ ASTAsm::ASTAsm(std::ostream& ostr,
 
 void ASTAsm::visit(
 	[[maybe_unused]] const ASTToken<t_lval>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	std::cerr << "Error: " << __func__ << " not implemented." << std::endl;
 }
 
 
 void ASTAsm::visit(const ASTToken<t_real>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	if(!ast->HasLexerValue())
 		return;
@@ -45,7 +45,7 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 
 
 void ASTAsm::visit(const ASTToken<t_int>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	if(!ast->HasLexerValue())
 		return;
@@ -65,29 +65,45 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 
 
 void ASTAsm::visit(const ASTToken<std::string>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	if(!ast->HasLexerValue())
 		return;
+
 	const std::string& val = ast->GetLexerValue();
+	bool lval = ast->IsLValue();
 
 	if(m_binary)
 	{
-		// TODO: get variable address and push it
-		t_vm_addr addr = 0x00;
+		// get variable address and push it
+		const SymInfo *sym = m_symtab.GetSymbol(val);
+		if(!sym)
+		{
+			sym = m_symtab.AddSymbol(val, m_glob_stack, Register::BP);
+			m_glob_stack += sizeof(t_real);
+		}
+
 		m_ostr->put(static_cast<std::int8_t>(OpCode::PUSHADDR));
-		m_ostr->write(reinterpret_cast<const char*>(&addr), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+
+		// dereference it, if the variable is on the rhs of an assignment
+		if(!lval)
+			m_ostr->put(static_cast<std::int8_t>(OpCode::DEREFF));
 	}
 	else
 	{
 		(*m_ostr) << "pushaddr " << val << std::endl;
+
+		// dereference it, if the variable is on the rhs of an assignment
+		if(!lval)
+			(*m_ostr) << "dereff" << std::endl;
 	}
 }
 
 
 void ASTAsm::visit(
 	[[maybe_unused]] const ASTToken<void*>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	std::cerr << "Error: " << __func__ << " not implemented." << std::endl;
 }
@@ -95,14 +111,14 @@ void ASTAsm::visit(
 
 void ASTAsm::visit(
 	[[maybe_unused]] const ASTDelegate* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	for(std::size_t i=0; i<ast->NumChildren(); ++i)
 		ast->GetChild(i)->accept(this, level+1);
 }
 
 
-void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level) const
+void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level)
 {
 	ast->GetChild(0)->accept(this, level+1);
 
@@ -128,7 +144,7 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level) cons
 }
 
 
-void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level) const
+void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 {
 	ast->GetChild(0)->accept(this, level+1); // operand 1
 	ast->GetChild(1)->accept(this, level+1); // operand 2
@@ -172,7 +188,7 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level) con
 }
 
 
-void ASTAsm::visit(const ASTList* ast, [[maybe_unused]] std::size_t level) const
+void ASTAsm::visit(const ASTList* ast, [[maybe_unused]] std::size_t level)
 {
 	for(std::size_t i=0; i<ast->NumChildren(); ++i)
 		ast->GetChild(i)->accept(this, level+1);

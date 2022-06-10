@@ -32,7 +32,7 @@ ASTPrinter::ASTPrinter(std::ostream& ostr) : m_ostr{ostr}
 
 
 void ASTPrinter::print_base(
-	const ASTBase* ast, std::size_t level, const char* extrainfo) const
+	const ASTBase* ast, std::size_t level, const char* extrainfo)
 {
 	for(std::size_t i=0; i<level; ++i)
 		m_ostr << "  ";
@@ -62,7 +62,7 @@ static std::string print_token(const ASTToken<t_val>* ast)
 
 void ASTPrinter::visit(
 	[[maybe_unused]] const ASTToken<t_lval>* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 	// TODO: implement for variant type t_lval
 	std::cerr << "Error: " << __func__ << " not implemented." << std::endl;
@@ -71,28 +71,28 @@ void ASTPrinter::visit(
 }
 
 
-void ASTPrinter::visit(const ASTToken<t_real>* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTToken<t_real>* ast, std::size_t level)
 {
 	std::string tok = print_token(ast);
 	print_base(ast, level, tok.c_str());
 }
 
 
-void ASTPrinter::visit(const ASTToken<t_int>* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTToken<t_int>* ast, std::size_t level)
 {
 	std::string tok = print_token(ast);
 	print_base(ast, level, tok.c_str());
 }
 
 
-void ASTPrinter::visit(const ASTToken<std::string>* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTToken<std::string>* ast, std::size_t level)
 {
 	std::string tok = print_token(ast);
 	print_base(ast, level, tok.c_str());
 }
 
 
-void ASTPrinter::visit(const ASTToken<void*>* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTToken<void*>* ast, std::size_t level)
 {
 	std::string tok = print_token(ast);
 	print_base(ast, level, tok.c_str());
@@ -101,22 +101,12 @@ void ASTPrinter::visit(const ASTToken<void*>* ast, std::size_t level) const
 
 void ASTPrinter::visit(
 	[[maybe_unused]] const ASTDelegate* ast,
-	[[maybe_unused]] std::size_t level) const
+	[[maybe_unused]] std::size_t level)
 {
 }
 
 
-void ASTPrinter::visit(const ASTUnary* ast, std::size_t level) const
-{
-	std::ostringstream _ostr;
-	_ostr << ", op=" << ast->GetOpId();
-	if(ast->GetOpId() < 256)
-		_ostr << " (" << (char)ast->GetOpId() << ")";
-	print_base(ast, level, _ostr.str().c_str());
-}
-
-
-void ASTPrinter::visit(const ASTBinary* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTUnary* ast, std::size_t level)
 {
 	std::ostringstream _ostr;
 	_ostr << ", op=" << ast->GetOpId();
@@ -126,7 +116,17 @@ void ASTPrinter::visit(const ASTBinary* ast, std::size_t level) const
 }
 
 
-void ASTPrinter::visit(const ASTList* ast, std::size_t level) const
+void ASTPrinter::visit(const ASTBinary* ast, std::size_t level)
+{
+	std::ostringstream _ostr;
+	_ostr << ", op=" << ast->GetOpId();
+	if(ast->GetOpId() < 256)
+		_ostr << " (" << (char)ast->GetOpId() << ")";
+	print_base(ast, level, _ostr.str().c_str());
+}
+
+
+void ASTPrinter::visit(const ASTList* ast, std::size_t level)
 {
 	print_base(ast, level);
 }

@@ -47,16 +47,16 @@ class ASTVisitor
 public:
 	virtual ~ASTVisitor() = default;
 
-	//template<class t_lval> virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTToken<void*>* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTDelegate* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTUnary* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTBinary* ast, std::size_t level) const = 0;
-	virtual void visit(const ASTList* ast, std::size_t level) const = 0;
+	//template<class t_lval> virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTToken<void*>* ast, std::size_t level) = 0;
+	virtual void visit(const ASTDelegate* ast, std::size_t level) = 0;
+	virtual void visit(const ASTUnary* ast, std::size_t level) = 0;
+	virtual void visit(const ASTBinary* ast, std::size_t level) = 0;
+	virtual void visit(const ASTList* ast, std::size_t level) = 0;
 };
 
 
@@ -84,7 +84,7 @@ public:
 	virtual t_astbaseptr GetChild(std::size_t) const { return nullptr; }
 	virtual void SetChild(std::size_t, const t_astbaseptr&) { }
 
-	virtual void accept(const ASTVisitor* visitor, std::size_t level = 0) const = 0;
+	virtual void accept(ASTVisitor* visitor, std::size_t level = 0) const = 0;
 
 
 	/**
@@ -127,7 +127,7 @@ public:
 		: ASTBase{id, tableidx}
 	{}
 
-	virtual void accept(const ASTVisitor* visitor, std::size_t level = 0) const override
+	virtual void accept(ASTVisitor* visitor, std::size_t level = 0) const override
 	{
 		const t_ast_sub *sub = static_cast<const t_ast_sub*>(this);
 		visitor->visit(sub, level);
@@ -144,11 +144,11 @@ class ASTToken : public ASTBaseAcceptor<ASTToken<t_lval>>
 {
 public:
 	ASTToken(std::size_t id, std::size_t tableidx)
-		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lval{std::nullopt}
+		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lexval{std::nullopt}
 	{}
 
 	ASTToken(std::size_t id, std::size_t tableidx, t_lval lval)
-		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lval{lval}
+		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lexval{lval}
 	{}
 
 	virtual ~ASTToken() = default;
@@ -159,12 +159,16 @@ public:
 	/**
 	 * get the lexical value of the token's attribute
 	 */
-	const t_lval& GetLexerValue() const { return *m_lval; }
-	constexpr bool HasLexerValue() const { return m_lval.operator bool(); }
+	const t_lval& GetLexerValue() const { return *m_lexval; }
+	constexpr bool HasLexerValue() const { return m_lexval.operator bool(); }
+
+	bool IsLValue() const { return m_islval; }
+	void SetLValue(bool b) { m_islval = b; }
 
 
 private:
-	std::optional<t_lval> m_lval;
+	std::optional<t_lval> m_lexval; // lexer value
+	bool m_islval{false}; // names an l-value variable (on lhs of assignment)
 };
 
 

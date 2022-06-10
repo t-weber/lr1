@@ -50,6 +50,7 @@ add_library(lr1-codegen STATIC
 	src/codegen/ast.h src/vm/opcodes.h
 	src/codegen/ast_printer.cpp src/codegen/ast_printer.h
 	src/codegen/ast_asm.cpp src/codegen/ast_asm.h
+	src/codegen/sym.h
 )
 
 target_link_libraries(lr1-codegen ${Boost_LIBRARIES})

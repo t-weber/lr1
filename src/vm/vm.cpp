@@ -117,6 +117,24 @@ bool VM::Run()
 				break;
 			}
 
+			// pop an address and push the value it points to
+			case OpCode::DEREFF:
+			{
+				t_addr addr = Pop<t_addr, m_addrsize>();
+				t_real val = *reinterpret_cast<t_real*>(&m_mem[m_bp + addr]);
+				Push<t_real, m_realsize>(val);
+				break;
+			}
+
+			// pop an address and push the value it points to
+			case OpCode::DEREFI:
+			{
+				t_addr addr = Pop<t_addr, m_addrsize>();
+				t_int val = *reinterpret_cast<t_int*>(&m_mem[m_bp + addr]);
+				Push<t_int, m_intsize>(val);
+				break;
+			}
+
 			case OpCode::UADDF:
 			{
 				break;

@@ -20,15 +20,15 @@ class ASTPrinter : public ASTVisitor
 public:
 	ASTPrinter(std::ostream& ostr = std::cout);
 
-	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) const override;
-	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) const override;
-	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) const override;
-	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) const override;
-	virtual void visit(const ASTToken<void*>* ast, std::size_t level) const override;
-	virtual void visit(const ASTDelegate* ast, std::size_t level) const override;
-	virtual void visit(const ASTUnary* ast, std::size_t level) const override;
-	virtual void visit(const ASTBinary* ast, std::size_t level) const override;
-	virtual void visit(const ASTList* ast, std::size_t level) const override;
+	virtual void visit(const ASTToken<t_lval>* ast, std::size_t level) override;
+	virtual void visit(const ASTToken<t_real>* ast, std::size_t level) override;
+	virtual void visit(const ASTToken<t_int>* ast, std::size_t level) override;
+	virtual void visit(const ASTToken<std::string>* ast, std::size_t level) override;
+	virtual void visit(const ASTToken<void*>* ast, std::size_t level) override;
+	virtual void visit(const ASTDelegate* ast, std::size_t level) override;
+	virtual void visit(const ASTUnary* ast, std::size_t level) override;
+	virtual void visit(const ASTBinary* ast, std::size_t level) override;
+	virtual void visit(const ASTList* ast, std::size_t level) override;
 
 
 	static std::string get_ast_typename(ASTType ty);
@@ -36,7 +36,7 @@ public:
 
 protected:
 	void print_base(const ASTBase* ast, std::size_t level,
-		const char *extrainfo = nullptr) const;
+		const char *extrainfo = nullptr);
 
 
 private:

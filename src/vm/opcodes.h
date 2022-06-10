@@ -29,12 +29,16 @@ enum class OpCode : std::int8_t
 	HALT = 0x00,
 	INVALID = 0x01,
 
-	// memory operations
+	// real memory operations
 	PUSHF = 0x02,
-	PUSHI = 0x03,
-	PUSHADDR = 0x04,
-	MOVREGI = 0x05,
-	MOVREGF = 0x06,
+	PUSHADDR = 0x03,
+	MOVREGF = 0x04,
+	DEREFF = 0x05,
+
+	// int memory operations
+	PUSHI = 0x06,
+	MOVREGI = 0x07,
+	DEREFI = 0x08,
 
 	// real arithmetics
 	UADDF = 0x10,

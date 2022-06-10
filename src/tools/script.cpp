@@ -389,6 +389,12 @@ static void lr1_run_parser()
 			// rule 15, assignment: expr -> ident = expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
+				if(args[0]->GetType() != ASTType::TOKEN)
+					throw std::runtime_error("Expected a symbol name on lhs of assignment.");
+
+				auto* symname = dynamic_cast<ASTToken<std::string>*>(args[0].get());
+				symname->SetLValue(true);
+
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTBinary>(
