@@ -150,15 +150,99 @@ bool VM::Run()
 				break;
 			}
 
-			case OpCode::FTOI: // converts t_real to t_int
+			case OpCode::AND:
 			{
-				OpCast<t_int, t_real, m_intsize, m_realsize>();
+				OpLogical<'&'>();
 				break;
 			}
 
-			case OpCode::ITOF: // converts t_int to t_real
+			case OpCode::OR:
 			{
-				OpCast<t_real, t_int, m_realsize, m_intsize>();
+				OpLogical<'|'>();
+				break;
+			}
+
+			case OpCode::XOR:
+			{
+				OpLogical<'^'>();
+				break;
+			}
+
+			case OpCode::NOT:
+			{
+				// might also use PopData and PushData in case ints
+				// should also be allowed in boolean expressions
+				t_bool val = PopRaw<t_bool, m_boolsize>();
+				PushRaw<t_bool, m_boolsize>(!val);
+				break;
+			}
+
+			case OpCode::GT:
+			{
+				OpComparison<OpCode::GT>();
+				break;
+			}
+
+			case OpCode::LT:
+			{
+				OpComparison<OpCode::LT>();
+				break;
+			}
+
+			case OpCode::GEQU:
+			{
+				OpComparison<OpCode::GEQU>();
+				break;
+			}
+
+			case OpCode::LEQU:
+			{
+				OpComparison<OpCode::LEQU>();
+				break;
+			}
+
+			case OpCode::EQU:
+			{
+				OpComparison<OpCode::EQU>();
+				break;
+			}
+
+			case OpCode::NEQU:
+			{
+				OpComparison<OpCode::NEQU>();
+				break;
+			}
+
+			case OpCode::TOI: // converts value to t_int
+			{
+				OpCast<t_int, m_intsize>();
+				break;
+			}
+
+			case OpCode::TOF: // converts value to t_real
+			{
+				OpCast<t_real, m_realsize>();
+				break;
+			}
+
+			case OpCode::JMP: // jump to direct address
+			{
+				// get address from stack and set ip
+				m_ip = PopAddress();
+				break;
+			}
+
+			case OpCode::JMPCND: // conditional jump to direct address
+			{
+				// get address from stack
+				t_addr addr = PopAddress();
+
+				// get boolean condition result from stack
+				t_bool cond = PopRaw<t_bool, m_boolsize>();
+
+				// set instruction pointer
+				if(cond)
+					m_ip = addr;
 				break;
 			}
 

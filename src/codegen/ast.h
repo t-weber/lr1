@@ -9,6 +9,7 @@
 #define __LR1_AST_H__
 
 #include <memory>
+#include <vector>
 #include <functional>
 #include <optional>
 #include <iostream>

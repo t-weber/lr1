@@ -66,7 +66,7 @@ target_link_libraries(lr1-codegen ${Boost_LIBRARIES})
 # vm library
 add_library(lr1-vm STATIC
 	src/vm/vm.cpp src/vm/vm.h
-	src/vm/opcodes.h
+	src/vm/opcodes.h src/vm/helpers.h
 )
 
 target_link_libraries(lr1-vm ${Boost_LIBRARIES})

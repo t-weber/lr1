@@ -17,23 +17,28 @@
 
 #include "../codegen/lval.h"
 #include "opcodes.h"
+#include "helpers.h"
 
 
 class VM
 {
 public:
-	// types and constants
+	// data types
 	using t_byte = ::t_vm_byte;
 	using t_addr = ::t_vm_addr;
 	using t_real = ::t_real;
 	using t_int = ::t_int;
-	using t_data = std::variant<t_real, t_int, t_addr>;
+	using t_bool = t_byte;
+
+	// variant of all data types
+	using t_data = std::variant<t_real, t_int, t_bool, t_addr>;
 
 	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
 	static constexpr const t_addr m_addrsize = sizeof(t_addr);
 	static constexpr const t_addr m_realsize = sizeof(t_real);
 	static constexpr const t_addr m_intsize = sizeof(t_int);
+	static constexpr const t_addr m_boolsize = sizeof(t_bool);
 
 	// memory sizes and ranges
 	t_addr m_memsize = 0x1000;
@@ -151,14 +156,14 @@ protected:
 	/**
 	 * cast from one variable type to the other
 	 */
-	template<class t_to, class t_from, t_addr to_size, t_addr from_size>
+	template<class t_to, t_addr to_size>
 	void OpCast()
 	{
-		//t_from val = PopRaw<t_from, from_size>();
-		//PushRaw<t_to, to_size>(static_cast<t_to>(val));
-
-		t_from val = std::get<t_from>(PopData());
-		PushData(static_cast<t_to>(val));
+		t_data val = PopData();
+		if(std::holds_alternative<t_real>(val))
+			PushData(static_cast<t_to>(std::get<t_real>(val)));
+		else if(std::holds_alternative<t_int>(val))
+			PushData(static_cast<t_to>(std::get<t_int>(val)));
 	}
 
 
@@ -182,8 +187,8 @@ protected:
 			result = val1 % val2;
 		else if constexpr(op == '%' && std::is_floating_point_v<t_val>)
 			result = std::fmod(val1, val2);
-		else if constexpr(op == '^')
-			result = std::pow<t_val>(val1, val2);
+		else if constexpr(op == '^' && std::is_floating_point_v<t_val>)
+			result = pow<t_val>(val1, val2);
 
 		return result;
 	}
@@ -226,6 +231,96 @@ protected:
 		}
 
 		PushData(result);
+	}
+
+
+	/**
+	 * logical operation
+	 */
+	template<char op>
+	void OpLogical()
+	{
+		// might also use PopData and PushData in case ints
+		// should also be allowed in boolean expressions
+		t_bool val2 = PopRaw<t_bool, m_boolsize>();
+		t_bool val1 = PopRaw<t_bool, m_boolsize>();
+
+		t_bool result = 0;
+
+		if constexpr(op == '&')
+			result = val1 && val2;
+		else if constexpr(op == '|')
+			result = val1 || val2;
+		else if constexpr(op == '^')
+			result = val1 ^ val2;
+
+		PushRaw<t_bool, m_boolsize>(result);
+	}
+
+
+	/**
+	 * comparison operation
+	 */
+	template<class t_val, OpCode op>
+	t_bool OpComparison(const t_val& val1, const t_val& val2)
+	{
+		t_bool result = 0;
+		// TODO: include an epsilon region for float comparisons
+
+		if constexpr(op == OpCode::GT)
+			result = (val1 > val2);
+		else if constexpr(op == OpCode::LT)
+			result = (val1 < val2);
+		else if constexpr(op == OpCode::GEQU)
+			result = (val1 >= val2);
+		else if constexpr(op == OpCode::LEQU)
+			result = (val1 <= val2);
+		else if constexpr(op == OpCode::EQU)
+			result = (val1 == val2);
+		else if constexpr(op == OpCode::NEQU)
+			result = (val1 != val2);
+
+		return result;
+	}
+
+
+	/**
+	 * comparison operation
+	 */
+	template<OpCode op>
+	void OpComparison()
+	{
+		t_data val2 = PopData();
+		t_data val1 = PopData();
+
+		bool is_real = false;
+		bool is_int = false;
+
+		if(std::holds_alternative<t_real>(val1) &&
+			std::holds_alternative<t_real>(val2))
+			is_real = true;
+		else if(std::holds_alternative<t_int>(val1) &&
+			std::holds_alternative<t_int>(val2))
+			is_int = true;
+
+		t_bool result;
+
+		if(is_real)
+		{
+			result = OpComparison<t_real, op>(
+				std::get<t_real>(val1), std::get<t_real>(val2));
+		}
+		else if(is_int)
+		{
+			result = OpComparison<t_int, op>(
+				std::get<t_int>(val1), std::get<t_int>(val2));
+		}
+		else
+		{
+			throw std::runtime_error("Type mismatch in comparison operation.");
+		}
+
+		PushRaw<t_bool, m_boolsize>(result);
 	}
 
 

@@ -308,7 +308,8 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 				seen_closures->insert(hash);
 
 				// get terminals from comefrom closure
-				std::vector<TerminalPtr> _terms = closure->GetComefromTerminals(seen_closures);
+				std::vector<TerminalPtr> _terms =
+					closure->GetComefromTerminals(seen_closures);
 				terms.insert(terms.end(), _terms.begin(), _terms.end());
 			}
 		}

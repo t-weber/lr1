@@ -124,8 +124,8 @@ void Collection::Simplify()
 	// cleanup ids
 	if constexpr(do_cleanup)
 	{
-		std::map<std::size_t, std::size_t> idmap;
-		std::set<std::size_t> already_seen;
+		std::unordered_map<std::size_t, std::size_t> idmap;
+		std::unordered_set<std::size_t> already_seen;
 		std::size_t newid = 0;
 
 		for(ClosurePtr closure : m_collection)
@@ -223,7 +223,7 @@ Collection Collection::ConvertToLALR() const
 	Collection coll;
 
 	// maps old closure pointer to new one
-	std::map<ClosurePtr, ClosurePtr> map;
+	std::unordered_map<ClosurePtr, ClosurePtr> map;
 
 	// states
 	for(const ClosurePtr& closure : m_collection)
@@ -260,7 +260,7 @@ Collection Collection::ConvertToLALR() const
 	}
 
 	// transitions
-	std::set<std::size_t> hashes;
+	std::unordered_set<std::size_t> hashes;
 	for(const t_transition& tup : m_transitions)
 	{
 		ClosurePtr closureFromConv = map[std::get<0>(tup)];
@@ -580,24 +580,42 @@ bool Collection::SaveParseTables(const std::tuple<t_table, t_table, t_table,
 
 	ofstr <<"namespace _lr1_tables {\n\n";
 
+	// save constants
+	ofstr << "\tconst std::size_t err = " << ERROR_VAL << ";\n";
+	ofstr << "\tconst std::size_t acc = " << ACCEPT_VAL << ";\n";
+	ofstr << "\tconst std::size_t eps = " << EPS_IDENT << ";\n";
+	ofstr << "\tconst std::size_t end = " << END_IDENT << ";\n";
+	ofstr << "\n";
+
 	std::get<0>(tabs).SaveCXXDefinition(ofstr, "tab_action_shift");
 	std::get<1>(tabs).SaveCXXDefinition(ofstr, "tab_action_reduce");
 	std::get<2>(tabs).SaveCXXDefinition(ofstr, "tab_jump");
 
+	// terminal symbol indices
 	ofstr << "const t_mapIdIdx map_term_idx{{\n";
-	for(const auto& pair : std::get<3>(tabs))
-		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
+	for(const auto& [id, idx] : std::get<3>(tabs))
+	{
+		ofstr << "\t{";
+		if(id == EPS_IDENT)
+			ofstr << "eps";
+		else if(id == END_IDENT)
+			ofstr << "end";
+		else
+			ofstr << id;
+		ofstr << ", " << idx << "},\n";
+	}
 	ofstr << "}};\n\n";
 
+	// non-terminal symbol indices
 	ofstr << "const t_mapIdIdx map_nonterm_idx{{\n";
-	for(const auto& pair : std::get<4>(tabs))
-		ofstr << "\t{" << pair.first << ", " << pair.second << "},\n";
+	for(const auto& [id, idx] : std::get<4>(tabs))
+		ofstr << "\t{" << id << ", " << idx << "},\n";
 	ofstr << "}};\n\n";
 
 	ofstr << "const t_vecIdx vec_num_rhs_syms{{ ";
 	for(const auto& val : std::get<5>(tabs))
-		ofstr << val << ",";
-	ofstr << " }};\n\n";
+		ofstr << val << ", ";
+	ofstr << "}};\n\n";
 
 	ofstr << "}\n\n\n";
 
@@ -630,8 +648,10 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	ostr << "--------------------------------------------------------------------------------\n";
 	for(const Collection::t_transition& tup : coll.m_transitions)
 	{
-		ostr << std::get<0>(tup)->GetId() << " -> " << std::get<1>(tup)->GetId()
-			<< " via " << std::get<2>(tup)->GetStrId() << "\n";
+		ostr << std::get<0>(tup)->GetId()
+			<< " -> " << std::get<1>(tup)->GetId()
+			<< " via " << std::get<2>(tup)->GetStrId()
+			<< "\n";
 	}
 	ostr << "\n\n";
 
@@ -654,13 +674,19 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 
 		if(symIsTerm)
 		{
-			ostrActionShift << "action_shift[ state " << stateFrom->GetId() << ", "
-				<< symTrans->GetStrId() << " ] = state " << stateTo->GetId() << "\n";
+			ostrActionShift
+				<< "action_shift[ state "
+				<< stateFrom->GetId() << ", "
+				<< symTrans->GetStrId() << " ] = state "
+				<< stateTo->GetId() << "\n";
 		}
 		else
 		{
-			ostrJump << "jump[ state " << stateFrom->GetId() << ", "
-				<< symTrans->GetStrId() << " ] = state " << stateTo->GetId() << "\n";
+			ostrJump
+				<< "jump[ state "
+				<< stateFrom->GetId() << ", "
+				<< symTrans->GetStrId() << " ] = state "
+				<< stateTo->GetId() << "\n";
 		}
 	}
 
@@ -677,8 +703,12 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 				ostrActionReduce << la->GetStrId() << " ";
 			ostrActionReduce << "] = ";
 			if(elem->GetSemanticRule())
-				ostrActionReduce << "[rule " << *elem->GetSemanticRule() << "] ";
-			ostrActionReduce << elem->GetLhs()->GetStrId() << " -> " << *elem->GetRhs();
+			{
+				ostrActionReduce << "[rule "
+					<< *elem->GetSemanticRule() << "] ";
+			}
+			ostrActionReduce << elem->GetLhs()->GetStrId()
+				<< " -> " << *elem->GetRhs();
 			ostrActionReduce << "\n";
 		}
 	}

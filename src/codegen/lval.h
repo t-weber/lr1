@@ -8,8 +8,8 @@
 #ifndef __LR1_LVAL_H__
 #define __LR1_LVAL_H__
 
-#include <map>
 #include <variant>
+#include <optional>
 #include <string>
 #include <cstdint>
 

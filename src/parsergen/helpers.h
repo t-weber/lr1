@@ -80,7 +80,8 @@ public:
 	{
 		ostr << "const Table<std::size_t, std::vector> " << var << "{"
 			<< size1() << ", " << size2() << ", "
-			<< m_errorval << ", " << m_acceptval << ", ";
+			<< "err, acc, ";
+			//<< m_errorval << ", " << m_acceptval << ", ";
 
 		ostr << "{\n";
 		for(std::size_t row=0; row<size1(); ++row)
@@ -89,7 +90,13 @@ public:
 			for(std::size_t col=0; col<size2(); ++col)
 			{
 				T entry = operator()(row, col);
-				ostr << entry << ", ";
+
+				if(entry == m_errorval)
+					ostr << "err, ";
+				else if(entry == m_acceptval)
+					ostr << "acc, ";
+				else
+					ostr << entry << ", ";
 			}
 			ostr << "\n";
 		}
@@ -123,11 +130,11 @@ public:
 
 
 private:
-	container_type m_data;
-	std::size_t m_rowsize, m_colsize;
+	container_type m_data{};
+	std::size_t m_rowsize{}, m_colsize{};
 
-	T m_errorval = 0;
-	T m_acceptval = 0;
+	T m_errorval{0};
+	T m_acceptval{0};
 };
 
 

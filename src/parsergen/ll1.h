@@ -18,8 +18,8 @@ class LL1
 {
 public:
 	// table[nonterminal, terminal] = rule
-	using t_map_terms = std::map<TerminalPtr, std::size_t, Symbol::CompareSymbols>;
-	using t_map_ll1 = std::map<NonTerminalPtr, t_map_terms, Symbol::CompareSymbols>;
+	using t_map_terms = std::map<TerminalPtr, std::size_t, Symbol::CompareSymbolsLess>;
+	using t_map_ll1 = std::map<NonTerminalPtr, t_map_terms, Symbol::CompareSymbolsLess>;
 
 
 public:

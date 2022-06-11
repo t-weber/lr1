@@ -38,7 +38,14 @@ bool Symbol::operator==(const Symbol& other) const
 }
 
 
-bool Symbol::CompareSymbols::operator()(
+std::size_t Symbol::HashSymbol::operator()(
+	const SymbolPtr sym) const
+{
+	return sym->hash();
+}
+
+
+bool Symbol::CompareSymbolsLess::operator()(
 	const SymbolPtr sym1, const SymbolPtr sym2) const
 {
 	/*
@@ -47,6 +54,13 @@ bool Symbol::CompareSymbols::operator()(
 	 return std::lexicographical_compare(id1.begin(), id1.end(), id2.begin(), id2.end());
 	 */
 	return sym1->hash() < sym2->hash();
+}
+
+
+bool Symbol::CompareSymbolsEqual::operator()(
+	const SymbolPtr sym1, const SymbolPtr sym2) const
+{
+	return sym1->hash() == sym2->hash();
 }
 
 

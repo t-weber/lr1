@@ -12,7 +12,7 @@
 #include "../codegen/ast.h"
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <variant>
 
 
@@ -26,7 +26,7 @@
 using t_toknode = t_astbaseptr;
 
 using t_table = Table<std::size_t, std::vector>;
-using t_mapIdIdx = std::map<std::size_t, std::size_t>;
+using t_mapIdIdx = std::unordered_map<std::size_t, std::size_t>;
 using t_vecIdx = std::vector<std::size_t>;
 
 

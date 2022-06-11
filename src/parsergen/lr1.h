@@ -12,7 +12,7 @@
 #include "common.h"
 
 #include <unordered_set>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <variant>
 #include <functional>
@@ -197,8 +197,8 @@ protected:
 
 
 private:
-	std::map<std::size_t, ClosurePtr> m_cache{};  // closure hashes
-	std::vector<ClosurePtr> m_collection{};       // collection
+	std::unordered_map<std::size_t, ClosurePtr> m_cache{};  // closure hashes
+	std::vector<ClosurePtr> m_collection{};                 // collection
 
 	// transitions between collection, [from, to, transition symbol]
 	std::vector<t_transition> m_transitions{};

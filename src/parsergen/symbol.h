@@ -12,8 +12,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <functional>
 #include <optional>
 #include <iostream>
@@ -66,9 +66,25 @@ private:
 
 public:
 	/**
+	 * hash function for terminals
+	 */
+	struct HashSymbol
+	{
+		std::size_t operator()(const SymbolPtr sym) const;
+	};
+
+	/**
 	 * comparator for terminals
 	 */
-	struct CompareSymbols
+	struct CompareSymbolsLess
+	{
+		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+	};
+
+	/**
+	 * comparator for terminals
+	 */
+	struct CompareSymbolsEqual
 	{
 		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
 	};
@@ -104,7 +120,9 @@ public:
 
 
 public:
-	using t_terminalset = std::set<TerminalPtr, Symbol::CompareSymbols>;
+	//using t_terminalset = std::set<TerminalPtr, Symbol::CompareSymbolsLess>;
+	using t_terminalset = std::unordered_set<TerminalPtr,
+		Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 private:
@@ -262,13 +280,24 @@ extern const TerminalPtr g_eps, g_end;
 // ----------------------------------------------------------------------------
 
 
-
+/*
 using t_map_first = std::map<
-	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbolsLess>;
 using t_map_first_perrule = std::map<
-	SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbols>;
+	SymbolPtr, std::vector<Terminal::t_terminalset>, Symbol::CompareSymbolsLess>;
 using t_map_follow = std::map<
-	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbols>;
+	SymbolPtr, Terminal::t_terminalset, Symbol::CompareSymbolsLess>;
+*/
+
+using t_map_first = std::unordered_map<
+	SymbolPtr, Terminal::t_terminalset,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+using t_map_first_perrule = std::unordered_map<
+	SymbolPtr, std::vector<Terminal::t_terminalset>,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
+using t_map_follow = std::unordered_map<
+	SymbolPtr, Terminal::t_terminalset,
+	Symbol::HashSymbol, Symbol::CompareSymbolsEqual>;
 
 
 /**
