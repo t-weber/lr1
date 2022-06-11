@@ -33,13 +33,16 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 
 	if(m_binary)
 	{
-		//m_ostr->put(std::to_underlying(OpCode::PUSHF));
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHF));
+		//m_ostr->put(std::to_underlying(OpCode::PUSH));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+		// write type descriptor byte
+		m_ostr->put(static_cast<t_vm_byte>(VMType::REAL));
+		// write value
 		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_real));
 	}
 	else
 	{
-		(*m_ostr) << "pushf " << val << std::endl;
+		(*m_ostr) << "push " << val << std::endl;
 	}
 }
 
@@ -53,13 +56,16 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 
 	if(m_binary)
 	{
-		//m_ostr->put(std::to_underlying(OpCode::PUSHI));
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHI));
+		//m_ostr->put(std::to_underlying(OpCode::PUSH));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+		// write type descriptor byte
+		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
+		// write data
 		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_int));
 	}
 	else
 	{
-		(*m_ostr) << "pushi " << val << std::endl;
+		(*m_ostr) << "push " << val << std::endl;
 	}
 }
 
@@ -79,8 +85,8 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		const SymInfo *sym = m_symtab.GetSymbol(val);
 		if(!sym)
 		{
-			sym = m_symtab.AddSymbol(val, m_glob_stack, Register::BP);
-			m_glob_stack += sizeof(t_real);
+			sym = m_symtab.AddSymbol(val, m_glob_stack, VMRegister::BP);
+			m_glob_stack += sizeof(t_real) + 1;  // data and descriptor size
 		}
 
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR));
@@ -91,7 +97,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 		// dereference it, if the variable is on the rhs of an assignment
 		if(!lval)
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREFF));
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
 	}
 	else
 	{
@@ -99,7 +105,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 		// dereference it, if the variable is on the rhs of an assignment
 		if(!lval)
-			(*m_ostr) << "dereff" << std::endl;
+			(*m_ostr) << "deref" << std::endl;
 	}
 }
 
@@ -130,10 +136,8 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary)
 	{
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
-		if(op == OpCode::ADDF) op = OpCode::NOP;
-		else if(op == OpCode::SUBF) op = OpCode::USUBF;
-		else if(op == OpCode::ADDI) op = OpCode::NOP;
-		else if(op == OpCode::SUBI) op = OpCode::USUBI;
+		if(op == OpCode::ADD) op = OpCode::NOP;
+		else if(op == OpCode::SUB) op = OpCode::USUB;
 		m_ostr->put(static_cast<t_vm_byte>(op));
 	}
 	else

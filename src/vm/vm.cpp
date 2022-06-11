@@ -40,17 +40,12 @@ bool VM::Run()
 				break;
 			}
 
-			// push direct real data onto stack
-			case OpCode::PUSHF:
+			// push direct data onto stack
+			case OpCode::PUSH:
 			{
-				OpPush<t_real, m_realsize>();
-				break;
-			}
-
-			// push direct int data onto stack
-			case OpCode::PUSHI:
-			{
-				OpPush<t_int, m_intsize>();
+				t_data val = ReadMemData(m_ip);
+				m_ip += GetDataSize(val) + m_bytesize;
+				PushData(val);
 				break;
 			}
 
@@ -58,137 +53,100 @@ bool VM::Run()
 			case OpCode::PUSHADDR:
 			{
 				// get address base register from memory
-				t_byte regval = ReadMem<t_byte>(m_ip);
+				t_byte regval = ReadMemRaw<t_byte>(m_ip);
 				m_ip += m_bytesize;
 
 				// get address from memory
-				t_addr val = ReadMem<t_addr>(m_ip);
+				t_addr val = ReadMemRaw<t_addr>(m_ip);
 				m_ip += m_addrsize;
 
-				Push<t_addr, m_addrsize>(val);
-				Push<t_byte, m_bytesize>(regval);
+				PushRaw<t_addr, m_addrsize>(val);
+				PushRaw<t_byte, m_bytesize>(regval);
 				break;
 			}
 
-			case OpCode::WRMEMF:
+			case OpCode::WRMEM:
 			{
-				OpWriteMem<t_real, m_realsize>();
+				// variable address
+				t_addr addr = PopAddress();
+
+				// pop data and write it to memory
+				t_data val = PopData();
+				WriteMemData(addr, val);
 				break;
 			}
 
-			case OpCode::WRMEMI:
+			case OpCode::RDMEM:
 			{
-				OpWriteMem<t_int, m_intsize>();
-				break;
-			}
+				// variable address
+				t_addr addr = PopAddress();
 
-			case OpCode::RDMEMF:
-			{
-				OpReadMem<t_real, m_realsize>();
-				break;
-			}
-
-			case OpCode::RDMEMI:
-			{
-				OpReadMem<t_int, m_intsize>();
-				break;
-			}
-
-			// pop an address and push the value it points to
-			case OpCode::DEREFF:
-			{
-				OpDeref<t_real, m_realsize>();
+				// read and push data from memory
+				t_data val = ReadMemData(addr);
+				PushData(val);
 				break;
 			}
 
 			// pop an address and push the value it points to
-			case OpCode::DEREFI:
+			case OpCode::DEREF:
 			{
-				OpDeref<t_int, m_intsize>();
+				t_addr addr = PopAddress();
+				t_data val = ReadMemData(addr);
+				PushData(val);
+
+				//std::cout << "dereferenced address " << addr << ": " << std::get<t_real>(val) << std::endl;
 				break;
 			}
 
-			case OpCode::USUBF:
+			case OpCode::USUB:
 			{
-				OpUMinus<t_real, m_realsize>();
+				t_data val = PopData();
+				t_data result;
+
+				if(std::holds_alternative<t_real>(val))
+					result = -std::get<t_real>(val);
+				else if(std::holds_alternative<t_int>(val))
+					result = -std::get<t_int>(val);
+				else
+					throw std::runtime_error("Type mismatch in arithmetic operation.");
+
+				PushData(result);
 				break;
 			}
 
-			case OpCode::ADDF:
+			case OpCode::ADD:
 			{
-				OpArithmetic<t_real, m_realsize, '+'>();
+				OpArithmetic<'+'>();
 				break;
 			}
 
-			case OpCode::SUBF:
+			case OpCode::SUB:
 			{
-				OpArithmetic<t_real, m_realsize, '-'>();
+				OpArithmetic<'-'>();
 				break;
 			}
 
-			case OpCode::MULF:
+			case OpCode::MUL:
 			{
-				OpArithmetic<t_real, m_realsize, '*'>();
+				OpArithmetic<'*'>();
 				break;
 			}
 
-			case OpCode::DIVF:
+			case OpCode::DIV:
 			{
-				OpArithmetic<t_real, m_realsize, '/'>();
+				OpArithmetic<'/'>();
 				break;
 			}
 
-			case OpCode::MODF:
+			case OpCode::MOD:
 			{
-				OpArithmetic<t_real, m_realsize, '%'>();
+				OpArithmetic<'%'>();
 				break;
 			}
 
-			case OpCode::POWF:
+			case OpCode::POW:
 			{
-				OpArithmetic<t_real, m_realsize, '^'>();
-				break;
-			}
-
-			case OpCode::USUBI:
-			{
-				OpUMinus<t_int, m_intsize>();
-				break;
-			}
-
-			case OpCode::ADDI:
-			{
-				OpArithmetic<t_int, m_intsize, '+'>();
-				break;
-			}
-
-			case OpCode::SUBI:
-			{
-				OpArithmetic<t_int, m_intsize, '-'>();
-				break;
-			}
-
-			case OpCode::MULI:
-			{
-				OpArithmetic<t_int, m_intsize, '*'>();
-				break;
-			}
-
-			case OpCode::DIVI:
-			{
-				OpArithmetic<t_int, m_intsize, '/'>();
-				break;
-			}
-
-			case OpCode::MODI:
-			{
-				OpArithmetic<t_int, m_intsize, '%'>();
-				break;
-			}
-
-			case OpCode::POWI:
-			{
-				OpArithmetic<t_int, m_intsize, '^'>();
+				OpArithmetic<'^'>();
 				break;
 			}
 
@@ -229,23 +187,176 @@ bool VM::Run()
 VM::t_addr VM::PopAddress()
 {
 	// get register info from stack
-	t_byte regval = Pop<t_byte, m_bytesize>();
+	t_byte regval = PopRaw<t_byte, m_bytesize>();
 
 	// get address from stack
-	t_addr addr = Pop<t_addr, m_addrsize>();
+	t_addr addr = PopRaw<t_addr, m_addrsize>();
 
 	// get absolute address using base address from register
-	Register thereg = static_cast<Register>(regval);
+	VMRegister thereg = static_cast<VMRegister>(regval);
 	switch(thereg)
 	{
-		case Register::MEM: break;
-		case Register::IP: addr += m_ip; break;
-		case Register::SP: addr += m_sp; break;
-		case Register::BP: addr += m_bp; break;
-		case Register::GBP: addr += m_gbp; break;
+		case VMRegister::MEM: break;
+		case VMRegister::IP: addr += m_ip; break;
+		case VMRegister::SP: addr += m_sp; break;
+		case VMRegister::BP: addr += m_bp; break;
+		case VMRegister::GBP: addr += m_gbp; break;
 	}
 
 	return addr;
+}
+
+
+/**
+ * pop data from the stack, which is prefixed
+ * with a type descriptor byte
+ */
+VM::t_data VM::PopData()
+{
+	// get data type info from stack
+	t_byte tyval = PopRaw<t_byte, m_bytesize>();
+	VMType ty = static_cast<VMType>(tyval);
+
+	t_data dat;
+
+	switch(ty)
+	{
+		case VMType::REAL:
+		{
+			t_real val = PopRaw<t_real, m_realsize>();
+			std::get<t_real>(dat) = val;
+			break;
+		}
+		case VMType::INT:
+		{
+			t_int val = PopRaw<t_int, m_intsize>();
+			std::get<t_int>(dat) = val;
+			break;
+		}
+
+		// TODO: handle pointer types
+
+		default:
+		{
+			throw std::runtime_error("Pop: Data type not yet implemented");
+			break;
+		}
+	}
+
+	return dat;
+}
+
+
+/**
+ * push the raw data followed by a data type descriptor
+ */
+void VM::PushData(const VM::t_data& data)
+{
+	if(std::holds_alternative<t_real>(data))
+	{
+		// push the actual data
+		PushRaw<t_real, m_realsize>(std::get<t_real>(data));
+
+		// push descriptor
+		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::REAL));
+	}
+	else if(std::holds_alternative<t_real>(data))
+	{
+		// push the actual data
+		PushRaw<t_int, m_intsize>(std::get<t_int>(data));
+
+		// push descriptor
+		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::INT));
+	}
+	else
+	{
+		throw std::runtime_error("Push: Data type not yet implemented");
+	}
+}
+
+
+/**
+ * read type-prefixed data from memory
+ */
+VM::t_data VM::ReadMemData(VM::t_addr addr)
+{
+	// get data type info from memory
+	t_byte tyval = ReadMemRaw<t_byte>(addr);
+	addr += m_bytesize;
+	VMType ty = static_cast<VMType>(tyval);
+
+	//std::cout << "read data type " << int(tyval) << " from address " << (addr-1) << std::endl;
+	t_data dat;
+	switch(ty)
+	{
+		case VMType::REAL:
+		{
+			t_real val = ReadMemRaw<t_real>(addr);
+			std::get<t_real>(dat) = val;
+			break;
+		}
+		case VMType::INT:
+		{
+			t_int val = ReadMemRaw<t_int>(addr);
+			std::get<t_int>(dat) = val;
+			break;
+		}
+
+		// TODO: handle pointer types
+
+		default:
+		{
+			throw std::runtime_error("ReadMem: Data type not yet implemented");
+			break;
+		}
+	}
+
+	return dat;
+}
+
+
+/**
+ * write type-prefixed data to memory
+ */
+void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
+{
+	if(std::holds_alternative<t_real>(data))
+	{
+		//std::cout << "writing real value " << std::get<t_real>(data) << " to address " << addr << std::endl;
+
+		// write descriptor prefix
+		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(VMType::REAL));
+		addr += m_bytesize;
+
+		// write the actual data
+		WriteMemRaw<t_real>(addr, std::get<t_real>(data));
+	}
+	else if(std::holds_alternative<t_int>(data))
+	{
+		//std::cout << "writing int value " << std::get<t_int>(data) << " to address " << addr << std::endl;
+
+		// write descriptor prefix
+		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(VMType::INT));
+		addr += m_bytesize;
+
+		// write the actual data
+		WriteMemRaw<t_int>(addr, std::get<t_int>(data));
+	}
+	else
+	{
+		throw std::runtime_error("WriteMem: Data type not yet implemented");
+	}
+}
+
+
+VM::t_addr VM::GetDataSize(const t_data& data) const
+{
+	if(std::holds_alternative<t_real>(data))
+		return m_realsize;
+	else if(std::holds_alternative<t_int>(data))
+		return m_intsize;
+
+	return 0;
 }
 
 

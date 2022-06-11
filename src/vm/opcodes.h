@@ -15,55 +15,49 @@ using t_vm_addr = std::uint16_t;
 using t_vm_byte = std::int8_t;
 
 
-enum class Register : t_vm_byte
+enum class VMType : t_vm_byte
 {
-	MEM = 0x00,
+	REAL     = 0x01,
+	INT      = 0x02,
+};
 
-	IP = 0x01,		// instruction pointer
-	SP = 0x02,		// stack pointer
-	BP = 0x03,		// frame base pointer for local variables
-	GBP = 0x04,		// global base pointer
+
+enum class VMRegister : t_vm_byte
+{
+	MEM      = 0x00,
+
+	IP       = 0x01,	// instruction pointer
+	SP       = 0x02,	// stack pointer
+	BP       = 0x03,	// frame base pointer for local variables
+	GBP      = 0x04,	// global base pointer
 };
 
 
 enum class OpCode : t_vm_byte
 {
-	HALT = 0x00,
-	NOP = 0x01,
-	INVALID = 0x02,
+	HALT     = 0x00,
+	NOP      = 0x01,
+	INVALID  = 0x02,
 
-	// real memory operations
-	PUSHADDR = 0x03,
-	PUSHF = 0x04,
-	DEREFF = 0x05,
-	WRMEMF = 0x06,
-	RDMEMF = 0x07,
+	// memory operations
+	PUSH     = 0x10,
+	PUSHADDR = 0x11,
+	DEREF    = 0x12,
+	WRMEM    = 0x13,
+	RDMEM    = 0x14,
 
-	// int memory operations
-	PUSHI = 0x08,
-	DEREFI = 0x09,
-	WRMEMI = 0x0a,
-	RDMEMI = 0x0b,
+	// arithmetics
+	USUB     = 0x20,
+	ADD      = 0x21,
+	SUB      = 0x22,
+	MUL      = 0x23,
+	DIV      = 0x24,
+	MOD      = 0x25,
+	POW      = 0x26,
 
-	// real arithmetics
-	USUBF = 0x10,
-	ADDF = 0x11,
-	SUBF = 0x12,
-	MULF = 0x13,
-	DIVF = 0x14,
-	MODF = 0x15,
-	POWF = 0x16,
-	FTOI = 0x17,
-
-	// int arithmetics
-	USUBI = 0x20,
-	ADDI = 0x21,
-	SUBI = 0x22,
-	MULI = 0x23,
-	DIVI = 0x24,
-	MODI = 0x25,
-	POWI = 0x26,
-	ITOF = 0x27,
+	// conversions
+	FTOI     = 0x30,
+	ITOF     = 0x31,
 };
 
 

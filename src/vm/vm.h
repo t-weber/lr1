@@ -8,9 +8,12 @@
 #ifndef __LR1_0ACVM_H__
 #define __LR1_0ACVM_H__
 
+
 #include <type_traits>
 #include <memory>
+#include <variant>
 #include <cmath>
+#include <iostream>
 
 #include "../codegen/lval.h"
 #include "opcodes.h"
@@ -24,6 +27,7 @@ public:
 	using t_addr = ::t_vm_addr;
 	using t_real = ::t_real;
 	using t_int = ::t_int;
+	using t_data = std::variant<t_real, t_int, t_addr>;
 
 	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
@@ -63,11 +67,15 @@ public:
 	template<class t_val>
 	t_val Top() const
 	{
-		return *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
+		t_addr addr = m_sp + 1; // skip descriptor byte
+		return *reinterpret_cast<t_val*>(m_mem.get() + addr);
 	}
 
 
 protected:
+	t_addr GetDataSize(const t_data& data) const;
+
+
 	/**
 	 * pop an address from the stack
 	 */
@@ -75,10 +83,32 @@ protected:
 
 
 	/**
-	 * read a value from memory
+	 * pop data from the stack
+	 */
+	t_data PopData();
+
+	/**
+	 * push data onto the stack
+	 */
+	void PushData(const t_data& data);
+
+
+	/**
+	 * read data from memory
+	 */
+	t_data ReadMemData(t_addr addr);
+
+	/**
+	 * write data to memory
+	 */
+	void WriteMemData(t_addr addr, const t_data& data);
+
+
+	/**
+	 * read a raw value from memory
 	 */
 	template<class t_val>
-	t_val ReadMem(t_addr addr) const
+	t_val ReadMemRaw(t_addr addr) const
 	{
 		t_val val = *reinterpret_cast<t_val*>(&m_mem[addr]);
 		return val;
@@ -86,20 +116,20 @@ protected:
 
 
 	/**
-	 * write a value to memory
+	 * write a raw value to memory
 	 */
 	template<class t_val>
-	void WriteMem(t_addr addr, t_val val)
+	void WriteMemRaw(t_addr addr, t_val val)
 	{
-		*reinterpret_cast<t_real*>(&m_mem[addr]) = val;
+		*reinterpret_cast<t_val*>(&m_mem[addr]) = val;
 	}
 
 
 	/**
-	 * pop a value from the stack
+	 * pop a raw value from the stack
 	 */
 	template<class t_val, t_addr valsize = sizeof(t_val)>
-	t_val Pop()
+	t_val PopRaw()
 	{
 		t_val val = *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
 		m_sp += valsize;	// stack grows to lower addresses
@@ -108,70 +138,13 @@ protected:
 
 
 	/**
-	 * push a value onto the stack
+	 * push a raw value onto the stack
 	 */
 	template<class t_val, t_addr valsize = sizeof(t_val)>
-	void Push(t_val val)
+	void PushRaw(t_val val)
 	{
 		m_sp -= valsize;	// stack grows to lower addresses
 		*reinterpret_cast<t_val*>(m_mem.get() + m_sp) = val;
-	}
-
-
-	/**
-	 * push direct data onto stack
-	 */
-	template<class t_val, t_addr valsize>
-	void OpPush()
-	{
-		// get data value from memory
-		t_real val = ReadMem<t_val>(m_ip);
-		m_ip += valsize;
-
-		//std::cout << "push " << val << std::endl;
-		Push<t_val, valsize>(val);
-	}
-
-
-	/**
-	 * pop an address and push the value it points to
-	 */
-	template<class t_val, t_addr valsize>
-	void OpDeref()
-	{
-		t_addr addr = PopAddress();
-		t_val val = ReadMem<t_val>(addr);
-		Push<t_val, valsize>(val);
-	}
-
-
-	/**
-	 * get value from the stack and write it to memory
-	 */
-	template<class t_val, t_addr valsize>
-	void OpWriteMem()
-	{
-		// variable address
-		t_addr addr = PopAddress();
-
-		// pop data and write it to memory
-		t_val val = Pop<t_val, valsize>();
-		WriteMem<t_val>(addr, val);
-	}
-
-
-	/**
-	 * read a value from memory and push it on the stack
-	 */
-	template<class t_val, t_addr valsize>
-	void OpReadMem()
-	{
-		// variable address
-		t_addr addr = PopAddress();
-
-		// read and push data from memory
-		t_val val = ReadMem<t_val>(addr);
-		Push<t_val, valsize>(val);
 	}
 
 
@@ -181,21 +154,22 @@ protected:
 	template<class t_to, class t_from, t_addr to_size, t_addr from_size>
 	void OpCast()
 	{
-		t_from val = Pop<t_from, from_size>();
-		Push<t_to, to_size>(static_cast<t_to>(val));
+		//t_from val = PopRaw<t_from, from_size>();
+		//PushRaw<t_to, to_size>(static_cast<t_to>(val));
+
+		t_from val = std::get<t_from>(PopData());
+		PushData(static_cast<t_to>(val));
 	}
 
 
 	/**
 	 * arithmetic operation
 	 */
-	template<class t_val, t_addr valsize, char op>
-	void OpArithmetic()
+	template<class t_val, char op>
+	t_val OpArithmetic(const t_val& val1, const t_val& val2)
 	{
-		t_val val2 = Pop<t_val, valsize>();
-		t_val val1 = Pop<t_val, valsize>();
-
 		t_val result{};
+
 		if constexpr(op == '+')
 			result = val1 + val2;
 		else if constexpr(op == '-')
@@ -211,21 +185,47 @@ protected:
 		else if constexpr(op == '^')
 			result = std::pow<t_val>(val1, val2);
 
-		//std::cout << val1 << " + " << val2 << " = " << result << std::endl;
-		Push<t_val, m_realsize>(result);
+		return result;
 	}
 
 
 	/**
-	 * unary minus
+	 * arithmetic operation
 	 */
-	template<class t_val, t_addr valsize>
-	void OpUMinus()
+	template<char op>
+	void OpArithmetic()
 	{
-		t_val val = Pop<t_val, valsize>();
+		t_data val2 = PopData();
+		t_data val1 = PopData();
 
-		//std::cout << " - " << val << std::endl;
-		Push<t_val, valsize>(-val);
+		bool is_real = false;
+		bool is_int = false;
+
+		if(std::holds_alternative<t_real>(val1) &&
+			std::holds_alternative<t_real>(val2))
+			is_real = true;
+		else if(std::holds_alternative<t_int>(val1) &&
+			std::holds_alternative<t_int>(val2))
+			is_int = true;
+
+		t_data result;
+
+		if(is_real)
+		{
+			result = OpArithmetic<t_real, op>(
+				std::get<t_real>(val1), std::get<t_real>(val2));
+		}
+		else if(is_int)
+		{
+			result = OpArithmetic<t_int, op>(
+				std::get<t_int>(val1), std::get<t_int>(val2));
+		}
+		else
+		{
+			throw std::runtime_error("Type mismatch in arithmetic operation.");
+		}
+
+		PushData(result);
 	}
 
 

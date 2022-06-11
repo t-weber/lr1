@@ -498,13 +498,13 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
 			{{
-				std::make_pair('+', std::make_tuple("addf", OpCode::ADDF)),
-				std::make_pair('-', std::make_tuple("subf", OpCode::SUBF)),
-				std::make_pair('*', std::make_tuple("mulf", OpCode::MULF)),
-				std::make_pair('/', std::make_tuple("divf", OpCode::DIVF)),
-				std::make_pair('%', std::make_tuple("modf", OpCode::MODF)),
-				std::make_pair('^', std::make_tuple("powf", OpCode::POWF)),
-				std::make_pair('=', std::make_tuple("wrmemf", OpCode::WRMEMF)),
+				std::make_pair('+', std::make_tuple("add", OpCode::ADD)),
+				std::make_pair('-', std::make_tuple("sub", OpCode::SUB)),
+				std::make_pair('*', std::make_tuple("mul", OpCode::MUL)),
+				std::make_pair('/', std::make_tuple("div", OpCode::DIV)),
+				std::make_pair('%', std::make_tuple("mod", OpCode::MOD)),
+				std::make_pair('^', std::make_tuple("pow", OpCode::POW)),
+				std::make_pair('=', std::make_tuple("wrmem", OpCode::WRMEM)),
 			}};
 
 #if DEBUG_CODEGEN != 0
