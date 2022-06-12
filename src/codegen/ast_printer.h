@@ -29,7 +29,7 @@ public:
 	virtual void visit(const ASTUnary* ast, std::size_t level) override;
 	virtual void visit(const ASTBinary* ast, std::size_t level) override;
 	virtual void visit(const ASTList* ast, std::size_t level) override;
-
+	virtual void visit(const ASTCondition* ast, std::size_t level) override;
 
 	static std::string get_ast_typename(ASTType ty);
 

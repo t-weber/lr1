@@ -27,6 +27,7 @@ class ASTDelegate;
 class ASTUnary;
 class ASTBinary;
 class ASTList;
+class ASTCondition;
 
 
 enum class ASTType
@@ -36,6 +37,7 @@ enum class ASTType
 	UNARY,
 	BINARY,
 	LIST,
+	CONDITION,
 };
 
 
@@ -58,6 +60,7 @@ public:
 	virtual void visit(const ASTUnary* ast, std::size_t level) = 0;
 	virtual void visit(const ASTBinary* ast, std::size_t level) = 0;
 	virtual void visit(const ASTList* ast, std::size_t level) = 0;
+	virtual void visit(const ASTCondition* ast, std::size_t level) = 0;
 };
 
 
@@ -332,6 +335,50 @@ public:
 
 private:
 	std::vector<t_astbaseptr> m_children{};
+};
+
+
+/**
+ * node for condition statements
+ */
+class ASTCondition : public ASTBaseAcceptor<ASTCondition>
+{
+public:
+	ASTCondition(std::size_t id, std::size_t tableidx,
+		const t_astbaseptr& cond, const t_astbaseptr& block)
+		: ASTBaseAcceptor<ASTCondition>{id, tableidx},
+			m_cond{cond}, m_block{block}
+	{}
+
+	virtual ~ASTCondition() = default;
+
+	virtual ASTType GetType() const override { return ASTType::CONDITION; }
+
+	virtual std::size_t NumChildren() const override { return 2; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_cond;
+			case 1: return m_block;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_cond = ast; break;
+			case 1: m_block = ast; break;
+		}
+	}
+
+
+private:
+	t_astbaseptr m_cond{}, m_block{};
 };
 
 

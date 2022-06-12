@@ -377,6 +377,26 @@ void Closure::CleanComefromTransitions()
 
 
 /**
+ * write the closures where we can come from
+ */
+void Closure::PrintComefroms(std::ostream& ostr) const
+{
+	const auto& comefroms = GetComefromTransitions();
+	if(comefroms.size())
+	{
+		ostr << "Coming from:\n";
+		for(std::size_t i=0; i<comefroms.size(); ++i)
+		{
+			const Closure::t_comefrom_transition& comefrom = comefroms[i];
+			ostr << "\tstate " << std::get<1>(comefrom)->GetId()
+				<< " via " << std::get<0>(comefrom)->GetStrId()
+				<< ".\n";
+		}
+	}
+}
+
+
+/**
  * prints a closure
  */
 std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
@@ -387,19 +407,6 @@ std::ostream& operator<<(std::ostream& ostr, const Closure& closure)
 	for(std::size_t i=0; i<closure.NumElements(); ++i)
 		ostr << "\t" << *closure.GetElement(i)<< "\n";
 
-	// write the closures where we can come from
-	const auto& comefroms = closure.GetComefromTransitions();
-	if(comefroms.size())
-	{
-		ostr << "Coming from:\n";
-		for(std::size_t i=0; i<comefroms.size(); ++i)
-		{
-			const Closure::t_comefrom_transition& comefrom = comefroms[i];
-			ostr << "\tstate " << std::get<1>(comefrom)->GetId()
-				<< " via " << std::get<0>(comefrom)->GetStrId()
-				<< "." << std::endl;
-		}
-	}
-
+	//closure.PrintComefroms(ostr);
 	return ostr;
 }

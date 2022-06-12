@@ -31,35 +31,45 @@
  */
 enum : std::size_t
 {
-	START,	// start
-	STMTS,	// list of statements
-	STMT,	// statement
-	EXPR,	// expression
+	START,      // start
+	STMTS,      // list of statements
+	STMT,       // statement
+	EXPR,       // expression
+	BOOL_EXPR,  // boolean expression
 };
 
 
 /**
  * non-terminals
  */
-static NonTerminalPtr start, stmts, stmt, expr;
+static NonTerminalPtr start, stmts, stmt, expr,
+	bool_expr;
 
 
 /**
  * terminals
  */
 static TerminalPtr op_assign, op_plus, op_minus,
-	op_mult, op_div, op_mod, op_pow;
-static TerminalPtr bracket_open, bracket_close, comma, stmt_end;
+	op_mult, op_div, op_mod, op_pow,
+	op_and, op_or, op_not,
+	op_equ, op_nequ, op_lt, op_gt, op_gequ, op_lequ;
+static TerminalPtr bracket_open, bracket_close;
+static TerminalPtr block_begin, block_end;
+static TerminalPtr keyword_if, keyword_else, keyword_loop;
+static TerminalPtr comma, stmt_end;
 static TerminalPtr sym, ident;
 
 
 static void create_grammar()
 {
+	// non-terminals
 	start = std::make_shared<NonTerminal>(START, "start");
 	stmts = std::make_shared<NonTerminal>(STMTS, "stmts");
 	stmt = std::make_shared<NonTerminal>(STMT, "stmt");
 	expr = std::make_shared<NonTerminal>(EXPR, "expr");
+	bool_expr = std::make_shared<NonTerminal>(BOOL_EXPR, "bool_expr");
 
+	// terminals
 	op_assign = std::make_shared<Terminal>('=', "=");
 	op_plus = std::make_shared<Terminal>('+', "+");
 	op_minus = std::make_shared<Terminal>('-', "-");
@@ -67,13 +77,33 @@ static void create_grammar()
 	op_div = std::make_shared<Terminal>('/', "/");
 	op_mod = std::make_shared<Terminal>('%', "%");
 	op_pow = std::make_shared<Terminal>('^', "^");
+
+	op_equ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::EQU), "==");
+	op_nequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::NEQU), "!=");
+	op_gequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::GEQU), ">=");
+	op_lequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::LEQU), "<=");
+	op_gt = std::make_shared<Terminal>('>', ">");
+	op_lt = std::make_shared<Terminal>('<', "<");
+	op_not = std::make_shared<Terminal>('!', "!");
+	op_and = std::make_shared<Terminal>('&', "&");
+	op_or = std::make_shared<Terminal>('|', "|");
+
 	bracket_open = std::make_shared<Terminal>('(', "(");
 	bracket_close = std::make_shared<Terminal>(')', ")");
+	block_begin = std::make_shared<Terminal>('{', "{");
+	block_end = std::make_shared<Terminal>('}', "}");
+
 	comma = std::make_shared<Terminal>(',', ",");
 	stmt_end = std::make_shared<Terminal>(';', ";");
-	sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
-	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
+	sym = std::make_shared<Terminal>(static_cast<std::size_t>(Token::REAL), "symbol");
+	ident = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IDENT), "ident");
+
+	keyword_if = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IF), "if");
+	keyword_else = std::make_shared<Terminal>(static_cast<std::size_t>(Token::ELSE), "else");
+	keyword_loop = std::make_shared<Terminal>(static_cast<std::size_t>(Token::LOOP), "loop");
+
+	// rule number
 	std::size_t semanticindex = 0;
 
 	// rule 0: start -> stmts
@@ -119,6 +149,31 @@ static void create_grammar()
 
 	// rule 18: stmt -> expr ;
 	stmt->AddRule({ expr, stmt_end }, semanticindex++);
+
+	// rule 19: stmt -> if(bool_expr) { stmts }
+	stmt->AddRule({ keyword_if, bracket_open, bool_expr, bracket_close,
+		block_begin, stmts, block_end }, semanticindex++);
+
+	// rule 20: bool_expr -> bool_expr & bool_expr
+	bool_expr->AddRule({ bool_expr, op_and, bool_expr }, semanticindex++);
+	// rule 21: bool_expr -> bool_expr | bool_expr
+	bool_expr->AddRule({ bool_expr, op_or, bool_expr }, semanticindex++);
+	// rule 22: bool_expr -> !bool_expr
+	bool_expr->AddRule({ op_not, bool_expr, }, semanticindex++);
+	// rule 23: bool_expr -> ( bool_expr )
+	bool_expr->AddRule({ bracket_open, bool_expr, bracket_close }, semanticindex++);
+	// rule 24: bool_expr -> expr > expr
+	bool_expr->AddRule({ expr, op_gt, expr }, semanticindex++);
+	// rule 25: bool_expr -> expr < expr
+	bool_expr->AddRule({ expr, op_lt, expr }, semanticindex++);
+	// rule 26: bool_expr -> expr >= expr
+	bool_expr->AddRule({ expr, op_gequ, expr }, semanticindex++);
+	// rule 27: bool_expr -> expr <= expr
+	bool_expr->AddRule({ expr, op_lequ, expr }, semanticindex++);
+	// rule 28: bool_expr -> expr == expr
+	bool_expr->AddRule({ expr, op_equ, expr }, semanticindex++);
+	// rule 29: bool_expr -> expr != expr
+	bool_expr->AddRule({ expr, op_nequ, expr }, semanticindex++);
 }
 
 
@@ -131,7 +186,7 @@ static void lr1_create_parser()
 	{
 #if DEBUG_PARSERGEN != 0
 		std::vector<NonTerminalPtr> all_nonterminals{{
-			start, stmts, stmt, expr }};
+			start, stmts, stmt, expr, bool_expr }};
 
 		std::cout << "Productions:\n";
 		for(NonTerminalPtr nonterm : all_nonterminals)
@@ -213,6 +268,9 @@ static void lr1_create_parser()
 			std::make_tuple(op_div, op_mod, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_mod, op_mult, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_mod, op_div, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_and, op_and, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_or, op_or, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_not, op_not, ConflictSolution::FORCE_REDUCE),
 
 			// right-associativity of operators
 			std::make_tuple(op_pow, op_pow, ConflictSolution::FORCE_SHIFT),
@@ -231,6 +289,12 @@ static void lr1_create_parser()
 			std::make_tuple(op_minus, op_div, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_plus, op_mod, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_minus, op_mod, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_and, op_or, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_or, op_and, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_and, op_not, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_or, op_not, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_not, op_and, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_not, op_or, ConflictSolution::FORCE_SHIFT),
 
 			std::make_tuple(op_pow, op_plus, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_pow, op_minus, ConflictSolution::FORCE_REDUCE),
@@ -311,7 +375,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_plus->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_plus->GetId());
 			},
 
 			// rule 2: expr -> expr - expr
@@ -319,7 +384,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_minus->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_minus->GetId());
 			},
 
 			// rule 3: expr -> expr * expr
@@ -327,7 +393,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mult->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_mult->GetId());
 			},
 
 			// rule 4: expr -> expr / expr
@@ -335,7 +402,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_div->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_div->GetId());
 			},
 
 			// rule 5: expr -> expr % expr
@@ -343,7 +411,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTBinary>(id, tableidx, args[0], args[2], op_mod->GetId());
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_mod->GetId());
 			},
 
 			// rule 6: expr -> expr ^ expr
@@ -408,7 +477,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_minus->GetId());
+				return std::make_shared<ASTUnary>(
+					id, tableidx, args[1], op_minus->GetId());
 			},
 
 			// rule 14, unary+: expr -> +expr
@@ -416,14 +486,16 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_plus->GetId());
+				return std::make_shared<ASTUnary>(
+					id, tableidx, args[1], op_plus->GetId());
 			},
 
 			// rule 15, assignment: expr -> ident = expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				if(args[0]->GetType() != ASTType::TOKEN)
-					throw std::runtime_error("Expected a symbol name on lhs of assignment.");
+					throw std::runtime_error(
+						"Expected a symbol name on lhs of assignment.");
 
 				auto* symname = dynamic_cast<ASTToken<std::string>*>(args[0].get());
 				symname->SetLValue(true);
@@ -457,8 +529,105 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
-		}};
 
+			// rule 19: stmt -> if(bool_expr) { stmts }
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = stmt->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTCondition>(
+					id, tableidx, args[2], args[5]);
+			},
+
+			// rule 20: bool_expr -> bool_expr & bool_expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_and->GetId());
+			},
+
+			// rule 21: bool_expr -> bool_expr | bool_expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_or->GetId());
+			},
+
+			// rule 22: bool_expr -> !bool_expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTUnary>(
+					id, tableidx, args[1], op_not->GetId());
+			},
+
+			// rule 23: bool_expr -> ( bool_expr )
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
+			},
+
+			// rule 24: bool_expr -> expr > expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_gt->GetId());
+			},
+
+			// rule 25: bool_expr -> expr < expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_lt->GetId());
+			},
+
+			// rule 26: bool_expr -> expr >= expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_gequ->GetId());
+			},
+
+			// rule 27: bool_expr -> expr <= expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_lequ->GetId());
+			},
+
+			// rule 28: bool_expr -> expr == expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_equ->GetId());
+			},
+
+			// rule 29: bool_expr -> expr != expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = bool_expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_nequ->GetId());
+			},
+		}};
 
 		Parser parser{parsetables, rules};
 
@@ -525,7 +694,21 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				std::make_pair('/', std::make_tuple("div", OpCode::DIV)),
 				std::make_pair('%', std::make_tuple("mod", OpCode::MOD)),
 				std::make_pair('^', std::make_tuple("pow", OpCode::POW)),
+
 				std::make_pair('=', std::make_tuple("wrmem", OpCode::WRMEM)),
+
+				std::make_pair(static_cast<std::size_t>(Token::EQU),
+					std::make_tuple("equ", OpCode::EQU)),
+				std::make_pair(static_cast<std::size_t>(Token::NEQU),
+					std::make_tuple("nequ", OpCode::NEQU)),
+				std::make_pair(static_cast<std::size_t>(Token::GEQU),
+					std::make_tuple("gequ", OpCode::GEQU)),
+				std::make_pair(static_cast<std::size_t>(Token::LEQU),
+					std::make_tuple("lequ", OpCode::LEQU)),
+				std::make_pair('>', std::make_tuple("gt", OpCode::GT)),
+				std::make_pair('<', std::make_tuple("lt", OpCode::LT)),
+				std::make_pair('&', std::make_tuple("and", OpCode::AND)),
+				std::make_pair('|', std::make_tuple("or", OpCode::OR)),
 			}};
 
 #if DEBUG_CODEGEN != 0
@@ -568,6 +751,8 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
+	std::ios_base::sync_with_stdio(false);
+
 #ifdef CREATE_PARSER
 	create_grammar();
 	lr1_create_parser();

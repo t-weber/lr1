@@ -246,6 +246,27 @@ bool VM::Run()
 				break;
 			}
 
+			case OpCode::SKIP: // jump to direct, relative address
+			{
+				// get address from stack and add it to ip
+				m_ip += PopAddress();
+				break;
+			}
+
+			case OpCode::SKIPCND: // conditional jump to direct, relative address
+			{
+				// get address from stack
+				t_addr addr = PopAddress();
+
+				// get boolean condition result from stack
+				t_bool cond = PopRaw<t_bool, m_boolsize>();
+
+				// increment instruction pointer
+				if(cond)
+					m_ip += addr;
+				break;
+			}
+
 			default:
 			{
 				std::cerr << "Error: Invalid opcode " << std::hex

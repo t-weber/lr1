@@ -79,7 +79,7 @@ public:
 	bool operator!=(const Element& other) const
 	{ return !operator==(other); }
 
-	std::size_t hash(bool only_core=false) const;
+	std::size_t hash(bool only_core = false) const;
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
 
@@ -137,8 +137,9 @@ public:
 	std::vector<TerminalPtr> GetComefromTerminals(
 		std::shared_ptr<std::unordered_set<std::size_t>> seen_closures = nullptr) const;
 
-	std::size_t hash(bool only_core=false) const;
+	std::size_t hash(bool only_core = false) const;
 
+	void PrintComefroms(std::ostream& ostr) const;
 	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);
 
 

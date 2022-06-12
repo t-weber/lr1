@@ -1,5 +1,5 @@
 /**
- * expression test with operator precedences/associativites
+ * expression test with operator precedences/associativities
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 06-jun-2022
  * @license see 'LICENSE.EUPL' file
@@ -464,6 +464,8 @@ static void lr1_run_parser()
 
 int main()
 {
+	std::ios_base::sync_with_stdio(false);
+
 #ifdef CREATE_PARSER
 	create_grammar();
 	lr1_create_parser();

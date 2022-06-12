@@ -27,22 +27,70 @@ get_matching_tokens(const std::string& str)
 		{
 			t_real val{};
 			std::istringstream{str} >> val;
-			matches.push_back(std::make_tuple((t_tok)Token::REAL, val));
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::REAL), val));
 		}
 	}
 
-	{	// ident
-		std::regex regex{"[A-Za-z]+[A-Za-z0-9]*"};
-		std::smatch smatch;
-		if(std::regex_match(str, smatch, regex))
-			matches.push_back(std::make_tuple((t_tok)Token::IDENT, str));
+	{	// keywords and identifiers
+		if(str == "if")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::IF), str));
+		}
+		else if(str == "else")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::ELSE), str));
+		}
+		else if(str == "loop")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::LOOP), str));
+		}
+		else
+		{
+			// identifier
+			std::regex regex{"[A-Za-z]+[A-Za-z0-9]*"};
+			std::smatch smatch;
+			if(std::regex_match(str, smatch, regex))
+				matches.emplace_back(std::make_tuple(
+					static_cast<t_tok>(Token::IDENT), str));
+		}
 	}
 
-	{	// tokens represented by themselves
-		if(str == "+" || str == "-" || str == "*" || str == "/" ||
+	{
+		// operators
+		if(str == "==")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::EQU), str));
+		}
+		else if(str == "!=" || str == "<>")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::NEQU), str));
+		}
+		else if(str == ">=")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::GEQU), str));
+		}
+		else if(str == "<=")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::LEQU), str));
+		}
+
+		// tokens represented by themselves
+		else if(str == "+" || str == "-" || str == "*" || str == "/" ||
 			str == "%" || str == "^" || str == "(" || str == ")" ||
-			str == "," || str == ";" || str == "=")
-			matches.push_back(std::make_tuple((t_tok)str[0], std::nullopt));
+			str == "{" || str == "}" || str == "[" || str == "]" ||
+			str == "," || str == ";" || str == "=" ||
+			str == ">" || str == "<" ||
+			str == "!" || str == "|" || str == "&")
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(str[0]), std::nullopt));
 	}
 
 	//std::cerr << "Input \"" << str << "\" has " << matches.size() << " matches." << std::endl;

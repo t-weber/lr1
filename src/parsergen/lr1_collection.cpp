@@ -21,7 +21,7 @@
 Collection::Collection(const ClosurePtr closure)
 	: m_cache{}, m_collection{}, m_transitions{}
 {
-	m_cache.insert(std::make_pair(closure->hash(), closure));
+	m_cache.emplace(std::make_pair(closure->hash(), closure));
 	m_collection.push_back(closure);
 }
 
@@ -61,9 +61,9 @@ void Collection::DoTransitions(const ClosurePtr closure_from)
 		if(new_closure)
 		{
 			// new unique closure
-			m_cache.insert(std::make_pair(hash_to, closure_to));
+			m_cache.emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.push_back(std::make_tuple(
+			m_transitions.emplace_back(std::make_tuple(
 				closure_from, closure_to, trans_sym));
 
 			DoTransitions(closure_to);
@@ -73,7 +73,7 @@ void Collection::DoTransitions(const ClosurePtr closure_from)
 			// reuse closure that has already been seen
 			ClosurePtr closure_to_existing = cacheIter->second;
 
-			m_transitions.push_back(std::make_tuple(
+			m_transitions.emplace_back(std::make_tuple(
 				closure_from, closure_to_existing, trans_sym));
 
 			// also add the comefrom symbol to the closure
@@ -138,7 +138,8 @@ void Collection::Simplify()
 
 			auto iditer = idmap.find(oldid);
 			if(iditer == idmap.end())
-				iditer = idmap.insert(std::make_pair(oldid, newid++)).first;
+				iditer = idmap.emplace(
+					std::make_pair(oldid, newid++)).first;
 
 			closure->SetId(iditer->second);
 			already_seen.insert(hash);
@@ -235,9 +236,9 @@ Collection Collection::ConvertToLALR() const
 		if(iter == coll.m_cache.end())
 		{
 			ClosurePtr newclosure = std::make_shared<Closure>(*closure);
-			map.insert(std::make_pair(closure, newclosure));
+			map.emplace(std::make_pair(closure, newclosure));
 
-			coll.m_cache.insert(std::make_pair(hash, newclosure));
+			coll.m_cache.emplace(std::make_pair(hash, newclosure));
 			coll.m_collection.push_back(newclosure);
 		}
 
@@ -245,7 +246,7 @@ Collection Collection::ConvertToLALR() const
 		else
 		{
 			ClosurePtr closureOld = iter->second;
-			map.insert(std::make_pair(closure, closureOld));
+			map.emplace(std::make_pair(closure, closureOld));
 
 			// unite lookaheads
 			for(std::size_t elemidx=0; elemidx<closureOld->m_elems.size(); ++elemidx)
@@ -373,7 +374,7 @@ Collection::CreateParseTables(
 
 		auto iter = map->find(id);
 		if(iter == map->end())
-			iter = map->insert(std::make_pair(id, (*curIdx)++)).first;
+			iter = map->emplace(std::make_pair(id, (*curIdx)++)).first;
 		return iter->second;
 	};
 
@@ -396,7 +397,7 @@ Collection::CreateParseTables(
 		std::size_t symIdx = get_idx(symTrans->GetId(), symIsTerm);
 		if(symIsTerm)
 		{
-			seen_terminals.insert(std::make_pair(
+			seen_terminals.emplace(std::make_pair(
 				symIdx, std::dynamic_pointer_cast<Terminal>(symTrans)));
 		}
 
@@ -639,7 +640,11 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	ostr << "Collection\n";
 	ostr << "--------------------------------------------------------------------------------\n";
 	for(const ClosurePtr& closure : coll.m_collection)
-		ostr << *closure << "\n";
+	{
+		ostr << *closure;
+		closure->PrintComefroms(ostr);
+		ostr << "\n";
+	}
 	ostr << "\n";
 
 

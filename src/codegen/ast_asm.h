@@ -37,6 +37,7 @@ public:
 	virtual void visit(const ASTUnary* ast, std::size_t level) override;
 	virtual void visit(const ASTBinary* ast, std::size_t level) override;
 	virtual void visit(const ASTList* ast, std::size_t level) override;
+	virtual void visit(const ASTCondition* ast, std::size_t level) override;
 
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
@@ -48,7 +49,8 @@ private:
 	bool m_binary{false};
 
 	SymTab m_symtab{};
-	t_vm_addr m_glob_stack{0};  // current offset into global variable stack
+	t_vm_addr m_glob_stack{0};   // current offset into global variable stack
+	std::size_t m_glob_label{0}; // jump label counter
 };
 
 

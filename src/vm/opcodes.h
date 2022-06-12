@@ -63,6 +63,8 @@ enum class OpCode : t_vm_byte
 	// jumps
 	JMP      = 0x40,  // unconditional jump to direct address
 	JMPCND   = 0x41,  // conditional jump to direct address
+	SKIP     = 0x42,  // unconditional relative jump
+	SKIPCND  = 0x43,  // conditional relative jump
 
 	// logical operations
 	AND      = 0x50,  // &&
