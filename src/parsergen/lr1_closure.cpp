@@ -110,6 +110,10 @@ void Closure::AddElement(const ElementPtr elem)
 						first_la.insert(la);
 					}
 				}
+				/*if(first_la.size() != 1)
+				{
+					std::cerr << "Info: Multiple look-ahead terminals, epsilon transition?" << std::endl;
+				}*/
 
 				AddElement(std::make_shared<Element>(
 					nonterm, nonterm_rhsidx, 0, first_la));

@@ -19,6 +19,12 @@
 #include <cstdint>
 
 
+#define USE_LALR          1
+#define DEBUG_PARSERGEN   1
+#define DEBUG_WRITEGRAPH  0
+#define DEBUG_CODEGEN     1
+
+
 enum : std::size_t
 {
 	START,
@@ -93,6 +99,7 @@ static void lr1_create_parser()
 {
 	try
 	{
+#if DEBUG_PARSERGEN != 0
 		std::vector<NonTerminalPtr> all_nonterminals{{ start, expr }};
 
 		std::cout << "Productions:\n";
@@ -116,7 +123,6 @@ static void lr1_create_parser()
 		}
 		std::cout << std::endl;
 
-
 		std::cout << "FOLLOW sets:\n";
 		t_map_follow follow;
 		for(const NonTerminalPtr& nonterminal : all_nonterminals)
@@ -130,6 +136,7 @@ static void lr1_create_parser()
 			std::cout << "\n";
 		}
 		std::cout << std::endl;
+#endif
 
 
 		ElementPtr elem = std::make_shared<Element>(
@@ -141,11 +148,26 @@ static void lr1_create_parser()
 
 		Collection colls{coll};
 		colls.DoTransitions();
-		std::cout << "\n\nLR(1):\n" << colls << std::endl;
 
+#if USE_LALR != 0
 		Collection collsLALR = colls.ConvertToLALR();
-		collsLALR.WriteGraph("expr_prec_lalr_full", 1);
+#endif
+
+#if DEBUG_PARSERGEN != 0
+#if USE_LALR != 0
 		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
+#else
+		std::cout << "\n\nLR(1):\n" << colls << std::endl;
+#endif
+#endif
+
+#if DEBUG_WRITEGRAPH != 0
+#if USE_LALR != 0
+		collsLALR.WriteGraph("expr_prec_lalr_full", 1);
+#else
+		colls.WriteGraph("expr_prec_full", 1);
+#endif
+#endif
 
 		// solutions for conflicts
 		std::vector<t_conflictsolution> conflicts{{
@@ -193,8 +215,13 @@ static void lr1_create_parser()
 			std::make_tuple(op_mod, op_pow, ConflictSolution::FORCE_SHIFT),
         }};
 
+#if USE_LALR != 0
 		auto parsetables = collsLALR.CreateParseTables(&conflicts);
 		collsLALR.SaveParseTables(parsetables, "expr_prec.tab");
+#else
+		auto parsetables = colls.CreateParseTables(&conflicts);
+		colls.SaveParseTables(parsetables, "expr_prec.tab");
+#endif
 	}
 	catch(const std::exception& err)
 	{
@@ -365,7 +392,10 @@ static void lr1_run_parser()
 			std::cout << "\nExpression: ";
 			std::getline(std::cin, exprstr);
 			std::istringstream istr{exprstr};
+
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
+
+#if DEBUG_CODEGEN != 0
 			std::cout << "Tokens: ";
 			for(const t_toknode& tok : tokens)
 			{
@@ -377,35 +407,43 @@ static void lr1_run_parser()
 				std::cout << " ";
 			}
 			std::cout << "\n";
+#endif
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 
+#if DEBUG_CODEGEN != 0
 			std::cout << "AST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
+#endif
 
 			std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> ops
 			{{
-				std::make_pair('+', std::make_tuple("addf", OpCode::ADDF)),
-				std::make_pair('-', std::make_tuple("subf", OpCode::SUBF)),
-				std::make_pair('*', std::make_tuple("mulf", OpCode::MULF)),
-				std::make_pair('/', std::make_tuple("divf", OpCode::DIVF)),
-				std::make_pair('%', std::make_tuple("modf", OpCode::MODF)),
-				std::make_pair('^', std::make_tuple("powf", OpCode::POWF)),
+				std::make_pair('+', std::make_tuple("add", OpCode::ADD)),
+				std::make_pair('-', std::make_tuple("sub", OpCode::SUB)),
+				std::make_pair('*', std::make_tuple("mul", OpCode::MUL)),
+				std::make_pair('/', std::make_tuple("div", OpCode::DIV)),
+				std::make_pair('%', std::make_tuple("mod", OpCode::MOD)),
+				std::make_pair('^', std::make_tuple("pow", OpCode::POW)),
 			}};
 
+#if DEBUG_CODEGEN != 0
 			std::ostringstream ostrAsm;
 			ASTAsm astasm{ostrAsm, &ops};
 			ast->accept(&astasm);
+#endif
 
 			std::ostringstream ostrAsmBin(
 				std::ios_base::out | std::ios_base::binary);
-			astasm.SetStream(&ostrAsmBin);
-			astasm.SetBinary(true);
-			ast->accept(&astasm);
+			ASTAsm astasmbin{ostrAsmBin, &ops};
+			astasmbin.SetBinary(true);
+			ast->accept(&astasmbin);
+
+#if DEBUG_CODEGEN != 0
 			std::cout << "Generated code ("
 				<< ostrAsmBin.str().size() << " bytes):\n"
 				<< ostrAsm.str();
+#endif
 
 			VM vm(1024);
 			vm.SetMem(0, ostrAsmBin.str());

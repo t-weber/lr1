@@ -10,6 +10,7 @@
 
 #include "parsergen/lr1.h"
 #include "codegen/lexer.h"
+#include "codegen/ast_printer.h"
 
 #include <iostream>
 #include <sstream>

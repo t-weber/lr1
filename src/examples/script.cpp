@@ -19,22 +19,34 @@
 #include <iomanip>
 #include <cstdint>
 
-#define DEBUG_PARSERGEN  1
-#define DEBUG_CODEGEN    1
-#define USE_LALR         1
+
+#define USE_LALR          1
+#define DEBUG_PARSERGEN   1
+#define DEBUG_WRITEGRAPH  0
+#define DEBUG_CODEGEN     1
 
 
+/**
+ * non-terminals identifiers
+ */
 enum : std::size_t
 {
-	START,
-	STMTS,
-	STMT,
-	EXPR,
+	START,	// start
+	STMTS,	// list of statements
+	STMT,	// statement
+	EXPR,	// expression
 };
 
 
+/**
+ * non-terminals
+ */
 static NonTerminalPtr start, stmts, stmt, expr;
 
+
+/**
+ * terminals
+ */
 static TerminalPtr op_assign, op_plus, op_minus,
 	op_mult, op_div, op_mod, op_pow;
 static TerminalPtr bracket_open, bracket_close, comma, stmt_end;
@@ -117,10 +129,10 @@ static void lr1_create_parser()
 {
 	try
 	{
+#if DEBUG_PARSERGEN != 0
 		std::vector<NonTerminalPtr> all_nonterminals{{
 			start, stmts, stmt, expr }};
 
-#if DEBUG_PARSERGEN != 0
 		std::cout << "Productions:\n";
 		for(NonTerminalPtr nonterm : all_nonterminals)
 			nonterm->print(std::cout);
@@ -165,14 +177,23 @@ static void lr1_create_parser()
 		Collection colls{ closure };
 		colls.DoTransitions();
 
-#if DEBUG_PARSERGEN != 0
 #if USE_LALR != 0
 		Collection collsLALR = colls.ConvertToLALR();
-		collsLALR.WriteGraph("script_lalr", 1);
+#endif
+
+#if DEBUG_PARSERGEN != 0
+#if USE_LALR != 0
 		std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
 #else
-		colls.WriteGraph("script", 1);
 		std::cout << "\n\nLR(1):\n" << colls << std::endl;
+#endif
+#endif
+
+#if DEBUG_WRITEGRAPH != 0
+#if USE_LALR != 0
+		collsLALR.WriteGraph("script_lalr", 1);
+#else
+		colls.WriteGraph("script", 1);
 #endif
 #endif
 
