@@ -38,6 +38,7 @@ public:
 	virtual void visit(const ASTBinary* ast, std::size_t level) override;
 	virtual void visit(const ASTList* ast, std::size_t level) override;
 	virtual void visit(const ASTCondition* ast, std::size_t level) override;
+	virtual void visit(const ASTLoop* ast, std::size_t level) override;
 
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }

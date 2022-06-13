@@ -21,6 +21,7 @@ std::string ASTPrinter::get_ast_typename(ASTType ty)
 		case ASTType::BINARY: return "binary";
 		case ASTType::LIST: return "list";
 		case ASTType::CONDITION: return "condition";
+		case ASTType::LOOP: return "loop";
 	}
 
 	return "<unknown>";
@@ -133,6 +134,11 @@ void ASTPrinter::visit(const ASTList* ast, std::size_t level)
 }
 
 void ASTPrinter::visit(const ASTCondition* ast, std::size_t level)
+{
+	print_base(ast, level);
+}
+
+void ASTPrinter::visit(const ASTLoop* ast, std::size_t level)
 {
 	print_base(ast, level);
 }

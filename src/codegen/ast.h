@@ -28,6 +28,7 @@ class ASTUnary;
 class ASTBinary;
 class ASTList;
 class ASTCondition;
+class ASTLoop;
 
 
 enum class ASTType
@@ -38,6 +39,7 @@ enum class ASTType
 	BINARY,
 	LIST,
 	CONDITION,
+	LOOP,
 };
 
 
@@ -61,6 +63,7 @@ public:
 	virtual void visit(const ASTBinary* ast, std::size_t level) = 0;
 	virtual void visit(const ASTList* ast, std::size_t level) = 0;
 	virtual void visit(const ASTCondition* ast, std::size_t level) = 0;
+	virtual void visit(const ASTLoop* ast, std::size_t level) = 0;
 };
 
 
@@ -345,14 +348,74 @@ class ASTCondition : public ASTBaseAcceptor<ASTCondition>
 {
 public:
 	ASTCondition(std::size_t id, std::size_t tableidx,
-		const t_astbaseptr& cond, const t_astbaseptr& block)
+		const t_astbaseptr& cond, const t_astbaseptr& ifblock)
 		: ASTBaseAcceptor<ASTCondition>{id, tableidx},
-			m_cond{cond}, m_block{block}
+			m_cond{cond}, m_ifblock{ifblock}
+	{}
+
+	ASTCondition(std::size_t id, std::size_t tableidx,
+		const t_astbaseptr& cond, const t_astbaseptr& ifblock, const t_astbaseptr& elseblock)
+		: ASTBaseAcceptor<ASTCondition>{id, tableidx},
+			m_cond{cond}, m_ifblock{ifblock}, m_elseblock{elseblock}
 	{}
 
 	virtual ~ASTCondition() = default;
 
 	virtual ASTType GetType() const override { return ASTType::CONDITION; }
+
+	virtual std::size_t NumChildren() const override { return m_elseblock ? 3 : 2; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_cond;
+			case 1: return m_ifblock;
+			case 2: return m_elseblock;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_cond = ast; break;
+			case 1: m_ifblock = ast; break;
+			case 2: m_elseblock = ast; break;
+		}
+	}
+
+	t_astbaseptr GetCondition() const { return m_cond; }
+	t_astbaseptr GetIfBlock() const { return m_ifblock; }
+	t_astbaseptr GetElseBlock() const { return m_elseblock; }
+
+	void SetCondition(const t_astbaseptr& ast) { m_cond = ast; }
+	void SetIfBlock(const t_astbaseptr& ast) { m_ifblock = ast; }
+	void SetElseBlock(const t_astbaseptr& ast) { m_elseblock = ast; }
+
+
+private:
+	t_astbaseptr m_cond{}, m_ifblock{}, m_elseblock{};
+};
+
+
+/**
+ * node for loop statements
+ */
+class ASTLoop : public ASTBaseAcceptor<ASTLoop>
+{
+public:
+	ASTLoop(std::size_t id, std::size_t tableidx,
+		const t_astbaseptr& cond, const t_astbaseptr& block)
+		: ASTBaseAcceptor<ASTLoop>{id, tableidx},
+			m_cond{cond}, m_block{block}
+	{}
+
+	virtual ~ASTLoop() = default;
+
+	virtual ASTType GetType() const override { return ASTType::LOOP; }
 
 	virtual std::size_t NumChildren() const override { return 2; }
 
@@ -375,6 +438,12 @@ public:
 			case 1: m_block = ast; break;
 		}
 	}
+
+	t_astbaseptr GetCondition() const { return m_cond; }
+	t_astbaseptr GetBlock() const { return m_block; }
+
+	void SetCondition(const t_astbaseptr& ast) { m_cond = ast; }
+	void SetBlock(const t_astbaseptr& ast) { m_block = ast; }
 
 
 private:
