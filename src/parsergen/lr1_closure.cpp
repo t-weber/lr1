@@ -62,6 +62,7 @@ void Closure::AddElement(const ElementPtr elem)
 		m_elems[core_idx]->AddLookaheads(elem->GetLookaheads());
 		//return;
 	}
+
 	// new element
 	else
 	{
@@ -115,8 +116,7 @@ void Closure::AddElement(const ElementPtr elem)
 					std::cerr << "Info: Multiple look-ahead terminals, epsilon transition?" << std::endl;
 				}*/
 
-				AddElement(std::make_shared<Element>(
-					nonterm, nonterm_rhsidx, 0, first_la));
+				AddElement(std::make_shared<Element>(nonterm, nonterm_rhsidx, 0, first_la));
 			}
 		}
 	}
@@ -196,6 +196,37 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 
 
 /**
+ * add the lookaheads from another closure with the same core
+ */
+bool Closure::AddLookaheads(const ClosurePtr closure)
+{
+	bool lookaheads_added = false;
+
+	for(std::size_t elemidx=0; elemidx<m_elems.size(); ++elemidx)
+	{
+		ElementPtr elem = m_elems[elemidx];
+		std::size_t elem_hash = elem->hash(true);
+
+		//ElementPtr closure_elem = closure->m_elems[elemidx];
+
+		// find the element whose core has the same hash
+		if(auto iter = std::find_if(closure->m_elems.begin(), closure->m_elems.end(),
+			[elem_hash](const ElementPtr closure_elem) -> bool
+			{
+				return closure_elem->hash(true) == elem_hash;
+			}); iter != closure->m_elems.end())
+		{
+			ElementPtr closure_elem = *iter;
+			if(elem->AddLookaheads(closure_elem->GetLookaheads()))
+				lookaheads_added = true;
+		}
+	}
+
+	return lookaheads_added;
+}
+
+
+/**
  * perform a transition and get the corresponding lr(1) closure
  */
 ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
@@ -256,7 +287,6 @@ std::size_t Closure::hash(bool only_core) const
 			return hash1 < hash2;
 		});
 
-
 	std::size_t fullhash = 0;
 	for(std::size_t hash : hashes)
 		boost::hash_combine(fullhash, hash);
@@ -289,6 +319,7 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 	std::shared_ptr<std::unordered_set<std::size_t>> seen_closures) const
 {
 	std::vector<TerminalPtr> terms;
+	terms.reserve(m_comefrom_transitions.size());
 
 	if(!seen_closures)
 		seen_closures = std::make_shared<std::unordered_set<std::size_t>>();

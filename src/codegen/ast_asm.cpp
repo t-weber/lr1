@@ -85,7 +85,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		const SymInfo *sym = m_symtab.GetSymbol(val);
 		if(!sym)
 		{
-			sym = m_symtab.AddSymbol(val, m_glob_stack, VMRegister::BP);
+			sym = m_symtab.AddSymbol(val, m_glob_stack, VMType::ADDR_BP);
 			m_glob_stack += sizeof(t_real) + 1;  // data and descriptor size
 		}
 
@@ -208,16 +208,16 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 
 		// ...skip to the end of the if block
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR)); // push jump address
-		m_ostr->put(static_cast<t_vm_byte>(VMRegister::MEM));
+		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		skip_addr = m_ostr->tellp();
 		m_ostr->write(reinterpret_cast<const char*>(&skipEndCond), sizeof(t_vm_addr));
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::SKIPCND));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMPCND));
 	}
 	else
 	{
 		(*m_ostr) << "not\n";
 		(*m_ostr) << "pushaddr end_cond_" << labelEndCond << "\n";
-		(*m_ostr) << "skipcnd\n";
+		(*m_ostr) << "jmpcnd\n";
 	}
 
 	// if block
@@ -229,15 +229,15 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 		{
 			// skip to end of if statement if there's an else block
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR)); // push jump address
-			m_ostr->put(static_cast<t_vm_byte>(VMRegister::MEM));
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 			skip_else_addr = m_ostr->tellp();
 			m_ostr->write(reinterpret_cast<const char*>(&skipEndIf), sizeof(t_vm_addr));
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::SKIP));
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 		}
 		else
 		{
 			(*m_ostr) << "pushaddr end_if_" << labelEndIf << "\n";
-			(*m_ostr) << "skip\n";
+			(*m_ostr) << "jmp\n";
 		}
 	}
 	std::streampos after_if_block = m_ostr->tellp();
@@ -299,16 +299,16 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::NOT));
 
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR)); // push jump address
-		m_ostr->put(static_cast<t_vm_byte>(VMRegister::MEM));
+		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		skip_addr = m_ostr->tellp();
 		m_ostr->write(reinterpret_cast<const char*>(&skip), sizeof(t_vm_addr));
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::SKIPCND));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMPCND));
 	}
 	else
 	{
 		(*m_ostr) << "not\n";
 		(*m_ostr) << "pushaddr end_loop_" << labelEnd << "\n";
-		(*m_ostr) << "skipcnd\n";
+		(*m_ostr) << "jmpcnd\n";
 	}
 
 	std::streampos before_block = m_ostr->tellp();
@@ -318,14 +318,14 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 	{
 		// loop back
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSHADDR)); // push jump address
-		m_ostr->put(static_cast<t_vm_byte>(VMRegister::MEM));
+		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		std::streampos after_block = m_ostr->tellp();
 		skip = after_block - before_block;
 		t_vm_addr skip_back = loop_begin - after_block;
 		skip_back -= static_cast<t_vm_addr>(sizeof(t_vm_addr)); // include the next two writes
 		skip_back -= static_cast<t_vm_addr>(sizeof(t_vm_byte));
 		m_ostr->write(reinterpret_cast<const char*>(&skip_back), sizeof(t_vm_addr));
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::SKIP));
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 
 		// go back and fill in missing number of bytes to skip
 		after_block = m_ostr->tellp();
@@ -337,7 +337,7 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 	else
 	{
 		(*m_ostr) << "pushaddr begin_loop_" << labelBegin << "\n";
-		(*m_ostr) << "skip\n";
+		(*m_ostr) << "jmp\n";
 
 		(*m_ostr) << "end_loop_" << labelEnd << ":" << std::endl;
 	}

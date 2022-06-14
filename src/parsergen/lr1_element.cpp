@@ -123,16 +123,23 @@ const SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
-void Element::AddLookahead(TerminalPtr term)
+bool Element::AddLookahead(TerminalPtr term)
 {
-	m_lookaheads.insert(term);
+	return m_lookaheads.insert(term).second;
 }
 
 
-void Element::AddLookaheads(const Terminal::t_terminalset& las)
+bool Element::AddLookaheads(const Terminal::t_terminalset& las)
 {
+	bool lookaheads_added = false;
+
 	for(TerminalPtr la : las)
-		AddLookahead(la);
+	{
+		if(AddLookahead(la))
+			lookaheads_added = true;
+	}
+
+	return lookaheads_added;
 }
 
 

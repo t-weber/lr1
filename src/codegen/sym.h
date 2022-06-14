@@ -19,8 +19,8 @@
  */
 struct SymInfo
 {
-	t_vm_addr addr{0};               // relative address of the variable
-	VMRegister loc{VMRegister::BP};  // register with the base address
+	t_vm_addr addr{0};             // relative address of the variable
+	VMType loc{VMType::ADDR_BP};   // register with the base address
 };
 
 
@@ -44,7 +44,7 @@ public:
 
 
 	const SymInfo* AddSymbol(const std::string& name,
-		t_vm_addr addr, VMRegister loc = VMRegister::BP)
+		t_vm_addr addr, VMType loc = VMType::ADDR_BP)
 	{
 		SymInfo info
 		{

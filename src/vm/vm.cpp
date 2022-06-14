@@ -246,27 +246,6 @@ bool VM::Run()
 				break;
 			}
 
-			case OpCode::SKIP: // jump to direct, relative address
-			{
-				// get address from stack and add it to ip
-				m_ip += PopAddress();
-				break;
-			}
-
-			case OpCode::SKIPCND: // conditional jump to direct, relative address
-			{
-				// get address from stack
-				t_addr addr = PopAddress();
-
-				// get boolean condition result from stack
-				t_bool cond = PopRaw<t_bool, m_boolsize>();
-
-				// increment instruction pointer
-				if(cond)
-					m_ip += addr;
-				break;
-			}
-
 			default:
 			{
 				std::cerr << "Error: Invalid opcode " << std::hex
@@ -291,21 +270,22 @@ bool VM::Run()
  */
 VM::t_addr VM::PopAddress()
 {
-	// get register info from stack
+	// get register/type info from stack
 	t_byte regval = PopRaw<t_byte, m_bytesize>();
 
 	// get address from stack
 	t_addr addr = PopRaw<t_addr, m_addrsize>();
 
 	// get absolute address using base address from register
-	VMRegister thereg = static_cast<VMRegister>(regval);
+	VMType thereg = static_cast<VMType>(regval);
 	switch(thereg)
 	{
-		case VMRegister::MEM: break;
-		case VMRegister::IP: addr += m_ip; break;
-		case VMRegister::SP: addr += m_sp; break;
-		case VMRegister::BP: addr += m_bp; break;
-		case VMRegister::GBP: addr += m_gbp; break;
+		case VMType::ADDR_MEM: break;
+		case VMType::ADDR_IP: addr += m_ip; break;
+		case VMType::ADDR_SP: addr += m_sp; break;
+		case VMType::ADDR_BP: addr += m_bp; break;
+		case VMType::ADDR_GBP: addr += m_gbp; break;
+		default: throw std::runtime_error("Unknown address base register"); break;
 	}
 
 	return addr;

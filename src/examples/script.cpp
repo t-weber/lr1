@@ -236,11 +236,16 @@ static void lr1_create_parser()
 		ClosurePtr closure = std::make_shared<Closure>();
 		closure->AddElement(elem);
 
+#if USE_LALR != 0
+		//Collection colls{ closure };
+		//colls.DoTransitions();
+		//Collection collsLALR = colls.ConvertToLALR();
+
+		Collection collsLALR{ closure };
+		collsLALR.DoTransitions(false);
+#else
 		Collection colls{ closure };
 		colls.DoTransitions();
-
-#if USE_LALR != 0
-		Collection collsLALR = colls.ConvertToLALR();
 #endif
 
 #if DEBUG_PARSERGEN != 0

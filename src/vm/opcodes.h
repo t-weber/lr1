@@ -20,17 +20,12 @@ enum class VMType : t_vm_byte
 	REAL     = 0x01,
 	INT      = 0x02,
 	BOOLEAN  = 0x03,
-};
 
-
-enum class VMRegister : t_vm_byte
-{
-	MEM      = 0x00,
-
-	IP       = 0x01,	// instruction pointer
-	SP       = 0x02,	// stack pointer
-	BP       = 0x03,	// frame base pointer for local variables
-	GBP      = 0x04,	// global base pointer
+	ADDR_MEM = 0b01000000,  // address refering to absolute memory locations
+	ADDR_IP  = 0b01000001,  // address relative to the instruction pointer
+	ADDR_SP  = 0b01000010,  // address relative to the stack pointer
+	ADDR_BP  = 0b01000011,  // address relative to a local base pointer
+	ADDR_GBP = 0b01000100,  // address relative to the global base pointer
 };
 
 
@@ -63,8 +58,6 @@ enum class OpCode : t_vm_byte
 	// jumps
 	JMP      = 0x40,  // unconditional jump to direct address
 	JMPCND   = 0x41,  // conditional jump to direct address
-	SKIP     = 0x42,  // unconditional relative jump
-	SKIPCND  = 0x43,  // conditional relative jump
 
 	// logical operations
 	AND      = 0x50,  // &&

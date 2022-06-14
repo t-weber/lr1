@@ -64,8 +64,8 @@ public:
 	WordPtr GetRhsAfterCursor() const;
 	const SymbolPtr GetSymbolAtCursor() const;
 
-	void AddLookahead(TerminalPtr term);
-	void AddLookaheads(const Terminal::t_terminalset& las);
+	bool AddLookahead(TerminalPtr term);
+	bool AddLookaheads(const Terminal::t_terminalset& las);
 	void SetLookaheads(const Terminal::t_terminalset& las);
 
 	const SymbolPtr GetPossibleTransition() const;
@@ -130,6 +130,8 @@ public:
 	ClosurePtr DoTransition(const SymbolPtr) const;
 	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions() const;
 
+	bool AddLookaheads(const ClosurePtr closure);
+
 	void AddComefromTransition(const t_comefrom_transition& comefrom);
 	void CleanComefromTransitions();
 	const std::vector<t_comefrom_transition>& GetComefromTransitions() const
@@ -167,12 +169,13 @@ class Collection
 public:
 	// transition from closure 1 to closure 2 with a symbol
 	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
+	using t_closurecache = std::shared_ptr<std::unordered_map<std::size_t, ClosurePtr>>;
 
 
 public:
-	Collection(const ClosurePtr coll);
+	Collection(const ClosurePtr closure);
 
-	void DoTransitions();
+	void DoTransitions(bool full_lr = true);
 
 	Collection ConvertToLALR() const;
 	Collection ConvertToSLR(const t_map_follow& follow) const;
@@ -191,14 +194,14 @@ public:
 protected:
 	Collection();
 
-	void DoTransitions(const ClosurePtr coll);
+	void DoTransitions(const ClosurePtr closure, t_closurecache closure_cache = nullptr);
+	void DoLALRTransitions(const ClosurePtr closure, t_closurecache closure_cache = nullptr);
 	void Simplify();
 
 	static std::size_t hash_transition(const t_transition& trans);
 
 
 private:
-	std::unordered_map<std::size_t, ClosurePtr> m_cache{};  // closure hashes
 	std::vector<ClosurePtr> m_collection{};                 // collection
 
 	// transitions between collection, [from, to, transition symbol]

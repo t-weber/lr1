@@ -141,16 +141,21 @@ static void lr1_create_parser()
 
 		ElementPtr elem = std::make_shared<Element>(
 			start, 0, 0, Terminal::t_terminalset{{g_end}});
-		ClosurePtr coll = std::make_shared<Closure>();
-		coll->AddElement(elem);
-		//std::cout << "\n\n" << *coll << std::endl;
+		ClosurePtr closure = std::make_shared<Closure>();
+		closure->AddElement(elem);
+		//std::cout << "\n\n" << *closure << std::endl;
 
-
-		Collection colls{coll};
-		colls.DoTransitions();
 
 #if USE_LALR != 0
-		Collection collsLALR = colls.ConvertToLALR();
+		/*Collection colls{ closure };
+		colls.DoTransitions();
+		Collection collsLALR = colls.ConvertToLALR();*/
+
+		Collection collsLALR{ closure };
+		collsLALR.DoTransitions(false);
+#else
+		Collection colls{ closure };
+		colls.DoTransitions();
 #endif
 
 #if DEBUG_PARSERGEN != 0
