@@ -17,6 +17,33 @@
 #include <boost/functional/hash.hpp>
 
 
+// ----------------------------------------------------------------------------
+/**
+ * hash a transition element
+ */
+std::size_t Closure::HashComefromTransition::operator()(
+	const t_comefrom_transition& trans) const
+{
+	bool full_lr1 = std::get<2>(trans);
+	std::size_t hashSym = std::get<0>(trans)->hash();
+	std::size_t hashFrom = std::get<1>(trans)->hash(!full_lr1);
+
+	boost::hash_combine(hashFrom, hashSym);
+	return hashFrom;
+}
+
+
+/**
+ * compare two transition elements for equality
+ */
+bool Closure::CompareComefromTransitionsEqual::operator()(
+	const t_comefrom_transition& tr1, const t_comefrom_transition& tr2) const
+{
+	return HashComefromTransition{}(tr1) == HashComefromTransition{}(tr2);
+}
+// ----------------------------------------------------------------------------
+
+
 // global closure id counter
 std::size_t Closure::g_id = 0;
 
@@ -33,6 +60,7 @@ Closure::Closure(const Closure& closure) : m_elems{}
 
 const Closure& Closure::operator=(const Closure& closure)
 {
+	//this->m_this = closure.m_this;
 	this->m_id = closure.m_id;
 	this->m_comefrom_transitions = closure.m_comefrom_transitions;
 
@@ -229,9 +257,10 @@ bool Closure::AddLookaheads(const ClosurePtr closure)
 /**
  * perform a transition and get the corresponding lr(1) closure
  */
-ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
+ClosurePtr Closure::DoTransition(const SymbolPtr transsym, bool full_lr) const
 {
 	ClosurePtr newclosure = std::make_shared<Closure>();
+	newclosure->SetThisPtr(newclosure);
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
@@ -245,7 +274,8 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
 		newelem->AdvanceCursor();
 
 		newclosure->AddElement(newelem);
-		newclosure->AddComefromTransition(std::make_tuple(transsym, this));
+		newclosure->m_comefrom_transitions.emplace(
+			std::make_tuple(transsym, m_this, full_lr));
 	}
 
 	return newclosure;
@@ -257,14 +287,14 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym) const
  * and get the corresponding lr(1) collection
  * @return [transition symbol, destination closure]
  */
-std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions() const
+std::vector<std::tuple<SymbolPtr, ClosurePtr>> Closure::DoTransitions(bool full_lr) const
 {
 	std::vector<std::tuple<SymbolPtr, ClosurePtr>> coll;
 	std::vector<SymbolPtr> possible_transitions = GetPossibleTransitions();
 
 	for(const SymbolPtr& transition : possible_transitions)
 	{
-		ClosurePtr closure = DoTransition(transition);
+		ClosurePtr closure = DoTransition(transition, full_lr);
 		coll.emplace_back(std::make_tuple(transition, closure));
 	}
 
@@ -295,24 +325,6 @@ std::size_t Closure::hash(bool only_core) const
 
 
 /**
- * adds a reference to where a possible transition can come from
- */
-void Closure::AddComefromTransition(const t_comefrom_transition& comefrom)
-{
-	// do we already have this comefrom?
-	for(const t_comefrom_transition& oldcomefrom : m_comefrom_transitions)
-	{
-		if(*std::get<0>(comefrom) == *std::get<0>(oldcomefrom) &&
-			std::get<1>(comefrom)->GetId() == std::get<1>(oldcomefrom)->GetId())
-			return;
-	}
-
-	// add unique comefrom
-	m_comefrom_transitions.push_back(comefrom);
-}
-
-
-/**
  * get all terminal symbols that lead to this closure
  */
 std::vector<TerminalPtr> Closure::GetComefromTerminals(
@@ -327,7 +339,7 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
 	{
 		SymbolPtr sym = std::get<0>(comefrom);
-		const Closure* closure = std::get<1>(comefrom);
+		const ClosurePtr closure = std::get<1>(comefrom);
 
 		if(sym->IsTerminal())
 		{
@@ -352,13 +364,13 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 
 	// remove duplicates
 	std::stable_sort(terms.begin(), terms.end(),
-		[](TerminalPtr term1, TerminalPtr term2) -> bool
+		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
 		{
 			return term1->hash() < term2->hash();
 			//return term1->GetId() < term2->GetId();
 		});
 	auto end = std::unique(terms.begin(), terms.end(),
-		[](TerminalPtr term1, TerminalPtr term2) -> bool
+		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
 		{
 			return *term1 == *term2;
 		});
@@ -370,55 +382,15 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 
 
 /**
- * removes duplicate comefrom transitions
- */
-void Closure::CleanComefromTransitions()
-{
-	// remove duplicates
-	std::stable_sort(m_comefrom_transitions.begin(), m_comefrom_transitions.end(),
-		[](const t_comefrom_transition& comefrom1,
-			const t_comefrom_transition& comefrom2) -> bool
-		{
-			// symbol
-			bool sym_equ = std::get<0>(comefrom1)->hash() ==
-				std::get<0>(comefrom2)->hash();
-			if(sym_equ)
-			{
-				return std::get<1>(comefrom1)->GetId() <
-					std::get<1>(comefrom2)->GetId();
-			}
-			else
-			{
-				return std::get<0>(comefrom1)->hash() <
-					std::get<0>(comefrom2)->hash();
-			}
-		});
-	auto end = std::unique(m_comefrom_transitions.begin(),
-		m_comefrom_transitions.end(),
-		[](const t_comefrom_transition& comefrom1,
-			const t_comefrom_transition& comefrom2) -> bool
-		{
-			return *std::get<0>(comefrom1) == *std::get<0>(comefrom2) &&
-				std::get<1>(comefrom1)->GetId() == std::get<1>(comefrom2)->GetId();
-		});
-
-	if(end != m_comefrom_transitions.end())
-		m_comefrom_transitions.resize(end-m_comefrom_transitions.begin());
-}
-
-
-/**
  * write the closures where we can come from
  */
 void Closure::PrintComefroms(std::ostream& ostr) const
 {
-	const auto& comefroms = GetComefromTransitions();
-	if(comefroms.size())
+	if(m_comefrom_transitions.size())
 	{
 		ostr << "Coming from:\n";
-		for(std::size_t i=0; i<comefroms.size(); ++i)
+		for(const auto& comefrom : m_comefrom_transitions)
 		{
-			const Closure::t_comefrom_transition& comefrom = comefroms[i];
 			ostr << "\tstate " << std::get<1>(comefrom)->GetId()
 				<< " via " << std::get<0>(comefrom)->GetStrId()
 				<< ".\n";

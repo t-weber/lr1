@@ -18,6 +18,63 @@
 #include <boost/functional/hash.hpp>
 
 
+// ----------------------------------------------------------------------------
+/**
+ * hash a transition element
+ */
+std::size_t Collection::HashTransition::operator()(
+	const t_transition& trans) const
+{
+	bool full_lr1 = std::get<3>(trans);
+	std::size_t hashFrom = std::get<0>(trans)->hash(!full_lr1);
+	std::size_t hashTo = std::get<1>(trans)->hash(!full_lr1);
+	std::size_t hashSym = std::get<2>(trans)->hash();
+
+	boost::hash_combine(hashFrom, hashTo);
+	boost::hash_combine(hashFrom, hashSym);
+
+	return hashFrom;
+}
+
+
+/**
+ * compare two transition elements for equality
+ */
+bool Collection::CompareTransitionsEqual::operator()(
+	const t_transition& tr1, const t_transition& tr2) const
+{
+	return HashTransition{}(tr1) == HashTransition{}(tr2);
+}
+
+
+/**
+ * compare two transition elements based on their order
+ */
+bool Collection::CompareTransitionsLess::operator()(
+	const t_transition& tr1, const t_transition& tr2) const
+{
+	/*std::size_t hash1 = HashTransition{}(tr1);
+	std::size_t hash2 = HashTransition{}(tr2);
+	return hash1 < hash2;*/
+
+	ClosurePtr from1 = std::get<0>(tr1);
+	ClosurePtr from2 = std::get<0>(tr2);
+	ClosurePtr to1 = std::get<1>(tr1);
+	ClosurePtr to2 = std::get<1>(tr2);
+	SymbolPtr sym1 = std::get<2>(tr1);
+	SymbolPtr sym2 = std::get<2>(tr2);
+
+	if(from1->GetId() < from2->GetId())
+		return true;
+	if(from1->GetId() == from2->GetId())
+		return to1->GetId() < to2->GetId();
+	if(from1->GetId() == from2->GetId() && to1->GetId() == to2->GetId())
+		return sym1->GetId() < sym2->GetId();
+	return false;
+}
+// ----------------------------------------------------------------------------
+
+
 Collection::Collection(const ClosurePtr closure)
 	: m_collection{}, m_transitions{}
 {
@@ -68,8 +125,8 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 			// new unique closure
 			closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.emplace_back(std::make_tuple(
-				closure_from, closure_to, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to, trans_sym, true));
 
 			DoTransitions(closure_to, closure_cache);
 		}
@@ -78,12 +135,12 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 			// reuse closure that has already been seen
 			ClosurePtr closure_to_existing = cacheIter->second;
 
-			m_transitions.emplace_back(std::make_tuple(
-				closure_from, closure_to_existing, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to_existing, trans_sym, true));
 
 			// also add the comefrom symbol to the closure
-			closure_to_existing->AddComefromTransition(
-				std::make_tuple(trans_sym, closure_from.get()));
+			closure_to_existing->m_comefrom_transitions.emplace(
+				std::make_tuple(trans_sym, closure_from, true));
 		}
 	}
 }
@@ -101,7 +158,7 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 	}
 
 	std::vector<std::tuple<SymbolPtr, ClosurePtr>> closure =
-		closure_from->DoTransitions();
+		closure_from->DoTransitions(false);
 
 	// no more transitions?
 	if(closure.size() == 0)
@@ -119,8 +176,8 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 			// new unique closure
 			closure_cache->emplace(std::make_pair(hash_to, closure_to));
 			m_collection.push_back(closure_to);
-			m_transitions.emplace_back(std::make_tuple(
-				closure_from, closure_to, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to, trans_sym, false));
 
 			DoLALRTransitions(closure_to, closure_cache);
 		}
@@ -132,17 +189,17 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 			// unite lookaheads
 			bool lookaheads_added = closure_to_existing->AddLookaheads(closure_to);
 
-			m_transitions.emplace_back(std::make_tuple(
-				closure_from, closure_to_existing, trans_sym));
+			m_transitions.emplace(std::make_tuple(
+				closure_from, closure_to_existing, trans_sym, false));
 
 			// unite lookbacks
 			for(const Closure::t_comefrom_transition& comefrom
 				: closure_to->m_comefrom_transitions)
-				closure_to_existing->AddComefromTransition(comefrom);
+				closure_to_existing->m_comefrom_transitions.insert(comefrom);
 
 			// also add the comefrom symbol to the closure
-			closure_to_existing->AddComefromTransition(
-				std::make_tuple(trans_sym, closure_from.get()));
+			closure_to_existing->m_comefrom_transitions.emplace(
+				std::make_tuple(trans_sym, closure_from, false));
 
 			// if a lookahead old an old closure has changed,
 			// the transitions of that closure need to be redone
@@ -177,21 +234,6 @@ void Collection::Simplify()
 			{
 				return closure1->GetId() < closure2->GetId();
 			});
-
-		std::stable_sort(m_transitions.begin(), m_transitions.end(),
-			[](const t_transition& tup1, const t_transition& tup2) -> bool
-			{
-				ClosurePtr from1 = std::get<0>(tup1);
-				ClosurePtr from2 = std::get<0>(tup2);
-				ClosurePtr to1 = std::get<1>(tup1);
-				ClosurePtr to2 = std::get<1>(tup2);
-
-				if(from1->GetId() < from2->GetId())
-					return true;
-				if(from1->GetId() == from2->GetId())
-					return to1->GetId() < to2->GetId();
-				return false;
-			});
 	}
 
 	// cleanup ids
@@ -216,27 +258,7 @@ void Collection::Simplify()
 
 			closure->SetId(iditer->second);
 			already_seen.insert(hash);
-
-			closure->CleanComefromTransitions();
 		}
-
-
-		// remove duplicate transitions
-		std::unordered_set<std::size_t> transition_already_seen;
-		std::vector<t_transition> new_transitions;
-		new_transitions.reserve(m_transitions.size());
-
-		for(const auto& transition : m_transitions)
-		{
-			std::size_t hash = hash_transition(transition);
-			if(transition_already_seen.find(hash) != transition_already_seen.end())
-				continue;
-
-			transition_already_seen.insert(hash);
-			new_transitions.push_back(transition);
-		}
-
-		m_transitions = std::move(new_transitions);
 	}
 }
 
@@ -294,32 +316,15 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 
 
 /**
- * hash a transition element
- */
-std::size_t Collection::hash_transition(const Collection::t_transition& trans)
-{
-	std::size_t hashFrom = std::get<0>(trans)->hash();
-	std::size_t hashTo = std::get<1>(trans)->hash();
-	std::size_t hashSym = std::get<2>(trans)->hash();
-
-	boost::hash_combine(hashFrom, hashTo);
-	boost::hash_combine(hashFrom, hashSym);
-
-	return hashFrom;
-}
-
-
-/**
  * convert from LR(1) collection to LALR(1) collection
  */
 Collection Collection::ConvertToLALR() const
 {
-	std::cout << "xxxxxxxxxxxxxxxxxx" << std::endl;
 	Collection coll;
 	std::unordered_map<std::size_t, ClosurePtr> closure_cache;
 
 	// maps old closure pointer to new one
-	std::unordered_map<ClosurePtr, ClosurePtr> map;
+	std::unordered_map<ClosurePtr, ClosurePtr> closure_map;
 
 	// states
 	for(const ClosurePtr& closure : m_collection)
@@ -331,7 +336,8 @@ Collection Collection::ConvertToLALR() const
 		if(iter == closure_cache.end())
 		{
 			ClosurePtr newclosure = std::make_shared<Closure>(*closure);
-			map.emplace(std::make_pair(closure, newclosure));
+			newclosure->SetThisPtr(newclosure);
+			closure_map.emplace(std::make_pair(closure, newclosure));
 
 			closure_cache.emplace(std::make_pair(hash, newclosure));
 			coll.m_collection.push_back(newclosure);
@@ -341,7 +347,7 @@ Collection Collection::ConvertToLALR() const
 		else
 		{
 			ClosurePtr closureOld = iter->second;
-			map.emplace(std::make_pair(closure, closureOld));
+			closure_map.emplace(std::make_pair(closure, closureOld));
 
 			// unite lookaheads
 			closureOld->AddLookaheads(closure);
@@ -349,44 +355,45 @@ Collection Collection::ConvertToLALR() const
 			// unite lookbacks
 			for(const Closure::t_comefrom_transition& comefrom
 				: closure->m_comefrom_transitions)
-				closureOld->AddComefromTransition(comefrom);
+			{
+				closureOld->m_comefrom_transitions.insert(comefrom);
+			}
 		}
 	}
 
 	// transitions
-	std::unordered_set<std::size_t> hashes;
 	for(const t_transition& tup : m_transitions)
 	{
-		ClosurePtr closureFromConv = map[std::get<0>(tup)];
-		ClosurePtr closureToConv = map[std::get<1>(tup)];
+		ClosurePtr closureFromConv = closure_map[std::get<0>(tup)];
+		ClosurePtr closureToConv = closure_map[std::get<1>(tup)];
 
 		t_transition trans = std::make_tuple(
-			closureFromConv, closureToConv, std::get<2>(tup));
+			closureFromConv, closureToConv, std::get<2>(tup), false);
 
-		std::size_t hash = hash_transition(trans);
-
-		// transition already seen?
-		if(hashes.find(hash) != hashes.end())
-			continue;
-
-		coll.m_transitions.emplace_back(std::move(trans));
-		hashes.insert(hash);
+		coll.m_transitions.emplace(std::move(trans));
 	}
 
 	// update comefroms
 	for(ClosurePtr& closure : coll.m_collection)
 	{
-		for(Closure::t_comefrom_transition& comefrom
-			: closure->m_comefrom_transitions)
+		Closure::t_comefrom_transitions new_comefroms;
+
+		for(Closure::t_comefrom_transition comefrom : closure->m_comefrom_transitions)
 		{
-			const Closure*& closure_from = std::get<1>(comefrom);
-			// find closure_from in map (TODO: use ClosurePtr and map.find())
-			for(const auto& [oldClosure, newClosure] : map)
+			// find closure_from in closure_map (TODO: use closure_map.find())
+			for(const auto& [oldClosure, newClosure] : closure_map)
 			{
-				if(oldClosure->GetId() == closure_from->GetId())
-					closure_from = newClosure.get();
+				if(oldClosure->GetId() == std::get<1>(comefrom)->GetId())
+				{
+					std::get<1>(comefrom) = newClosure;
+					break;
+				}
 			}
+
+			new_comefroms.emplace(std::move(comefrom));
 		}
+
+		closure->m_comefrom_transitions = std::move(new_comefroms);
 	}
 
 	coll.Simplify();
@@ -755,8 +762,14 @@ std::ostream& operator<<(std::ostream& ostr, const Collection& coll)
 	ostr << "--------------------------------------------------------------------------------\n";
 	ostr << "Tables\n";
 	ostr << "--------------------------------------------------------------------------------\n";
+	// sort transitions
+	std::vector<Collection::t_transition> transitions;
+	transitions.reserve(coll.m_transitions.size());
+	std::copy(coll.m_transitions.begin(), coll.m_transitions.end(), std::back_inserter(transitions));
+	std::stable_sort(transitions.begin(), transitions.end(), Collection::CompareTransitionsLess{});
+
 	std::ostringstream ostrActionShift, ostrActionReduce, ostrJump;
-	for(const Collection::t_transition& tup : coll.m_transitions)
+	for(const Collection::t_transition& tup : /*coll.m_transitions*/ transitions)
 	{
 		const ClosurePtr& stateFrom = std::get<0>(tup);
 		const ClosurePtr& stateTo = std::get<1>(tup);

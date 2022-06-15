@@ -50,7 +50,8 @@ using t_conflictsolution = std::tuple<
 class Element
 {
 public:
-	Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la);
+	Element(const NonTerminalPtr lhs, std::size_t rhsidx,
+		std::size_t cursor, const Terminal::t_terminalset& la);
 
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
@@ -69,6 +70,7 @@ public:
 	void SetLookaheads(const Terminal::t_terminalset& las);
 
 	const SymbolPtr GetPossibleTransition() const;
+
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
 
@@ -106,8 +108,24 @@ public:
 	friend class Collection;
 
 	// backtracing of transitions that lead to this closure
-	using t_comefrom_transition = std::tuple<
-		SymbolPtr, const Closure*>; // TODO: use ClosurePtr
+	// [ transition terminal, from closure, full lr1 ]
+	using t_comefrom_transition = std::tuple<SymbolPtr, ClosurePtr, bool>;
+
+	// hash comefrom transitions
+	struct HashComefromTransition
+	{
+		std::size_t operator ()(const t_comefrom_transition& tr) const;
+	};
+
+	// compare comefrom transitions for equality
+	struct CompareComefromTransitionsEqual
+	{
+		bool operator ()(const t_comefrom_transition& tr1,
+			const t_comefrom_transition& tr2) const;
+	};
+
+	using t_comefrom_transitions = std::unordered_set<t_comefrom_transition,
+		HashComefromTransition, CompareComefromTransitionsEqual>;
 
 
 public:
@@ -115,6 +133,9 @@ public:
 
 	Closure(const Closure& coll);
 	const Closure& operator=(const Closure& coll);
+
+	// set the "this" shared pointer, TODO: find a better way to do this
+	void SetThisPtr(ClosurePtr ptr) { m_this = ptr; }
 
 	std::size_t GetId() const { return m_id; }
 
@@ -127,15 +148,11 @@ public:
 	const ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
 	std::vector<SymbolPtr> GetPossibleTransitions() const;
-	ClosurePtr DoTransition(const SymbolPtr) const;
-	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions() const;
+	ClosurePtr DoTransition(const SymbolPtr, bool full_lr = true) const;
+	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions(bool full_lr = true) const;
 
 	bool AddLookaheads(const ClosurePtr closure);
 
-	void AddComefromTransition(const t_comefrom_transition& comefrom);
-	void CleanComefromTransitions();
-	const std::vector<t_comefrom_transition>& GetComefromTransitions() const
-	{ return m_comefrom_transitions; }
 	std::vector<TerminalPtr> GetComefromTerminals(
 		std::shared_ptr<std::unordered_set<std::size_t>> seen_closures = nullptr) const;
 
@@ -150,13 +167,15 @@ private:
 
 
 private:
+	ClosurePtr m_this{};
+
 	std::vector<ElementPtr> m_elems{};
 	std::size_t m_id{0};      // closure id
 
 	static std::size_t g_id;  // global closure id counter
 
 	// transition that led to this closure
-	std::vector<t_comefrom_transition> m_comefrom_transitions{};
+	t_comefrom_transitions m_comefrom_transitions{};
 };
 
 
@@ -167,8 +186,29 @@ private:
 class Collection
 {
 public:
-	// transition from closure 1 to closure 2 with a symbol
-	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr>;
+	// transition [ from closure, to closure, symbol, full_lr1 ]
+	using t_transition = std::tuple<ClosurePtr, ClosurePtr, SymbolPtr, bool>;
+
+	// hash transitions
+	struct HashTransition
+	{
+		std::size_t operator ()(const t_transition& tr) const;
+	};
+
+	// compare transitions for equality
+	struct CompareTransitionsEqual
+	{
+		bool operator ()(const t_transition& tr1, const t_transition& tr2) const;
+	};
+
+	// compare transitions by order
+	struct CompareTransitionsLess
+	{
+		bool operator ()(const t_transition& tr1, const t_transition& tr2) const;
+	};
+
+	//using t_transitions = std::set<t_transition, CompareTransitionsLess>;
+	using t_transitions = std::unordered_set<t_transition, HashTransition, CompareTransitionsEqual>;
 	using t_closurecache = std::shared_ptr<std::unordered_map<std::size_t, ClosurePtr>>;
 
 
@@ -202,10 +242,8 @@ protected:
 
 
 private:
-	std::vector<ClosurePtr> m_collection{};                 // collection
-
-	// transitions between collection, [from, to, transition symbol]
-	std::vector<t_transition> m_transitions{};
+	std::vector<ClosurePtr> m_collection{};  // collection of LR(1) closures
+	t_transitions m_transitions{};           // transitions between collection, [from, to, transition symbol]
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
 };

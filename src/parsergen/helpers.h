@@ -69,8 +69,15 @@ public:
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
 
-	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
-	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
+	const T& operator()(std::size_t row, std::size_t col) const
+	{
+		return m_data[row*m_colsize + col];
+	}
+
+	T& operator()(std::size_t row, std::size_t col)
+	{
+		return m_data[row*m_colsize + col];
+	}
 
 
 	/**

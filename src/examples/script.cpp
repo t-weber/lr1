@@ -234,6 +234,7 @@ static void lr1_create_parser()
 		ElementPtr elem = std::make_shared<Element>(
 			start, 0, 0, Terminal::t_terminalset{{ g_end }});
 		ClosurePtr closure = std::make_shared<Closure>();
+		closure->SetThisPtr(closure); // TODO: find a better way to set the "this" shared pointer
 		closure->AddElement(elem);
 
 #if USE_LALR != 0

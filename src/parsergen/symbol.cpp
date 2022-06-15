@@ -264,7 +264,7 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
 
 /**
  * calculates the first set of a nonterminal
- * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_perrule* _first_perrule)
 {
@@ -339,7 +339,7 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 
 /**
  * calculates the follow set of a nonterminal
- * see: https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
