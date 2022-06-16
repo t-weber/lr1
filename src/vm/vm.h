@@ -19,6 +19,12 @@
 #include "opcodes.h"
 #include "helpers.h"
 
+// indices in data variant
+#define T_REAL  0
+#define T_INT   1
+#define T_BOOL  2
+#define T_ADDR  3
+
 
 class VM
 {
@@ -95,13 +101,13 @@ protected:
 	/**
 	 * push data onto the stack
 	 */
-	void PushData(const t_data& data);
+	void PushData(const t_data& data, VMType ty = VMType::UNKNOWN);
 
 
 	/**
 	 * read data from memory
 	 */
-	t_data ReadMemData(t_addr addr);
+	std::tuple<VMType, t_data> ReadMemData(t_addr addr);
 
 	/**
 	 * write data to memory

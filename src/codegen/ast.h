@@ -29,17 +29,24 @@ class ASTBinary;
 class ASTList;
 class ASTCondition;
 class ASTLoop;
+class ASTFunc;
+class ASTFuncCall;
 
 
 enum class ASTType
 {
 	TOKEN,
 	DELEGATE,
+
 	UNARY,
 	BINARY,
 	LIST,
+
 	CONDITION,
 	LOOP,
+
+	FUNC,
+	FUNCCALL,
 };
 
 
@@ -64,6 +71,8 @@ public:
 	virtual void visit(const ASTList* ast, std::size_t level) = 0;
 	virtual void visit(const ASTCondition* ast, std::size_t level) = 0;
 	virtual void visit(const ASTLoop* ast, std::size_t level) = 0;
+	virtual void visit(const ASTFunc* ast, std::size_t level) = 0;
+	virtual void visit(const ASTFuncCall* ast, std::size_t level) = 0;
 };
 
 
@@ -448,6 +457,110 @@ public:
 
 private:
 	t_astbaseptr m_cond{}, m_block{};
+};
+
+
+/**
+ * node for functions
+ */
+class ASTFunc : public ASTBaseAcceptor<ASTFunc>
+{
+public:
+	ASTFunc(std::size_t id, std::size_t tableidx,
+		const std::string& name,
+		const t_astbaseptr& args, const t_astbaseptr& block)
+		: ASTBaseAcceptor<ASTFunc>{id, tableidx},
+			m_name{name}, m_args{args}, m_block{block}
+	{}
+
+	virtual ~ASTFunc() = default;
+
+	virtual ASTType GetType() const override { return ASTType::FUNC; }
+
+	virtual std::size_t NumChildren() const override { return 2; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_args;
+			case 1: return m_block;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_args = ast; break;
+			case 1: m_block = ast; break;
+		}
+	}
+
+	t_astbaseptr GetArgs() const { return m_args; }
+	t_astbaseptr GetBlock() const { return m_block; }
+	const std::string& GetName() const { return m_name; }
+
+	void SetArgs(const t_astbaseptr& ast) { m_args = ast; }
+	void SetBlock(const t_astbaseptr& ast) { m_block = ast; }
+	void SetName(const std::string& name) { m_name = name; }
+
+
+private:
+	std::string m_name{};
+	t_astbaseptr m_args{};
+	t_astbaseptr m_block{};
+};
+
+
+/**
+ * node for function calls
+ */
+class ASTFuncCall : public ASTBaseAcceptor<ASTFuncCall>
+{
+public:
+	ASTFuncCall(std::size_t id, std::size_t tableidx,
+		const std::string& name, const t_astbaseptr& args)
+		: ASTBaseAcceptor<ASTFuncCall>{id, tableidx},
+			m_name{name}, m_args{args}
+	{}
+
+	virtual ~ASTFuncCall() = default;
+
+	virtual ASTType GetType() const override { return ASTType::FUNCCALL; }
+
+	virtual std::size_t NumChildren() const override { return 1; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_args;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_args = ast; break;
+		}
+	}
+
+	t_astbaseptr GetArgs() const { return m_args; }
+	const std::string& GetName() const { return m_name; }
+
+	void SetArgs(const t_astbaseptr& ast) { m_args = ast; }
+	void SetName(const std::string& name) { m_name = name; }
+
+
+private:
+	std::string m_name{};
+	t_astbaseptr m_args{};
 };
 
 

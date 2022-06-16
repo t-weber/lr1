@@ -31,6 +31,8 @@ public:
 	virtual void visit(const ASTList* ast, std::size_t level) override;
 	virtual void visit(const ASTCondition* ast, std::size_t level) override;
 	virtual void visit(const ASTLoop* ast, std::size_t level) override;
+	virtual void visit(const ASTFunc* ast, std::size_t level) override;
+	virtual void visit(const ASTFuncCall* ast, std::size_t level) override;
 
 	static std::string get_ast_typename(ASTType ty);
 

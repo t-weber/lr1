@@ -36,7 +36,8 @@ enum class Token : t_tok
 
 	IF      = 4000,
 	ELSE    = 4001,
-        LOOP    = 4002,
+	LOOP    = 4002,
+	FUNC    = 4003,
 
 	END     = END_IDENT,
 };

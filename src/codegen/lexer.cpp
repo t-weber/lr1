@@ -43,10 +43,15 @@ get_matching_tokens(const std::string& str)
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::ELSE), str));
 		}
-		else if(str == "loop")
+		else if(str == "loop" || str == "while")
 		{
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::LOOP), str));
+		}
+		else if(str == "func")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::FUNC), str));
 		}
 		else
 		{

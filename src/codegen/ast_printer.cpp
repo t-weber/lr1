@@ -22,6 +22,8 @@ std::string ASTPrinter::get_ast_typename(ASTType ty)
 		case ASTType::LIST: return "list";
 		case ASTType::CONDITION: return "condition";
 		case ASTType::LOOP: return "loop";
+		case ASTType::FUNC: return "function";
+		case ASTType::FUNCCALL: return "function_call";
 	}
 
 	return "<unknown>";
@@ -139,6 +141,16 @@ void ASTPrinter::visit(const ASTCondition* ast, std::size_t level)
 }
 
 void ASTPrinter::visit(const ASTLoop* ast, std::size_t level)
+{
+	print_base(ast, level);
+}
+
+void ASTPrinter::visit(const ASTFunc* ast, std::size_t level)
+{
+	print_base(ast, level);
+}
+
+void ASTPrinter::visit(const ASTFuncCall* ast, std::size_t level)
 {
 	print_base(ast, level);
 }

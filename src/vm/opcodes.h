@@ -11,21 +11,22 @@
 #include <cstdint>
 
 
-using t_vm_addr = std::uint16_t;
+using t_vm_addr = std::int16_t;
 using t_vm_byte = std::int8_t;
 
 
 enum class VMType : t_vm_byte
 {
+	UNKNOWN  = 0x00,
 	REAL     = 0x01,
 	INT      = 0x02,
 	BOOLEAN  = 0x03,
 
-	ADDR_MEM = 0b01000000,  // address refering to absolute memory locations
-	ADDR_IP  = 0b01000001,  // address relative to the instruction pointer
-	ADDR_SP  = 0b01000010,  // address relative to the stack pointer
-	ADDR_BP  = 0b01000011,  // address relative to a local base pointer
-	ADDR_GBP = 0b01000100,  // address relative to the global base pointer
+	ADDR_MEM = 0b00001000,  // address refering to absolute memory locations
+	ADDR_IP  = 0b00001001,  // address relative to the instruction pointer
+	ADDR_SP  = 0b00001010,  // address relative to the stack pointer
+	ADDR_BP  = 0b00001011,  // address relative to a local base pointer
+	ADDR_GBP = 0b00001100,  // address relative to the global base pointer
 };
 
 
@@ -37,10 +38,9 @@ enum class OpCode : t_vm_byte
 
 	// memory operations
 	PUSH     = 0x10,  // push direct data
-	PUSHADDR = 0x11,  // get the address of a variable
-	DEREF    = 0x12,  // dereference pointer
-	WRMEM    = 0x13,  // write mem
-	RDMEM    = 0x14,  // read mem
+	DEREF    = 0x11,  // dereference pointer
+	WRMEM    = 0x12,  // write mem
+	RDMEM    = 0x13,  // read mem
 
 	// arithmetic operations
 	USUB     = 0x20,  // unary -

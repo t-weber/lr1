@@ -26,6 +26,7 @@ bool VM::Run()
 	{
 		t_byte _op = m_mem[m_ip++];
 		OpCode op = static_cast<OpCode>(_op);
+		//std::cout << "opcode: " << std::hex << static_cast<std::size_t>(op) << std::endl;
 
 		switch(op)
 		{
@@ -43,25 +44,9 @@ bool VM::Run()
 			// push direct data onto stack
 			case OpCode::PUSH:
 			{
-				t_data val = ReadMemData(m_ip);
+				auto [ty, val] = ReadMemData(m_ip);
 				m_ip += GetDataSize(val) + m_bytesize;
-				PushData(val);
-				break;
-			}
-
-			// push direct address onto stack
-			case OpCode::PUSHADDR:
-			{
-				// get address base register from memory
-				t_byte regval = ReadMemRaw<t_byte>(m_ip);
-				m_ip += m_bytesize;
-
-				// get address from memory
-				t_addr val = ReadMemRaw<t_addr>(m_ip);
-				m_ip += m_addrsize;
-
-				PushRaw<t_addr, m_addrsize>(val);
-				PushRaw<t_byte, m_bytesize>(regval);
+				PushData(val, ty);
 				break;
 			}
 
@@ -82,8 +67,8 @@ bool VM::Run()
 				t_addr addr = PopAddress();
 
 				// read and push data from memory
-				t_data val = ReadMemData(addr);
-				PushData(val);
+				auto [ty, val] = ReadMemData(addr);
+				PushData(val, ty);
 				break;
 			}
 
@@ -91,8 +76,8 @@ bool VM::Run()
 			case OpCode::DEREF:
 			{
 				t_addr addr = PopAddress();
-				t_data val = ReadMemData(addr);
-				PushData(val);
+				auto [ty, val] = ReadMemData(addr);
+				PushData(val, ty);
 
 				//std::cout << "dereferenced address " << addr << ": " << std::get<t_real>(val) << std::endl;
 				break;
@@ -288,6 +273,7 @@ VM::t_addr VM::PopAddress()
 		default: throw std::runtime_error("Unknown address base register"); break;
 	}
 
+	//std::cout << "got address " << t_int(addr) << " from stack" << std::endl;
 	return addr;
 }
 
@@ -319,7 +305,16 @@ VM::t_data VM::PopData()
 			break;
 		}
 
-		// TODO: handle pointer types
+		case VMType::ADDR_MEM:
+		case VMType::ADDR_IP:
+		case VMType::ADDR_SP:
+		case VMType::ADDR_BP:
+		case VMType::ADDR_GBP:
+		{
+			t_addr val = PopRaw<t_addr, m_addrsize>();
+			dat = val;
+			break;
+		}
 
 		default:
 		{
@@ -335,7 +330,7 @@ VM::t_data VM::PopData()
 /**
  * push the raw data followed by a data type descriptor
  */
-void VM::PushData(const VM::t_data& data)
+void VM::PushData(const VM::t_data& data, VMType ty)
 {
 	if(std::holds_alternative<t_real>(data))
 	{
@@ -345,13 +340,21 @@ void VM::PushData(const VM::t_data& data)
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::REAL));
 	}
-	else if(std::holds_alternative<t_real>(data))
+	else if(std::holds_alternative<t_int>(data))
 	{
 		// push the actual data
 		PushRaw<t_int, m_intsize>(std::get<t_int>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::INT));
+	}
+	else if(std::holds_alternative<t_addr>(data))
+	{
+		// push the actual address
+		PushRaw<t_addr, m_addrsize>(std::get<T_ADDR>(data));
+
+		// push descriptor
+		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
 	}
 	else
 	{
@@ -363,7 +366,7 @@ void VM::PushData(const VM::t_data& data)
 /**
  * read type-prefixed data from memory
  */
-VM::t_data VM::ReadMemData(VM::t_addr addr)
+std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 {
 	// get data type info from memory
 	t_byte tyval = ReadMemRaw<t_byte>(addr);
@@ -380,6 +383,7 @@ VM::t_data VM::ReadMemData(VM::t_addr addr)
 			std::get<t_real>(dat) = val;
 			break;
 		}
+
 		case VMType::INT:
 		{
 			t_int val = ReadMemRaw<t_int>(addr);
@@ -387,7 +391,16 @@ VM::t_data VM::ReadMemData(VM::t_addr addr)
 			break;
 		}
 
-		// TODO: handle pointer types
+		case VMType::ADDR_MEM:
+		case VMType::ADDR_IP:
+		case VMType::ADDR_SP:
+		case VMType::ADDR_BP:
+		case VMType::ADDR_GBP:
+		{
+			t_addr val = ReadMemRaw<t_addr>(addr);
+			dat = val;
+			break;
+		}
 
 		default:
 		{
@@ -396,7 +409,7 @@ VM::t_data VM::ReadMemData(VM::t_addr addr)
 		}
 	}
 
-	return dat;
+	return std::make_tuple(ty, dat);
 }
 
 
@@ -427,6 +440,17 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		// write the actual data
 		WriteMemRaw<t_int>(addr, std::get<t_int>(data));
 	}
+	/*else if(std::holds_alternative<t_addr>(data))
+	{
+		//std::cout << "writing address value " << std::get<T_ADDR>(data) << " to address " << addr << std::endl;
+
+		// write descriptor prefix
+		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(ty));
+		addr += m_bytesize;
+
+		// write the actual data
+		WriteMemRaw<t_int>(addr, std::get<T_ADDR>(data));
+	}*/
 	else
 	{
 		throw std::runtime_error("WriteMem: Data type not yet implemented");
@@ -440,6 +464,8 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 		return m_realsize;
 	else if(std::holds_alternative<t_int>(data))
 		return m_intsize;
+	else if(std::holds_alternative<t_addr>(data))
+		return m_addrsize;
 
 	return 0;
 }
