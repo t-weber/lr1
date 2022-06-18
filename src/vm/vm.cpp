@@ -26,7 +26,7 @@ bool VM::Run()
 	{
 		t_byte _op = m_mem[m_ip++];
 		OpCode op = static_cast<OpCode>(_op);
-		//std::cout << "opcode: " << std::hex << static_cast<std::size_t>(op) << std::endl;
+		//std::cout << "ip = " << m_ip << ", opcode: " << std::hex << static_cast<std::size_t>(op) << std::endl;
 
 		switch(op)
 		{
@@ -231,6 +231,38 @@ bool VM::Run()
 				break;
 			}
 
+			case OpCode::CALL:
+			{
+				t_addr funcaddr = PopAddress();
+
+				// save instruction and base pointer and
+				// set up the function's stack frame for local variables
+				PushAddress(m_ip, VMType::ADDR_MEM);
+				PushAddress(m_bp, VMType::ADDR_MEM);
+				m_bp = m_sp;
+				m_sp -= m_framesize;
+
+				// jump to function
+				m_ip = funcaddr;
+				break;
+			}
+
+			case OpCode::RET:
+			{
+				// TODO: return value
+				//t_data val = PopData();
+
+				// remove the function's stack frame
+				m_sp = m_bp;
+
+				m_bp = PopAddress();
+				m_ip = PopAddress();  // jump back
+
+				// TODO: remove function arguments from stack
+				//m_sp += ...
+				break;
+			}
+
 			default:
 			{
 				std::cerr << "Error: Invalid opcode " << std::hex
@@ -275,6 +307,16 @@ VM::t_addr VM::PopAddress()
 
 	//std::cout << "got address " << t_int(addr) << " from stack" << std::endl;
 	return addr;
+}
+
+
+/**
+ * push an address to stack
+ */
+void VM::PushAddress(t_addr addr, VMType ty)
+{
+	PushRaw<t_addr, m_addrsize>(addr);
+	PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
 }
 
 
@@ -474,8 +516,9 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 void VM::Reset()
 {
 	m_ip = 0;
-	m_sp = m_memsize;
-	m_bp = m_sp - m_framesize;
+	m_sp = m_memsize - m_framesize;
+	m_bp = m_memsize;
+	m_bp -= m_realsize; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
 
 	std::memset(m_mem.get(), 0, m_memsize);

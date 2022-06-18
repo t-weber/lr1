@@ -94,6 +94,12 @@ protected:
 
 
 	/**
+	 * push an address to stack
+	 */
+	void PushAddress(t_addr addr, VMType ty = VMType::ADDR_MEM);
+
+
+	/**
 	 * pop data from the stack
 	 */
 	t_data PopData();

@@ -135,20 +135,24 @@ void ASTPrinter::visit(const ASTList* ast, std::size_t level)
 	print_base(ast, level);
 }
 
+
 void ASTPrinter::visit(const ASTCondition* ast, std::size_t level)
 {
 	print_base(ast, level);
 }
+
 
 void ASTPrinter::visit(const ASTLoop* ast, std::size_t level)
 {
 	print_base(ast, level);
 }
 
+
 void ASTPrinter::visit(const ASTFunc* ast, std::size_t level)
 {
 	print_base(ast, level);
 }
+
 
 void ASTPrinter::visit(const ASTFuncCall* ast, std::size_t level)
 {

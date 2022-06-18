@@ -74,7 +74,8 @@ enum class OpCode : t_vm_byte
 	NEQU     = 0x65,  // !=
 
 	// function calls
-	// TODO
+	CALL     = 0x70,
+	RET      = 0x71,
 };
 
 

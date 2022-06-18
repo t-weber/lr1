@@ -52,7 +52,10 @@ private:
 	bool m_binary{false};
 
 	SymTab m_symtab{};
-	t_vm_addr m_glob_stack{0};   // current offset into global variable stack
+	t_vm_addr m_glob_stack{};    // current offset into global variable stack
+	std::unordered_map<std::string, t_vm_addr> m_local_stack{};
+	std::string m_cur_func{};    // currently active function
+
 	std::size_t m_glob_label{0}; // jump label counter
 };
 
