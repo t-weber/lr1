@@ -76,6 +76,7 @@ bool VM::Run()
 			case OpCode::DEREF:
 			{
 				t_addr addr = PopAddress();
+				//std::cout << std::dec << "addr " << addr - m_bp << std::endl;
 				auto [ty, val] = ReadMemData(addr);
 				PushData(val, ty);
 
@@ -249,8 +250,13 @@ bool VM::Run()
 
 			case OpCode::RET:
 			{
-				// TODO: return value
-				//t_data val = PopData();
+				// get number of function arguments
+				t_int num_args = std::get<t_int>(PopData());
+
+				// if there's still a value on the stack, use it as return value
+				t_data retval;
+				if(m_sp + m_framesize < m_bp)
+					retval = PopData();
 
 				// remove the function's stack frame
 				m_sp = m_bp;
@@ -258,8 +264,11 @@ bool VM::Run()
 				m_bp = PopAddress();
 				m_ip = PopAddress();  // jump back
 
-				// TODO: remove function arguments from stack
-				//m_sp += ...
+				// remove function arguments from stack
+				for(t_int arg=0; arg<num_args; ++arg)
+					PopData();
+
+				PushData(retval, VMType::UNKNOWN, false);
 				break;
 			}
 
@@ -292,6 +301,8 @@ VM::t_addr VM::PopAddress()
 
 	// get address from stack
 	t_addr addr = PopRaw<t_addr, m_addrsize>();
+
+	//std::cout << std::dec << "popped address " << addr << " of type " << int(regval) << std::endl;
 
 	// get absolute address using base address from register
 	VMType thereg = static_cast<VMType>(regval);
@@ -340,10 +351,11 @@ VM::t_data VM::PopData()
 			std::get<t_real>(dat) = val;
 			break;
 		}
+
 		case VMType::INT:
 		{
 			t_int val = PopRaw<t_int, m_intsize>();
-			std::get<t_int>(dat) = val;
+			dat = val;
 			break;
 		}
 
@@ -372,7 +384,7 @@ VM::t_data VM::PopData()
 /**
  * push the raw data followed by a data type descriptor
  */
-void VM::PushData(const VM::t_data& data, VMType ty)
+void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 {
 	if(std::holds_alternative<t_real>(data))
 	{
@@ -398,7 +410,7 @@ void VM::PushData(const VM::t_data& data, VMType ty)
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
 	}
-	else
+	else if(err_on_unknown)
 	{
 		throw std::runtime_error("Push: Data type not yet implemented");
 	}
@@ -429,7 +441,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::INT:
 		{
 			t_int val = ReadMemRaw<t_int>(addr);
-			std::get<t_int>(dat) = val;
+			dat = val;
 			break;
 		}
 
@@ -518,7 +530,7 @@ void VM::Reset()
 	m_ip = 0;
 	m_sp = m_memsize - m_framesize;
 	m_bp = m_memsize;
-	m_bp -= m_realsize; // padding of max. data type size to avoid writing beyond memory size
+	m_bp -= m_realsize + 1; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
 
 	std::memset(m_mem.get(), 0, m_memsize);

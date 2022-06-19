@@ -80,14 +80,20 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 	if(m_binary)
 	{
+		std::string varname;
+		if(m_cur_func != "")
+			varname = m_cur_func + "/" + val;
+		else
+			varname = val;
+
 		// get variable address and push it
-		const SymInfo *sym = m_symtab.GetSymbol(val);
+		const SymInfo *sym = m_symtab.GetSymbol(varname);
 		if(!sym)
 		{
 			if(m_cur_func == "")
 			{
 				// in global scope
-				sym = m_symtab.AddSymbol(val, -m_glob_stack, VMType::ADDR_BP);
+				sym = m_symtab.AddSymbol(varname, -m_glob_stack, VMType::ADDR_BP);
 				m_glob_stack += sizeof(t_real) + 1;  // data and descriptor size
 			}
 			else
@@ -99,7 +105,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 					m_local_stack[m_cur_func] = sizeof(t_real) + 1;
 				}
 
-				sym = m_symtab.AddSymbol(val, -m_local_stack[m_cur_func], VMType::ADDR_BP);
+				sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func], VMType::ADDR_BP);
 				m_local_stack[m_cur_func] += sizeof(t_real) + 1;  // data and descriptor size
 			}
 		}
@@ -363,7 +369,16 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 {
 	if(m_cur_func != "")
 		throw std::runtime_error("Nested functions are not allowed.");
+
+	// function name
 	m_cur_func = ast->GetName();
+
+	// function arguments
+	t_int num_args = 0;
+	if(ast->GetArgs())
+	{
+		num_args = ast->GetArgs()->NumChildren();
+	}
 
 	std::streampos jmp_end_streampos;
 	t_vm_addr end_func_addr = 0;
@@ -383,14 +398,41 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		(*m_ostr) << ast->GetName() << ":\n";
 	}
 
-	// TODO function arguments
+
+	// function arguments
+	if(ast->GetArgs())
+	{
+		// skip saved ebp and return address on stack frame
+		t_vm_addr addr_bp = 2 * (sizeof(t_vm_addr) + 1);
+
+		for(std::size_t i=0; i<ast->GetArgs()->NumChildren(); ++i)
+		{
+			auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(ast->GetArgs()->GetChild(i));
+			const std::string& argname = ident->GetLexerValue();
+			std::string varname = m_cur_func + "/" + argname;
+
+			//std::cout << "arg: " << varname << ", addr: " << addr_bp << std::endl;
+			m_symtab.AddSymbol(varname, addr_bp, VMType::ADDR_BP);
+			addr_bp += sizeof(t_real) + 1;  // TODO: implement for other data types
+		}
+	}
+
 
 	std::streampos before_block = m_ostr->tellp();
+
+	// add function to symbol table
+	m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, true, 0);
+
 	ast->GetBlock()->accept(this, level+1); // block
 
 
 	if(m_binary)
 	{
+		// push number of arguments
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
+		m_ostr->write(reinterpret_cast<const char*>(&num_args), sizeof(t_int));
+
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::RET));
 
 		// fill in end-of-function jump address
@@ -399,13 +441,10 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->seekp(jmp_end_streampos);
 		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr), sizeof(t_vm_addr));
 		m_ostr->seekp(end_func_streampos);
-
-		// add function to symbol table
-		m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, true, 0);
 	}
 	else
 	{
-		(*m_ostr) << "ret\n";
+		(*m_ostr) << "ret " << num_args << "\n";
 		(*m_ostr) << ast->GetName() << "_end:" << std::endl;
 	}
 
@@ -415,6 +454,12 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 {
+	//std::size_t num_args = ast->GetArgs()->NumChildren();
+
+	// push the function arguments
+	if(ast->GetArgs())
+		ast->GetArgs()->accept(this, level+1);
+
 	if(m_binary)
 	{
 		// get function address and push it
@@ -424,11 +469,11 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 			throw std::runtime_error("Tried to call unknown function \"" + ast->GetName() + "\".");
 		}
 
-		// TODO function arguments
-
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push function address
+		// push function address
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
 		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
 	}
 	else

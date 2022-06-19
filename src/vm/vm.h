@@ -107,7 +107,7 @@ protected:
 	/**
 	 * push data onto the stack
 	 */
-	void PushData(const t_data& data, VMType ty = VMType::UNKNOWN);
+	void PushData(const t_data& data, VMType ty = VMType::UNKNOWN, bool err_on_unknown = true);
 
 
 	/**

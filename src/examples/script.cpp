@@ -189,12 +189,16 @@ static void create_grammar()
 
 	// rule 31: idents -> ident, idents
 	idents->AddRule({ ident, comma, idents }, semanticindex++);
-	// rule 32: idents -> eps
+	// rule 32: idents -> ident
+	idents->AddRule({ ident }, semanticindex++);
+	// rule 33: idents -> eps
 	idents->AddRule({ g_eps }, semanticindex++);
 
-	// rule 33: exprs -> expr, exprs
+	// rule 34: exprs -> expr, exprs
 	exprs->AddRule({ expr, comma, exprs }, semanticindex++);
-	// rule 34: exprs -> eps
+	// rule 35: exprs -> expr
+	exprs->AddRule({ expr }, semanticindex++);
+	// rule 36: exprs -> eps
 	exprs->AddRule({ g_eps }, semanticindex++);
 }
 
@@ -466,7 +470,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				if(args[0]->GetType() != ASTType::TOKEN)
 					throw std::runtime_error("Expected a function mame.");
 
-				auto* funcname = dynamic_cast<ASTToken<std::string>*>(args[0].get());
+				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 				const std::string& ident = funcname->GetLexerValue();
 
 				std::size_t id = expr->GetId();
@@ -515,7 +519,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					throw std::runtime_error(
 						"Expected a symbol name on lhs of assignment.");
 
-				auto* symname = dynamic_cast<ASTToken<std::string>*>(args[0].get());
+				auto symname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 				symname->SetLValue(true);
 
 				std::size_t id = expr->GetId();
@@ -527,7 +531,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			// rule 14: stmts -> stmt stmts
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				auto stmts_lst = dynamic_pointer_cast<ASTList>(args[1]);
+				auto stmts_lst = std::dynamic_pointer_cast<ASTList>(args[1]);
 				stmts_lst->AddChild(args[0], true);
 				return stmts_lst;
 			},
@@ -581,7 +585,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				if(args[1]->GetType() != ASTType::TOKEN)
 					throw std::runtime_error("Expected a function mame.");
 
-				auto* funcname = dynamic_cast<ASTToken<std::string>*>(args[1].get());
+				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[1]);
 				const std::string& ident = funcname->GetLexerValue();
 
 				std::size_t id = stmt->GetId();
@@ -682,12 +686,23 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			// rule 31: idents -> ident, idents
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				auto ident_lst = dynamic_pointer_cast<ASTList>(args[1]);
-				ident_lst->AddChild(args[0], true);
-				return ident_lst;
+				auto idents_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
+				idents_lst->AddChild(args[0], true);
+				return idents_lst;
 			},
 
-			// rule 32, idents -> eps
+			// rule 32: idents -> ident
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = idents->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				auto idents_lst = std::make_shared<ASTList>(id, tableidx);
+
+				idents_lst->AddChild(args[0], true);
+				return idents_lst;
+			},
+
+			// rule 33, idents -> eps
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = idents->GetId();
@@ -695,15 +710,26 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTList>(id, tableidx);
 			},
 
-			// rule 33: exprs -> expr, exprs
+			// rule 34: exprs -> expr, exprs
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				auto ident_lst = dynamic_pointer_cast<ASTList>(args[1]);
-				ident_lst->AddChild(args[0], true);
-				return ident_lst;
+				auto exprs_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
+				exprs_lst->AddChild(args[0], true);
+				return exprs_lst;
 			},
 
-			// rule 34, exprs -> eps
+			// rule 35: exprs -> expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = exprs->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				auto exprs_lst = std::make_shared<ASTList>(id, tableidx);
+
+				exprs_lst->AddChild(args[0], true);
+				return exprs_lst;
+			},
+
+			// rule 36, exprs -> eps
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = exprs->GetId();
