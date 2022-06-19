@@ -142,7 +142,6 @@ static void lr1_create_parser()
 
 		ElementPtr elem = std::make_shared<Element>(start, 0, 0, Terminal::t_terminalset{{g_end}});
 		ClosurePtr coll = std::make_shared<Closure>();
-		coll->SetThisPtr(coll);
 		coll->AddElement(elem);
 		//std::cout << "\n\n" << *coll << std::endl;
 

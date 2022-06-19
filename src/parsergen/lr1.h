@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <vector>
 #include <variant>
+#include <memory>
 #include <functional>
 #include <iostream>
 
@@ -47,7 +48,7 @@ using t_conflictsolution = std::tuple<
 /**
  * LR(1) element
  */
-class Element
+class Element : public std::enable_shared_from_this<Element>
 {
 public:
 	Element(const NonTerminalPtr lhs, std::size_t rhsidx,
@@ -102,7 +103,7 @@ private:
 /**
  * closure of LR(1) element
  */
-class Closure
+class Closure : public std::enable_shared_from_this<Closure>
 {
 public:
 	friend class Collection;
@@ -134,9 +135,6 @@ public:
 	Closure(const Closure& coll);
 	const Closure& operator=(const Closure& coll);
 
-	// set the "this" shared pointer, TODO: find a better way to do this
-	void SetThisPtr(ClosurePtr ptr) { m_this = ptr; }
-
 	std::size_t GetId() const { return m_id; }
 
 	void AddElement(const ElementPtr elem);
@@ -167,8 +165,6 @@ private:
 
 
 private:
-	ClosurePtr m_this{};
-
 	std::vector<ElementPtr> m_elems{};
 	std::size_t m_id{0};      // closure id
 
@@ -183,7 +179,7 @@ private:
 /**
  * LR(1) collection of closures
  */
-class Collection
+class Collection : public std::enable_shared_from_this<Collection>
 {
 public:
 	// transition [ from closure, to closure, symbol, full_lr1 ]

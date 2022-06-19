@@ -48,11 +48,12 @@ bool Closure::CompareComefromTransitionsEqual::operator()(
 std::size_t Closure::g_id = 0;
 
 
-Closure::Closure() : m_elems{}, m_id{g_id++}
+Closure::Closure() : std::enable_shared_from_this<Closure>{}, m_elems{}, m_id{g_id++}
 {}
 
 
-Closure::Closure(const Closure& closure) : m_elems{}
+Closure::Closure(const Closure& closure)
+	: std::enable_shared_from_this<Closure>{}, m_elems{}
 {
 	this->operator=(closure);
 }
@@ -60,7 +61,6 @@ Closure::Closure(const Closure& closure) : m_elems{}
 
 const Closure& Closure::operator=(const Closure& closure)
 {
-	//this->m_this = closure.m_this;
 	this->m_id = closure.m_id;
 	this->m_comefrom_transitions = closure.m_comefrom_transitions;
 
@@ -260,7 +260,6 @@ bool Closure::AddLookaheads(const ClosurePtr closure)
 ClosurePtr Closure::DoTransition(const SymbolPtr transsym, bool full_lr) const
 {
 	ClosurePtr newclosure = std::make_shared<Closure>();
-	newclosure->SetThisPtr(newclosure);
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
@@ -273,9 +272,11 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym, bool full_lr) const
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 
+		ClosurePtr this_closure = std::const_pointer_cast<Closure>(
+			shared_from_this());
 		newclosure->AddElement(newelem);
 		newclosure->m_comefrom_transitions.emplace(
-			std::make_tuple(transsym, m_this, full_lr));
+			std::make_tuple(transsym, this_closure, full_lr));
 	}
 
 	return newclosure;

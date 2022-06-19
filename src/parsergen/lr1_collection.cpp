@@ -76,14 +76,14 @@ bool Collection::CompareTransitionsLess::operator()(
 
 
 Collection::Collection(const ClosurePtr closure)
-	: m_collection{}, m_transitions{}
+	: std::enable_shared_from_this<Collection>{}, m_collection{}, m_transitions{}
 {
 	m_collection.push_back(closure);
 }
 
 
 Collection::Collection()
-	: m_collection{}, m_transitions{}
+	: std::enable_shared_from_this<Collection>{}, m_collection{}, m_transitions{}
 {
 }
 
@@ -336,7 +336,6 @@ Collection Collection::ConvertToLALR() const
 		if(iter == closure_cache.end())
 		{
 			ClosurePtr newclosure = std::make_shared<Closure>(*closure);
-			newclosure->SetThisPtr(newclosure);
 			closure_map.emplace(std::make_pair(closure, newclosure));
 
 			closure_cache.emplace(std::make_pair(hash, newclosure));

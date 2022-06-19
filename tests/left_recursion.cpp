@@ -79,7 +79,6 @@ int main()
 	ElementPtr elem = std::make_shared<Element>(
 		Sprime, 0, 0, Terminal::t_terminalset{{ g_end }});
 	ClosurePtr coll = std::make_shared<Closure>();
-	coll->SetThisPtr(coll);
 	coll->AddElement(elem);
 
 	Collection colls{coll};

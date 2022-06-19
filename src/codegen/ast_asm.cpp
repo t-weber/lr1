@@ -93,7 +93,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			if(m_cur_func == "")
 			{
 				// in global scope
-				sym = m_symtab.AddSymbol(varname, -m_glob_stack, VMType::ADDR_BP);
+				sym = m_symtab.AddSymbol(varname, -m_glob_stack, VMType::ADDR_GBP);
 				m_glob_stack += sizeof(t_real) + 1;  // data and descriptor size
 			}
 			else
@@ -400,7 +400,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 
 	// function arguments
-	if(ast->GetArgs())
+	if(m_binary && ast->GetArgs())
 	{
 		// skip saved ebp and return address on stack frame
 		t_vm_addr addr_bp = 2 * (sizeof(t_vm_addr) + 1);
@@ -420,8 +420,12 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 	std::streampos before_block = m_ostr->tellp();
 
-	// add function to symbol table
-	m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, true, 0);
+	if(m_binary)
+	{
+		// add function to symbol table
+		m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, true, 0);
+		//std::cout << "function " << ast->GetName() << " at address " << before_block << std::endl;
+	}
 
 	ast->GetBlock()->accept(this, level+1); // block
 

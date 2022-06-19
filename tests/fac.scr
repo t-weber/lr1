@@ -1,0 +1,27 @@
+func fac(arg1)
+{
+	if(arg1 <= 1)
+	{
+		1;
+	}
+	else
+	{
+		arg1 * fac(arg1-1);
+	}
+}
+
+func fibo(arg1)
+{
+	if(arg1 <= 1)
+	{
+		1;
+	}
+	else
+	{
+		fibo(arg1-1) + fibo(arg1-2);
+	}
+}
+
+a = fac(5);
+b = fibo(10);
+a + b;

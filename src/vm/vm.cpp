@@ -76,7 +76,6 @@ bool VM::Run()
 			case OpCode::DEREF:
 			{
 				t_addr addr = PopAddress();
-				//std::cout << std::dec << "addr " << addr - m_bp << std::endl;
 				auto [ty, val] = ReadMemData(addr);
 				PushData(val, ty);
 
@@ -240,11 +239,14 @@ bool VM::Run()
 				// set up the function's stack frame for local variables
 				PushAddress(m_ip, VMType::ADDR_MEM);
 				PushAddress(m_bp, VMType::ADDR_MEM);
+
+				//std::cout << "saved base pointer " << m_bp << std::endl;
 				m_bp = m_sp;
 				m_sp -= m_framesize;
 
 				// jump to function
 				m_ip = funcaddr;
+				//std::cout << "calling function " << funcaddr << std::endl;
 				break;
 			}
 
@@ -263,6 +265,7 @@ bool VM::Run()
 
 				m_bp = PopAddress();
 				m_ip = PopAddress();  // jump back
+				//std::cout << "restored base pointer " << m_bp << std::endl;
 
 				// remove function arguments from stack
 				for(t_int arg=0; arg<num_args; ++arg)
@@ -388,6 +391,8 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 {
 	if(std::holds_alternative<t_real>(data))
 	{
+		//std::cout << "pushing real " << std::get<t_real>(data) << std::endl;
+
 		// push the actual data
 		PushRaw<t_real, m_realsize>(std::get<t_real>(data));
 
@@ -396,6 +401,8 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	}
 	else if(std::holds_alternative<t_int>(data))
 	{
+		//std::cout << "pushing int " << std::get<t_int>(data) << std::endl;
+
 		// push the actual data
 		PushRaw<t_int, m_intsize>(std::get<t_int>(data));
 
@@ -404,6 +411,8 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	}
 	else if(std::holds_alternative<t_addr>(data))
 	{
+		//std::cout << "pushing address " << std::get<T_ADDR>(data) << std::endl;
+
 		// push the actual address
 		PushRaw<t_addr, m_addrsize>(std::get<T_ADDR>(data));
 
@@ -427,7 +436,6 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 	addr += m_bytesize;
 	VMType ty = static_cast<VMType>(tyval);
 
-	//std::cout << "read data type " << int(tyval) << " from address " << (addr-1) << std::endl;
 	t_data dat;
 	switch(ty)
 	{
@@ -435,6 +443,8 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_real val = ReadMemRaw<t_real>(addr);
 			std::get<t_real>(dat) = val;
+
+			//std::cout << "read real " << val << " from address " << (addr-1) << std::endl;
 			break;
 		}
 
@@ -539,6 +549,8 @@ void VM::Reset()
 
 void VM::SetMem(t_addr addr, t_byte data)
 {
+	CheckMemoryBounds(addr, sizeof(t_byte));
+
 	m_mem[addr % m_memsize] = data;
 }
 

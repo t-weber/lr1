@@ -79,6 +79,8 @@ public:
 	t_val Top() const
 	{
 		t_addr addr = m_sp + 1; // skip descriptor byte
+
+		CheckMemoryBounds(addr, sizeof(t_val));
 		return *reinterpret_cast<t_val*>(m_mem.get() + addr);
 	}
 
@@ -127,6 +129,8 @@ protected:
 	template<class t_val>
 	t_val ReadMemRaw(t_addr addr) const
 	{
+		CheckMemoryBounds(addr, sizeof(t_val));
+
 		t_val val = *reinterpret_cast<t_val*>(&m_mem[addr]);
 		return val;
 	}
@@ -138,6 +142,8 @@ protected:
 	template<class t_val>
 	void WriteMemRaw(t_addr addr, t_val val)
 	{
+		CheckMemoryBounds(addr, sizeof(t_val));
+
 		*reinterpret_cast<t_val*>(&m_mem[addr]) = val;
 	}
 
@@ -148,6 +154,8 @@ protected:
 	template<class t_val, t_addr valsize = sizeof(t_val)>
 	t_val PopRaw()
 	{
+		CheckMemoryBounds(m_sp, sizeof(t_val));
+
 		t_val val = *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
 		m_sp += valsize;	// stack grows to lower addresses
 		return val;
@@ -160,6 +168,8 @@ protected:
 	template<class t_val, t_addr valsize = sizeof(t_val)>
 	void PushRaw(t_val val)
 	{
+		CheckMemoryBounds(m_sp, sizeof(t_val));
+
 		m_sp -= valsize;	// stack grows to lower addresses
 		*reinterpret_cast<t_val*>(m_mem.get() + m_sp) = val;
 	}
@@ -333,6 +343,14 @@ protected:
 		}
 
 		PushRaw<t_bool, m_boolsize>(result);
+	}
+
+
+private:
+	void CheckMemoryBounds(t_addr addr, std::size_t size = 1) const
+	{
+		if(std::size_t(addr) + size > std::size_t(m_memsize) || addr < 0)
+			throw std::runtime_error("Tried to access out of memory bounds.");
 	}
 
 

@@ -18,13 +18,14 @@
 
 
 Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la)
-	: m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_semanticrule{lhs->GetSemanticRule(rhsidx)},
+	: std::enable_shared_from_this<Element>{},
+		m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_semanticrule{lhs->GetSemanticRule(rhsidx)},
 		m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
 {
 }
 
 
-Element::Element(const Element& elem) : m_lookaheads{}
+Element::Element(const Element& elem) : std::enable_shared_from_this<Element>{}, m_lookaheads{}
 {
 	this->operator=(elem);
 }

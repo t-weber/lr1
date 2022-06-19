@@ -1,8 +1,8 @@
-func fkt(arg1)
+func fkt(arg1, arg2)
 {
-	a = arg1*2 + 12;
+	a = arg1*2 + arg2;
 	a;
 }
 
 a = 5;
-a + fkt(50) + a;
+a + fkt(50, 12) + a;

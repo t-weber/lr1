@@ -253,7 +253,6 @@ static void lr1_create_parser()
 		ElementPtr elem = std::make_shared<Element>(
 			start, 0, 0, Terminal::t_terminalset{{ g_end }});
 		ClosurePtr closure = std::make_shared<Closure>();
-		closure->SetThisPtr(closure); // TODO: find a better way to set the "this" shared pointer
 		closure->AddElement(elem);
 
 #if USE_LALR != 0
@@ -714,7 +713,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto exprs_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
-				exprs_lst->AddChild(args[0], true);
+				exprs_lst->AddChild(args[0], false);
 				return exprs_lst;
 			},
 
@@ -725,7 +724,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				auto exprs_lst = std::make_shared<ASTList>(id, tableidx);
 
-				exprs_lst->AddChild(args[0], true);
+				exprs_lst->AddChild(args[0], false);
 				return exprs_lst;
 			},
 
@@ -839,7 +838,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				<< ostrAsm.str();
 #endif
 
-			VM vm(1024);
+			VM vm(4096);
 			vm.SetMem(0, ostrAsmBin.str());
 			vm.Run();
 			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
