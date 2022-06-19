@@ -7,6 +7,10 @@
  * References:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
  *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
+ *	- https://www.cs.ecu.edu/karl/5220/spr16/Notes/Bottom-up/lr1.html
+ *	- https://www.cs.ecu.edu/karl/5220/spr16/Notes/Bottom-up/slr1table.html
+ *	- https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ *	- https://en.wikipedia.org/wiki/LR_parser
  */
 
 #include "lr1.h"

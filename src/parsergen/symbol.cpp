@@ -7,6 +7,7 @@
  * References:
  *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
  *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
+ *	- https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 
 #include "symbol.h"

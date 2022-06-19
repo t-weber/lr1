@@ -24,6 +24,7 @@
 #define DEBUG_PARSERGEN   1
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
+#define RUN_VM            1
 
 
 /**
@@ -838,10 +839,33 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				<< ostrAsm.str();
 #endif
 
+			std::string strAsmBin = ostrAsmBin.str();
+
+			std::string binfile{"script.bin"};
+			std::ofstream ofstrAsmBin(binfile, std::ios_base::binary);
+			if(!ofstrAsmBin)
+			{
+				std::cerr << "Cannot open \""
+					<< binfile << "\"." << std::endl;
+				return false;
+			}
+			ofstrAsmBin.write(strAsmBin.data(), strAsmBin.size());
+			if(ofstrAsmBin.fail())
+			{
+				std::cerr << "Cannot write \""
+					<< binfile << "\"." << std::endl;
+				return false;
+			}
+
+			std::cout << "Created compiled program \""
+				<< binfile << "\"." << std::endl;
+
+#if RUN_VM != 0
 			VM vm(4096);
-			vm.SetMem(0, ostrAsmBin.str());
+			vm.SetMem(0, strAsmBin);
 			vm.Run();
 			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
+#endif
 		}
 	}
 	catch(const std::exception& err)

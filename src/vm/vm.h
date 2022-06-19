@@ -55,10 +55,13 @@ public:
 	VM(t_addr memsize = 1024);
 	~VM() = default;
 
+	void SetDebug(bool b) { m_debug = b; }
+
 	void Reset();
 	bool Run();
 
 	void SetMem(t_addr addr, t_byte data);
+	void SetMem(t_addr addr, const t_byte* data, std::size_t size);
 	void SetMem(t_addr addr, const std::string& data);
 
 	t_addr GetSP() const { return m_sp; }
@@ -355,6 +358,7 @@ private:
 
 
 private:
+	bool m_debug{false};
 	std::unique_ptr<t_byte[]> m_mem{};
 
 	// registers

@@ -26,7 +26,14 @@ bool VM::Run()
 	{
 		t_byte _op = m_mem[m_ip++];
 		OpCode op = static_cast<OpCode>(_op);
-		//std::cout << "ip = " << m_ip << ", opcode: " << std::hex << static_cast<std::size_t>(op) << std::endl;
+
+		if(m_debug)
+		{
+			std::cout << "read instruction at ip = " << t_int(m_ip)
+				<< ", opcode: " << std::hex
+				<< static_cast<std::size_t>(op)
+				<< std::dec << std::endl;
+		}
 
 		switch(op)
 		{
@@ -79,7 +86,13 @@ bool VM::Run()
 				auto [ty, val] = ReadMemData(addr);
 				PushData(val, ty);
 
-				//std::cout << "dereferenced address " << addr << ": " << std::get<t_real>(val) << std::endl;
+				if(m_debug)
+				{
+					std::cout << "dereferenced address "
+						<< addr << ": "
+						<< std::get<t_real>(val)
+						<< std::endl;
+				}
 				break;
 			}
 
@@ -231,7 +244,32 @@ bool VM::Run()
 				break;
 			}
 
-			case OpCode::CALL:
+			/**
+			 * stack frame for functions:
+			 *
+			 *  --------------------
+			 * |  local var n       |  <-- m_sp
+			 *  --------------------      |
+			 * |      ...           |     |
+			 *  --------------------      |
+			 * |  local var 2       |     |  m_framesize
+			 *  --------------------      |
+			 * |  local var 1       |     |
+			 *  --------------------      |
+			 * |  old m_bp          |  <-- m_bp (= previous m_sp)
+			 *  --------------------
+			 * |  old m_ip for ret  |
+			 *  --------------------
+			 * |  func. arg 1       |
+			 *  --------------------
+			 * |  func. arg 2       |
+			 *  --------------------
+			 * |  ...               |
+			 *  --------------------
+			 * |  func. arg n       |
+			 *  --------------------
+			 */
+			case OpCode::CALL: // function call
 			{
 				t_addr funcaddr = PopAddress();
 
@@ -240,17 +278,26 @@ bool VM::Run()
 				PushAddress(m_ip, VMType::ADDR_MEM);
 				PushAddress(m_bp, VMType::ADDR_MEM);
 
-				//std::cout << "saved base pointer " << m_bp << std::endl;
+				if(m_debug)
+				{
+					std::cout << "saved base pointer "
+						<< m_bp << std::endl;
+				}
 				m_bp = m_sp;
 				m_sp -= m_framesize;
 
 				// jump to function
 				m_ip = funcaddr;
-				//std::cout << "calling function " << funcaddr << std::endl;
+				if(m_debug)
+				{
+					std::cout << "calling function "
+						<< funcaddr
+						<< std::endl;
+				}
 				break;
 			}
 
-			case OpCode::RET:
+			case OpCode::RET: // return from function
 			{
 				// get number of function arguments
 				t_int num_args = std::get<t_int>(PopData());
@@ -265,7 +312,12 @@ bool VM::Run()
 
 				m_bp = PopAddress();
 				m_ip = PopAddress();  // jump back
-				//std::cout << "restored base pointer " << m_bp << std::endl;
+
+				if(m_debug)
+				{
+					std::cout << "restored base pointer "
+						<< m_bp << std::endl;
+				}
 
 				// remove function arguments from stack
 				for(t_int arg=0; arg<num_args; ++arg)
@@ -277,8 +329,9 @@ bool VM::Run()
 
 			default:
 			{
-				std::cerr << "Error: Invalid opcode " << std::hex
-					<< static_cast<t_addr>(_op) << std::endl;
+				std::cerr << "Error: Invalid instruction " << std::hex
+					<< static_cast<t_addr>(_op) << std::dec
+					<< std::endl;
 				return false;
 			}
 		}
@@ -305,7 +358,12 @@ VM::t_addr VM::PopAddress()
 	// get address from stack
 	t_addr addr = PopRaw<t_addr, m_addrsize>();
 
-	//std::cout << std::dec << "popped address " << addr << " of type " << int(regval) << std::endl;
+	if(m_debug)
+	{
+		std::cout << "popped address " << t_int(addr)
+			<< " of type " << t_int(regval)
+			<< std::endl;
+	}
 
 	// get absolute address using base address from register
 	VMType thereg = static_cast<VMType>(regval);
@@ -319,7 +377,6 @@ VM::t_addr VM::PopAddress()
 		default: throw std::runtime_error("Unknown address base register"); break;
 	}
 
-	//std::cout << "got address " << t_int(addr) << " from stack" << std::endl;
 	return addr;
 }
 
@@ -391,7 +448,12 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 {
 	if(std::holds_alternative<t_real>(data))
 	{
-		//std::cout << "pushing real " << std::get<t_real>(data) << std::endl;
+		if(m_debug)
+		{
+			std::cout << "pushing real "
+				<< std::get<t_real>(data)
+				<< std::endl;
+		}
 
 		// push the actual data
 		PushRaw<t_real, m_realsize>(std::get<t_real>(data));
@@ -401,7 +463,12 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	}
 	else if(std::holds_alternative<t_int>(data))
 	{
-		//std::cout << "pushing int " << std::get<t_int>(data) << std::endl;
+		if(m_debug)
+		{
+			std::cout << "pushing int "
+				<< std::get<t_int>(data)
+				<< std::endl;
+		}
 
 		// push the actual data
 		PushRaw<t_int, m_intsize>(std::get<t_int>(data));
@@ -411,7 +478,12 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	}
 	else if(std::holds_alternative<t_addr>(data))
 	{
-		//std::cout << "pushing address " << std::get<T_ADDR>(data) << std::endl;
+		if(m_debug)
+		{
+			std::cout << "pushing address "
+				<< std::get<T_ADDR>(data)
+				<< std::endl;
+		}
 
 		// push the actual address
 		PushRaw<t_addr, m_addrsize>(std::get<T_ADDR>(data));
@@ -443,8 +515,12 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_real val = ReadMemRaw<t_real>(addr);
 			std::get<t_real>(dat) = val;
-
-			//std::cout << "read real " << val << " from address " << (addr-1) << std::endl;
+			if(m_debug)
+			{
+				std::cout << "read real " << val
+					<< " from address " << (addr-1)
+					<< std::endl;
+			}
 			break;
 		}
 
@@ -452,6 +528,12 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_int val = ReadMemRaw<t_int>(addr);
 			dat = val;
+			if(m_debug)
+			{
+				std::cout << "read int " << val
+					<< " from address " << (addr-1)
+					<< std::endl;
+			}
 			break;
 		}
 
@@ -463,6 +545,12 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_addr val = ReadMemRaw<t_addr>(addr);
 			dat = val;
+			if(m_debug)
+			{
+				std::cout << "read address " << t_int(val)
+					<< " from address " << t_int(addr-1)
+					<< std::endl;
+			}
 			break;
 		}
 
@@ -484,7 +572,13 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 {
 	if(std::holds_alternative<t_real>(data))
 	{
-		//std::cout << "writing real value " << std::get<t_real>(data) << " to address " << addr << std::endl;
+		if(m_debug)
+		{
+			std::cout << "writing real value "
+				<< std::get<t_real>(data)
+				<< " to address " << addr
+				<< std::endl;
+		}
 
 		// write descriptor prefix
 		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(VMType::REAL));
@@ -495,7 +589,13 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 	}
 	else if(std::holds_alternative<t_int>(data))
 	{
-		//std::cout << "writing int value " << std::get<t_int>(data) << " to address " << addr << std::endl;
+		if(m_debug)
+		{
+			std::cout << "writing int value "
+				<< std::get<t_int>(data)
+				<< " to address " << addr
+				<< std::endl;
+		}
 
 		// write descriptor prefix
 		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(VMType::INT));
@@ -506,7 +606,13 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 	}
 	/*else if(std::holds_alternative<t_addr>(data))
 	{
-		//std::cout << "writing address value " << std::get<T_ADDR>(data) << " to address " << addr << std::endl;
+		if(m_debug)
+		{
+			std::cout << "writing address value "
+				<< std::get<T_ADDR>(data)
+				<< " to address " << addr
+				<< std::endl;
+		}
 
 		// write descriptor prefix
 		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(ty));
@@ -547,7 +653,7 @@ void VM::Reset()
 }
 
 
-void VM::SetMem(t_addr addr, t_byte data)
+void VM::SetMem(t_addr addr, VM::t_byte data)
 {
 	CheckMemoryBounds(addr, sizeof(t_byte));
 
@@ -559,4 +665,11 @@ void VM::SetMem(t_addr addr, const std::string& data)
 {
 	for(std::size_t i=0; i<data.size(); ++i)
 		SetMem(addr + (t_addr)(i), static_cast<t_byte>(data[i]));
+}
+
+
+void VM::SetMem(t_addr addr, const VM::t_byte* data, std::size_t size)
+{
+	for(std::size_t i=0; i<size; ++i)
+		SetMem(addr + t_addr(i), data[i]);
 }

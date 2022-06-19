@@ -3,6 +3,12 @@
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
  * @date 27-jun-2020
  * @license see 'LICENSE.EUPL' file
+ *
+ * References:
+ *	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
+ *	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
+ *	- https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ *	- https://de.wikipedia.org/wiki/LL(k)-Grammatik
  */
 
 #ifndef __LL1_H__
