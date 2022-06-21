@@ -234,6 +234,9 @@ public:
 
 	bool WriteGraph(const std::string& file, bool write_full_coll=1) const;
 
+	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
+	void ReportProgress(const std::string& msg, bool finished = false);
+
 
 protected:
 	Collection();
@@ -248,6 +251,8 @@ protected:
 private:
 	std::vector<ClosurePtr> m_collection{};  // collection of LR(1) closures
 	t_transitions m_transitions{};           // transitions between collection, [from, to, transition symbol]
+
+	std::function<void(const std::string& msg, bool finished)> m_progress_observer{};
 
 	friend std::ostream& operator<<(std::ostream& ostr, const Collection& colls);
 };

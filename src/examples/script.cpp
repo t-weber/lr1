@@ -256,15 +256,24 @@ static void lr1_create_parser()
 		ClosurePtr closure = std::make_shared<Closure>();
 		closure->AddElement(elem);
 
+		auto progress = [](const std::string& msg, [[maybe_unused]] bool done)
+		{
+			std::cout << "\r" << msg;
+			std::cout.flush();
+		};
+
 #if USE_LALR != 0
 		//Collection colls{ closure };
+		//colls.SetProgressObserver(progress);
 		//colls.DoTransitions();
 		//Collection collsLALR = colls.ConvertToLALR();
 
 		Collection collsLALR{ closure };
+		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions(false);
 #else
 		Collection colls{ closure };
+		colls.SetProgressObserver(progress);
 		colls.DoTransitions();
 #endif
 
@@ -529,7 +538,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 14: stmts -> stmt stmts
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto stmts_lst = std::dynamic_pointer_cast<ASTList>(args[1]);
 				stmts_lst->AddChild(args[0], true);
@@ -537,7 +546,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 15, stmts -> eps
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmts->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -684,7 +693,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 31: idents -> ident, idents
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto idents_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
 				idents_lst->AddChild(args[0], true);
@@ -703,7 +712,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 33, idents -> eps
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = idents->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -711,7 +720,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 34: exprs -> expr, exprs
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto exprs_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
 				exprs_lst->AddChild(args[0], false);
@@ -730,7 +739,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 36, exprs -> eps
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = exprs->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -832,14 +841,13 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
+			std::string strAsmBin = ostrAsmBin.str();
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "Generated code ("
-				<< ostrAsmBin.str().size() << " bytes):\n"
+				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();
 #endif
-
-			std::string strAsmBin = ostrAsmBin.str();
 
 			std::string binfile{"script.bin"};
 			std::ofstream ofstrAsmBin(binfile, std::ios_base::binary);

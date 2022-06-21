@@ -92,6 +92,19 @@ Collection::Collection()
 }
 
 
+void Collection::SetProgressObserver(std::function<void(const std::string&, bool)> func)
+{
+	m_progress_observer = func;
+}
+
+
+void Collection::ReportProgress(const std::string& msg, bool finished)
+{
+	if(m_progress_observer)
+		m_progress_observer(msg, finished);
+}
+
+
 /**
  * perform all possible lr(1) transitions from all collections
  * @return [source closure id, transition symbol, destination closure]
@@ -116,12 +129,14 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 		const SymbolPtr trans_sym = std::get<0>(tup);
 		const ClosurePtr closure_to = std::get<1>(tup);
 		std::size_t hash_to = closure_to->hash();
-
 		auto cacheIter = closure_cache->find(hash_to);
 		bool new_closure = (cacheIter == closure_cache->end());
 
-		//std::cout << "transition " << closure_from->GetId() << " -> " << closure_to->GetId()
-		//	<< " via " << trans_sym->GetId() << ", new: " << new_closure << std::endl;
+		std::ostringstream ostrMsg;
+		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
+			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".          ";
+		//ostrMsg << " Transition symbol: " << trans_sym->GetId() << ".";
+		ReportProgress(ostrMsg.str(), false);
 		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
 
 		if(new_closure)
@@ -174,8 +189,16 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 		const ClosurePtr closure_to = std::get<1>(tup);
 		std::size_t hash_to = closure_to->hash(true);
 		auto cacheIter = closure_cache->find(hash_to);
+		bool new_closure = (cacheIter == closure_cache->end());
 
-		if(cacheIter == closure_cache->end())
+		std::ostringstream ostrMsg;
+		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
+			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".          ";
+		//ostrMsg << " Transition symbol: " << trans_sym->GetId() << ".";
+		ReportProgress(ostrMsg.str(), false);
+		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
+
+		if(new_closure)
 		{
 			// new unique closure
 			closure_cache->emplace(std::make_pair(hash_to, closure_to));
@@ -222,6 +245,7 @@ void Collection::DoTransitions(bool full_lr)
 		DoLALRTransitions(m_collection[0]);
 
 	Simplify();
+	ReportProgress("All transitions done.                    \n", true);
 }
 
 
@@ -314,8 +338,7 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 	ofstr.flush();
 	ofstr.close();
 
-	std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str());
-	return true;
+	return std::system(("dot -Tsvg " + outfile_graph + " -o " + outfile_svg).c_str()) == 0;
 }
 
 

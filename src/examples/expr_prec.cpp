@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <cstdint>
 
@@ -23,6 +24,7 @@
 #define DEBUG_PARSERGEN   1
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
+#define WRITE_BINFILE     0
 
 
 enum : std::size_t
@@ -332,7 +334,7 @@ static void lr1_run_parser()
 			},
 
 			// rule 8: expr -> ident()
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -340,7 +342,7 @@ static void lr1_run_parser()
 			},
 
 			// rule 9: expr -> ident(expr)
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -348,7 +350,7 @@ static void lr1_run_parser()
 			},
 
 			// rule 10: expr -> ident(expr, expr)
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				// TODO: function call
 				std::cerr << "not yet implemented" << std::endl;
@@ -443,15 +445,32 @@ static void lr1_run_parser()
 			ASTAsm astasmbin{ostrAsmBin, &ops};
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
+			std::string strAsmBin = ostrAsmBin.str();
+
+#if WRITE_BINFILE != 0
+			std::string binfile{"expr_prec.bin"};
+			std::ofstream ofstrAsmBin(binfile, std::ios_base::binary);
+			if(!ofstrAsmBin)
+			{
+				std::cerr << "Cannot open \""
+					<< binfile << "\"." << std::endl;
+			}
+			ofstrAsmBin.write(strAsmBin.data(), strAsmBin.size());
+			if(ofstrAsmBin.fail())
+			{
+				std::cerr << "Cannot write \""
+					<< binfile << "\"." << std::endl;
+			}
+#endif
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "Generated code ("
-				<< ostrAsmBin.str().size() << " bytes):\n"
+				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();
 #endif
 
 			VM vm(1024);
-			vm.SetMem(0, ostrAsmBin.str());
+			vm.SetMem(0, strAsmBin);
 			vm.Run();
 			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
 		}
