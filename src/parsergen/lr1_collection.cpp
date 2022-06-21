@@ -134,7 +134,7 @@ void Collection::DoTransitions(const ClosurePtr closure_from, t_closurecache clo
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".          ";
+			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".";
 		//ostrMsg << " Transition symbol: " << trans_sym->GetId() << ".";
 		ReportProgress(ostrMsg.str(), false);
 		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
@@ -193,7 +193,7 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 
 		std::ostringstream ostrMsg;
 		ostrMsg << "Calculating " << (new_closure ? "new " : "") <<  "transition "
-			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".          ";
+			<< closure_from->GetId() << " -> " << closure_to->GetId() << ".";
 		//ostrMsg << " Transition symbol: " << trans_sym->GetId() << ".";
 		ReportProgress(ostrMsg.str(), false);
 		//std::cout << std::hex << closure_to->hash() << ", " << *closure_to << std::endl;
@@ -245,7 +245,7 @@ void Collection::DoTransitions(bool full_lr)
 		DoLALRTransitions(m_collection[0]);
 
 	Simplify();
-	ReportProgress("All transitions done.                    \n", true);
+	ReportProgress("All transitions done.", true);
 }
 
 
