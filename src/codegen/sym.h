@@ -22,7 +22,9 @@ struct SymInfo
 	t_vm_addr addr{0};             // relative address of the variable
 	VMType loc{VMType::ADDR_BP};   // register with the base address
 
+	VMType ty{VMType::UNKNOWN};    // data type
 	bool is_func{false};           // function or variable
+
 	t_vm_addr arg_size{0};         // size of arguments
 };
 
@@ -48,12 +50,14 @@ public:
 
 	const SymInfo* AddSymbol(const std::string& name,
 		t_vm_addr addr, VMType loc = VMType::ADDR_BP,
-		bool is_func = false, t_vm_addr arg_size = 0)
+		VMType ty = VMType::UNKNOWN, bool is_func = false,
+		t_vm_addr arg_size = 0)
 	{
 		SymInfo info
 		{
 			.addr = addr,
 			.loc = loc,
+			.ty = ty,
 			.is_func = is_func,
 			.arg_size = arg_size,
 		};

@@ -392,6 +392,53 @@ void VM::PushAddress(t_addr addr, VMType ty)
 
 
 /**
+ * get top data from the stack, which is prefixed
+ * with a type descriptor byte
+ */
+VM::t_data VM::TopData() const
+{
+	// get data type info from stack
+	t_byte tyval = TopRaw<t_byte, m_bytesize>();
+	VMType ty = static_cast<VMType>(tyval);
+
+	t_data dat;
+
+	switch(ty)
+	{
+		case VMType::REAL:
+		{
+			dat = TopRaw<t_real, m_realsize>(m_bytesize);
+			break;
+		}
+
+		case VMType::INT:
+		{
+			dat = TopRaw<t_int, m_intsize>(m_bytesize);
+			break;
+		}
+
+		case VMType::ADDR_MEM:
+		case VMType::ADDR_IP:
+		case VMType::ADDR_SP:
+		case VMType::ADDR_BP:
+		case VMType::ADDR_GBP:
+		{
+			dat = TopRaw<t_addr, m_addrsize>(m_bytesize);
+			break;
+		}
+
+		default:
+		{
+			throw std::runtime_error("Top: Data type not yet implemented");
+			break;
+		}
+	}
+
+	return dat;
+}
+
+
+/**
  * pop data from the stack, which is prefixed
  * with a type descriptor byte
  */
@@ -407,15 +454,13 @@ VM::t_data VM::PopData()
 	{
 		case VMType::REAL:
 		{
-			t_real val = PopRaw<t_real, m_realsize>();
-			std::get<t_real>(dat) = val;
+			dat = PopRaw<t_real, m_realsize>();
 			break;
 		}
 
 		case VMType::INT:
 		{
-			t_int val = PopRaw<t_int, m_intsize>();
-			dat = val;
+			dat = PopRaw<t_int, m_intsize>();
 			break;
 		}
 
@@ -425,8 +470,7 @@ VM::t_data VM::PopData()
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
 		{
-			t_addr val = PopRaw<t_addr, m_addrsize>();
-			dat = val;
+			dat = PopRaw<t_addr, m_addrsize>();
 			break;
 		}
 
@@ -481,12 +525,12 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 		if(m_debug)
 		{
 			std::cout << "pushing address "
-				<< std::get<T_ADDR>(data)
+				<< std::get<t_addr>(data)
 				<< std::endl;
 		}
 
 		// push the actual address
-		PushRaw<t_addr, m_addrsize>(std::get<T_ADDR>(data));
+		PushRaw<t_addr, m_addrsize>(std::get<t_addr>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
@@ -514,7 +558,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::REAL:
 		{
 			t_real val = ReadMemRaw<t_real>(addr);
-			std::get<t_real>(dat) = val;
+			dat = val;
 			if(m_debug)
 			{
 				std::cout << "read real " << val
@@ -609,7 +653,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		if(m_debug)
 		{
 			std::cout << "writing address value "
-				<< std::get<T_ADDR>(data)
+				<< std::get<t_addr>(data)
 				<< " to address " << addr
 				<< std::endl;
 		}
@@ -619,7 +663,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		addr += m_bytesize;
 
 		// write the actual data
-		WriteMemRaw<t_int>(addr, std::get<T_ADDR>(data));
+		WriteMemRaw<t_int>(addr, std::get<t_addr>(data));
 	}*/
 	else
 	{
@@ -646,7 +690,7 @@ void VM::Reset()
 	m_ip = 0;
 	m_sp = m_memsize - m_framesize;
 	m_bp = m_memsize;
-	m_bp -= m_realsize + 1; // padding of max. data type size to avoid writing beyond memory size
+	m_bp -= sizeof(t_data) + 1; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
 
 	std::memset(m_mem.get(), 0, m_memsize);

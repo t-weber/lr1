@@ -147,16 +147,26 @@ static void lr1_create_parser()
 		closure->AddElement(elem);
 		//std::cout << "\n\n" << *closure << std::endl;
 
+		auto progress = [](const std::string& msg, [[maybe_unused]] bool done)
+		{
+			std::cout << "\r" << msg << "                ";
+			if(done)
+				std::cout << "\n";
+			std::cout.flush();
+		};
 
 #if USE_LALR != 0
 		/*Collection colls{ closure };
+		colls.SetProgressObserver(progress);
 		colls.DoTransitions();
 		Collection collsLALR = colls.ConvertToLALR();*/
 
 		Collection collsLALR{ closure };
+		collsLALR.SetProgressObserver(progress);
 		collsLALR.DoTransitions(false);
 #else
 		Collection colls{ closure };
+		colls.SetProgressObserver(progress);
 		colls.DoTransitions();
 #endif
 
@@ -472,7 +482,13 @@ static void lr1_run_parser()
 			VM vm(1024);
 			vm.SetMem(0, strAsmBin);
 			vm.Run();
-			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
+
+			std::cout << "Result: ";
+			std::visit([](auto&& val) -> void
+			{
+				std::cout << val;
+			}, vm.TopData());
+			std::cout << std::endl;
 		}
 	}
 	catch(const std::exception& err)

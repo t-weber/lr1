@@ -43,7 +43,18 @@ static bool run_vm(const char* _prog = nullptr)
 		//vm.SetDebug(true);
 		vm.SetMem(0, bytes.data(), filesize);
 		vm.Run();
-		std::cout << "Result: " << vm.Top<t_real>() << std::endl;
+		VM::t_data dat = vm.TopData();
+		std::cout << "Top of stack: ";
+		std::visit([](auto&& val) -> void
+		{
+			using t_val = std::decay_t<decltype(val)>;
+
+			std::cout << val
+				<< " ["
+				<< vm_type_name<t_val>
+				<< "]";
+		}, dat);
+		std::cout << std::endl;
 	}
 	catch(const std::exception& err)
 	{

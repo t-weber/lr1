@@ -874,7 +874,13 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			VM vm(4096);
 			vm.SetMem(0, strAsmBin);
 			vm.Run();
-			std::cout << "Result: " << vm.Top<t_real>() << std::endl;
+
+			std::cout << "Result: ";
+			std::visit([](auto&& val) -> void
+			{
+				std::cout << val;
+			}, vm.TopData());
+			std::cout << std::endl;
 #endif
 		}
 	}

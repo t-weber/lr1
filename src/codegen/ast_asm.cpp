@@ -28,7 +28,7 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 {
 	if(!ast->HasLexerValue())
 		return;
-	t_real val = ast->GetLexerValue();
+	t_vm_real val = static_cast<t_vm_real>(ast->GetLexerValue());
 
 	if(m_binary)
 	{
@@ -37,7 +37,7 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 		// write type descriptor byte
 		m_ostr->put(static_cast<t_vm_byte>(VMType::REAL));
 		// write value
-		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_real));
+		m_ostr->write(reinterpret_cast<const char*>(&val), vm_type_size<VMType::REAL, false>);
 	}
 	else
 	{
@@ -51,7 +51,7 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 {
 	if(!ast->HasLexerValue())
 		return;
-	t_int val = ast->GetLexerValue();
+	t_vm_int val = static_cast<t_vm_int>(ast->GetLexerValue());
 
 	if(m_binary)
 	{
@@ -60,7 +60,7 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 		// write type descriptor byte
 		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
 		// write data
-		m_ostr->write(reinterpret_cast<const char*>(&val), sizeof(t_int));
+		m_ostr->write(reinterpret_cast<const char*>(&val), vm_type_size<VMType::INT, false>);
 	}
 	else
 	{
@@ -88,25 +88,27 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 		// get variable address and push it
 		const SymInfo *sym = m_symtab.GetSymbol(varname);
-		if(!sym)
+		if(!sym)                      // symbol not yet seen -> register it
 		{
-			if(m_cur_func == "")
+			constexpr VMType symty = VMType::REAL; // TODO: other data types
+
+			if(m_cur_func == "")  // in global scope
 			{
-				// in global scope
-				sym = m_symtab.AddSymbol(varname, -m_glob_stack, VMType::ADDR_GBP);
-				m_glob_stack += sizeof(t_real) + 1;  // data and descriptor size
+				sym = m_symtab.AddSymbol(varname, -m_glob_stack,
+					VMType::ADDR_GBP, symty);
+				m_glob_stack += vm_type_size<symty, true>;
 			}
-			else
+			else                  // in local function scope
 			{
-				// in local function scope
 				if(m_local_stack.find(m_cur_func) == m_local_stack.end())
 				{
-					// padding of maximum data type size, to avoid overwriting stack value
-					m_local_stack[m_cur_func] = sizeof(t_real) + 1;
+					// padding of maximum data type size, to avoid overwriting top stack value
+					m_local_stack[m_cur_func] = sizeof(/*t_data*/ t_vm_longest_type) + 1;
 				}
 
-				sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func], VMType::ADDR_BP);
-				m_local_stack[m_cur_func] += sizeof(t_real) + 1;  // data and descriptor size
+				sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
+					VMType::ADDR_BP, symty);
+				m_local_stack[m_cur_func] += vm_type_size<symty, true>;
 			}
 		}
 
@@ -374,7 +376,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	m_cur_func = ast->GetName();
 
 	// function arguments
-	t_int num_args = 0;
+	t_vm_int num_args = 0;
 	if(ast->GetArgs())
 	{
 		num_args = ast->GetArgs()->NumChildren();
@@ -411,9 +413,10 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 			const std::string& argname = ident->GetLexerValue();
 			std::string varname = m_cur_func + "/" + argname;
 
+			constexpr VMType argty = VMType::REAL; // TODO: implement for other data types
 			//std::cout << "arg: " << varname << ", addr: " << addr_bp << std::endl;
-			m_symtab.AddSymbol(varname, addr_bp, VMType::ADDR_BP);
-			addr_bp += sizeof(t_real) + 1;  // TODO: implement for other data types
+			m_symtab.AddSymbol(varname, addr_bp, VMType::ADDR_BP, argty);
+			addr_bp += vm_type_size<argty, true>;
 		}
 	}
 
@@ -423,7 +426,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary)
 	{
 		// add function to symbol table
-		m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, true, 0);
+		m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, VMType::UNKNOWN, true, 0);
 		//std::cout << "function " << ast->GetName() << " at address " << before_block << std::endl;
 	}
 
@@ -435,7 +438,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		// push number of arguments
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
-		m_ostr->write(reinterpret_cast<const char*>(&num_args), sizeof(t_int));
+		m_ostr->write(reinterpret_cast<const char*>(&num_args), sizeof(t_vm_int));
 
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::RET));
 

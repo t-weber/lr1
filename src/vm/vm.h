@@ -15,15 +15,9 @@
 #include <cmath>
 #include <iostream>
 
-#include "../codegen/lval.h"
+//#include "../codegen/lval.h"
 #include "opcodes.h"
 #include "helpers.h"
-
-// indices in data variant
-#define T_REAL  0
-#define T_INT   1
-#define T_BOOL  2
-#define T_ADDR  3
 
 
 class VM
@@ -32,9 +26,9 @@ public:
 	// data types
 	using t_byte = ::t_vm_byte;
 	using t_addr = ::t_vm_addr;
-	using t_real = ::t_real;
-	using t_int = ::t_int;
-	using t_bool = t_byte;
+	using t_real = ::t_vm_real;
+	using t_int = ::t_vm_int;
+	using t_bool = ::t_vm_byte;
 
 	// variant of all data types
 	using t_data = std::variant<t_real, t_int, t_bool, t_addr>;
@@ -74,18 +68,10 @@ public:
 	void SetGBP(t_addr bp) { m_gbp = bp; }
 	void SetIP(t_addr ip) { m_ip = ip; }
 
-
 	/**
-	 * get the value on top of the stack
+	 * get top data from the stack
 	 */
-	template<class t_val>
-	t_val Top() const
-	{
-		t_addr addr = m_sp + 1; // skip descriptor byte
-
-		CheckMemoryBounds(addr, sizeof(t_val));
-		return *reinterpret_cast<t_val*>(m_mem.get() + addr);
-	}
+	t_data TopData() const;
 
 
 protected:
@@ -102,7 +88,6 @@ protected:
 	 * push an address to stack
 	 */
 	void PushAddress(t_addr addr, VMType ty = VMType::ADDR_MEM);
-
 
 	/**
 	 * pop data from the stack
@@ -152,12 +137,24 @@ protected:
 
 
 	/**
+	 * get the value on top of the stack
+	 */
+	template<class t_val, t_addr valsize = sizeof(t_val)>
+	t_val TopRaw(t_addr sp_offs = 0) const
+	{
+		t_addr addr = m_sp + sp_offs;
+		CheckMemoryBounds(addr, valsize);
+		return *reinterpret_cast<t_val*>(m_mem.get() + addr);
+	}
+
+
+	/**
 	 * pop a raw value from the stack
 	 */
 	template<class t_val, t_addr valsize = sizeof(t_val)>
 	t_val PopRaw()
 	{
-		CheckMemoryBounds(m_sp, sizeof(t_val));
+		CheckMemoryBounds(m_sp, valsize);
 
 		t_val val = *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
 		m_sp += valsize;	// stack grows to lower addresses
@@ -171,7 +168,7 @@ protected:
 	template<class t_val, t_addr valsize = sizeof(t_val)>
 	void PushRaw(t_val val)
 	{
-		CheckMemoryBounds(m_sp, sizeof(t_val));
+		CheckMemoryBounds(m_sp, valsize);
 
 		m_sp -= valsize;	// stack grows to lower addresses
 		*reinterpret_cast<t_val*>(m_mem.get() + m_sp) = val;
