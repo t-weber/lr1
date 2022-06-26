@@ -396,7 +396,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	}
 	else
 	{
-		(*m_ostr) << "jmp " << ast->GetName() << "_end\n";
+		(*m_ostr) << "jmp " << ast->GetName() << "_ret\n";
 		(*m_ostr) << ast->GetName() << ":\n";
 	}
 
@@ -435,11 +435,12 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 	if(m_binary)
 	{
-		// push number of arguments
+		std::streampos ret_streampos = m_ostr->tellp();
+
+		// push number of arguments and return
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
 		m_ostr->write(reinterpret_cast<const char*>(&num_args), sizeof(t_vm_int));
-
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::RET));
 
 		// fill in end-of-function jump address
@@ -447,10 +448,22 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		end_func_addr = end_func_streampos - before_block;
 		m_ostr->seekp(jmp_end_streampos);
 		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr), sizeof(t_vm_addr));
+
+		// fill in any saved, unset end-of-function jump addresses
+		for(std::streampos pos : m_endfunc_comefroms)
+		{
+			t_vm_addr to_skip = ret_streampos - pos;
+			// already skipped over address and jmp instruction
+			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			m_ostr->seekp(pos);
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+		}
+		m_endfunc_comefroms.clear();
 		m_ostr->seekp(end_func_streampos);
 	}
 	else
 	{
+		(*m_ostr) << ast->GetName() << "_ret:" << std::endl;
 		(*m_ostr) << "ret " << num_args << "\n";
 		(*m_ostr) << ast->GetName() << "_end:" << std::endl;
 	}
@@ -486,5 +499,41 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 	else
 	{
 		(*m_ostr) << "call " << ast->GetName() << std::endl;
+	}
+}
+
+
+void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
+{
+	if(ast->GetExpr())
+		ast->GetExpr()->accept(this, level+1);
+
+	if(ast->GetJumpType() == ASTJump::JumpType::RETURN)
+	{
+		if(m_cur_func == "")
+			throw std::runtime_error("Tried to return outside any function.");
+
+		if(m_binary)
+		{
+			// jump to the end of the function
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+			m_endfunc_comefroms.push_back(m_ostr->tellp());
+			t_vm_addr dummy_addr = 0;
+			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr), sizeof(t_vm_addr));
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
+		}
+		else
+		{
+			(*m_ostr) << "jmp " << m_cur_func << "_end" << std::endl;
+		}
+	}
+	else if(ast->GetJumpType() == ASTJump::JumpType::BREAK)
+	{
+		// TODO
+	}
+	else if(ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
+	{
+		// TODO
 	}
 }

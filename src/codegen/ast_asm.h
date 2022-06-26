@@ -41,6 +41,7 @@ public:
 	virtual void visit(const ASTLoop* ast, std::size_t level) override;
 	virtual void visit(const ASTFunc* ast, std::size_t level) override;
 	virtual void visit(const ASTFuncCall* ast, std::size_t level) override;
+	virtual void visit(const ASTJump* ast, std::size_t level) override;
 
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
@@ -52,11 +53,13 @@ private:
 	bool m_binary{false};
 
 	SymTab m_symtab{};
-	t_vm_addr m_glob_stack{};    // current offset into global variable stack
+	t_vm_addr m_glob_stack{};           // current offset into global variable stack
 	std::unordered_map<std::string, t_vm_addr> m_local_stack{};
-	std::string m_cur_func{};    // currently active function
 
-	std::size_t m_glob_label{0}; // jump label counter
+	std::string m_cur_func{};           // currently active function
+	std::vector<std::streampos> m_endfunc_comefroms{};
+
+	std::size_t m_glob_label{0};        // jump label counter
 };
 
 

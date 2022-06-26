@@ -11,9 +11,9 @@
 /**
  * gets a printable type name of an ast node
  */
-std::string ASTPrinter::get_ast_typename(ASTType ty)
+std::string ASTPrinter::get_ast_typename(const ASTBase* ast)
 {
-	switch(ty)
+	switch(ast->GetType())
 	{
 		case ASTType::TOKEN: return "token";
 		case ASTType::DELEGATE: return "delegate";
@@ -24,9 +24,33 @@ std::string ASTPrinter::get_ast_typename(ASTType ty)
 		case ASTType::LOOP: return "loop";
 		case ASTType::FUNC: return "function";
 		case ASTType::FUNCCALL: return "function_call";
+		case ASTType::JUMP:
+		{
+			std::string ty = "jump";
+			const auto* jump = static_cast<const ASTJump*>(ast);
+			std::string subty = get_jump_typename(jump);
+			return ty + "/" + subty;
+		}
 	}
 
 	return "<unknown>";
+}
+
+
+/**
+ * gets a printable subtype name of a jump node
+ */
+std::string ASTPrinter::get_jump_typename(const ASTJump* ast)
+{
+	switch(ast->GetJumpType())
+	{
+		case ASTJump::JumpType::RETURN: return "return";
+		case ASTJump::JumpType::BREAK: return "break";
+		case ASTJump::JumpType::CONTINUE: return "continue";
+		case ASTJump::JumpType::UNKNOWN: return "<unknown>";
+	}
+
+	return "<unknonw>";
 }
 
 
@@ -40,7 +64,7 @@ void ASTPrinter::print_base(
 {
 	for(std::size_t i=0; i<level; ++i)
 		m_ostr << "  ";
-	m_ostr << get_ast_typename(ast->GetType()) << ", id=" << ast->GetId();
+	m_ostr << get_ast_typename(ast) << ", id=" << ast->GetId();
 	//if(ast->GetId() < 256)
 	//	m_ostr << " (" << (char)ast->GetId() << ")";
 	if(extrainfo)
@@ -155,6 +179,12 @@ void ASTPrinter::visit(const ASTFunc* ast, std::size_t level)
 
 
 void ASTPrinter::visit(const ASTFuncCall* ast, std::size_t level)
+{
+	print_base(ast, level);
+}
+
+
+void ASTPrinter::visit(const ASTJump* ast, std::size_t level)
 {
 	print_base(ast, level);
 }

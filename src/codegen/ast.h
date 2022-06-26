@@ -31,6 +31,7 @@ class ASTCondition;
 class ASTLoop;
 class ASTFunc;
 class ASTFuncCall;
+class ASTJump;
 
 
 enum class ASTType
@@ -44,6 +45,8 @@ enum class ASTType
 
 	CONDITION,
 	LOOP,
+
+	JUMP,
 
 	FUNC,
 	FUNCCALL,
@@ -73,6 +76,7 @@ public:
 	virtual void visit(const ASTLoop* ast, std::size_t level) = 0;
 	virtual void visit(const ASTFunc* ast, std::size_t level) = 0;
 	virtual void visit(const ASTFuncCall* ast, std::size_t level) = 0;
+	virtual void visit(const ASTJump* ast, std::size_t level) = 0;
 };
 
 
@@ -561,6 +565,66 @@ public:
 private:
 	std::string m_name{};
 	t_astbaseptr m_args{};
+};
+
+
+/**
+ * node for jump keywords
+ */
+class ASTJump : public ASTBaseAcceptor<ASTJump>
+{
+public:
+	enum class JumpType
+	{
+		UNKNOWN,
+		RETURN,
+		BREAK,
+		CONTINUE
+	};
+
+
+public:
+	ASTJump(std::size_t id, std::size_t tableidx,
+		JumpType ty, const t_astbaseptr& expr)
+		: ASTBaseAcceptor<ASTJump>{id, tableidx},
+			m_jumptype{ty}, m_expr{expr}
+	{}
+
+	virtual ~ASTJump() = default;
+
+	virtual ASTType GetType() const override { return ASTType::JUMP; }
+
+	JumpType GetJumpType() const { return m_jumptype; }
+	void SetJumpType(JumpType ty) { m_jumptype = ty; }
+
+	virtual std::size_t NumChildren() const override { return 1; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_expr;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_expr = ast; break;
+		}
+	}
+
+	t_astbaseptr GetExpr() const { return m_expr; }
+
+	void SetExpr(const t_astbaseptr& ast) { m_expr = ast; }
+
+
+private:
+	JumpType m_jumptype{JumpType::UNKNOWN};
+	t_astbaseptr m_expr{};
 };
 
 

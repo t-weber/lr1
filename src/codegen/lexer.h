@@ -23,21 +23,24 @@ using t_tok = std::size_t;
 
 enum class Token : t_tok
 {
-	REAL    = 1000,
-	IDENT   = 1001,
+	REAL     = 1000,
+	IDENT    = 1001,
 
-	EQU     = 2000,
-	NEQU    = 2001,
-	GEQU    = 2004,
-	LEQU    = 2005,
+	EQU      = 2000,
+	NEQU     = 2001,
+	GEQU     = 2004,
+	LEQU     = 2005,
 
-	AND     = 3000,
-	OR      = 3001,
+	AND      = 3000,
+	OR       = 3001,
 
-	IF      = 4000,
-	ELSE    = 4001,
-	LOOP    = 4002,
-	FUNC    = 4003,
+	IF       = 4000,
+	ELSE     = 4001,
+	LOOP     = 4002,
+	FUNC     = 4003,
+	RETURN   = 4004,
+	BREAK    = 4005,
+	CONTINUE = 4006,
 
 	END     = END_IDENT,
 };
