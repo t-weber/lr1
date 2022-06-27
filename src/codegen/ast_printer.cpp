@@ -72,7 +72,11 @@ void ASTPrinter::print_base(
 	m_ostr << "\n";
 
 	for(std::size_t i=0; i<ast->NumChildren(); ++i)
+	{
+		if(!ast->GetChild(i))
+			continue;
 		ast->GetChild(i)->accept(this, level+1);
+	}
 }
 
 

@@ -6,6 +6,7 @@
  */
 
 #include "ast_asm.h"
+#include <cmath>
 
 
 ASTAsm::ASTAsm(std::ostream& ostr,
@@ -303,13 +304,17 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 
 void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 {
-	std::size_t labelBegin = m_glob_label++;
-	std::size_t labelEnd = m_glob_label++;
+	std::size_t labelLoop = m_glob_label++;
+
+	std::ostringstream ostrLabel;
+	ostrLabel << "loop_" << labelLoop;
+	m_cur_loop.push_back(ostrLabel.str());
+
 	std::streampos loop_begin = m_ostr->tellp();
 
 	if(!m_binary)
 	{
-		(*m_ostr) << "begin_loop_" << labelBegin << ":" << std::endl;
+		(*m_ostr) << "begin_loop_" << labelLoop << ":" << std::endl;
 	}
 
 	ast->GetCondition()->accept(this, level+1); // condition
@@ -330,7 +335,7 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 	else
 	{
 		(*m_ostr) << "not\n";
-		(*m_ostr) << "push addr end_loop_" << labelEnd << "\n";
+		(*m_ostr) << "push addr end_loop_" << labelLoop << "\n";
 		(*m_ostr) << "jmpcnd\n";
 	}
 
@@ -355,15 +360,53 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 		skip = after_block - before_block;
 		m_ostr->seekp(skip_addr);
 		m_ostr->write(reinterpret_cast<const char*>(&skip), sizeof(t_vm_addr));
+
+		// fill in any saved, unset start-of-loop jump addresses (continues)
+		while(true)
+		{
+			auto iter = m_loop_begin_comefroms.find(ostrLabel.str());
+			if(iter == m_loop_begin_comefroms.end())
+				break;
+
+			std::streampos pos = iter->second;
+			m_loop_begin_comefroms.erase(iter);
+
+			t_vm_addr to_skip = loop_begin - pos;
+			// already skipped over address and jmp instruction
+			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			m_ostr->seekp(pos);
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+		}
+
+		// fill in any saved, unset end-of-loop jump addresses (breaks)
+		while(true)
+		{
+			auto iter = m_loop_end_comefroms.find(ostrLabel.str());
+			if(iter == m_loop_end_comefroms.end())
+				break;
+
+			std::streampos pos = iter->second;
+			m_loop_end_comefroms.erase(iter);
+
+			t_vm_addr to_skip = after_block - pos;
+			// already skipped over address and jmp instruction
+			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			m_ostr->seekp(pos);
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+		}
+
+		// go to end of stream
 		m_ostr->seekp(after_block);
 	}
 	else
 	{
-		(*m_ostr) << "push addr begin_loop_" << labelBegin << "\n";
+		(*m_ostr) << "push addr begin_loop_" << labelLoop << "\n";
 		(*m_ostr) << "jmp\n";
 
-		(*m_ostr) << "end_loop_" << labelEnd << ":" << std::endl;
+		(*m_ostr) << "end_loop_" << labelLoop << ":" << std::endl;
 	}
+
+	m_cur_loop.pop_back();
 }
 
 
@@ -469,6 +512,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	}
 
 	m_cur_func = "";
+	m_cur_loop.clear();
 }
 
 
@@ -505,11 +549,11 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 
 void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 {
-	if(ast->GetExpr())
-		ast->GetExpr()->accept(this, level+1);
-
 	if(ast->GetJumpType() == ASTJump::JumpType::RETURN)
 	{
+		if(ast->GetExpr())
+			ast->GetExpr()->accept(this, level+1);
+
 		if(m_cur_func == "")
 			throw std::runtime_error("Tried to return outside any function.");
 
@@ -528,12 +572,50 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 			(*m_ostr) << "jmp " << m_cur_func << "_end" << std::endl;
 		}
 	}
-	else if(ast->GetJumpType() == ASTJump::JumpType::BREAK)
+	else if(ast->GetJumpType() == ASTJump::JumpType::BREAK
+		|| ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
 	{
-		// TODO
-	}
-	else if(ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
-	{
-		// TODO
+		if(!m_cur_loop.size())
+			throw std::runtime_error("Tried to use break/continue outside loop.");
+
+		t_int loop_depth = 0; // how many loop levels to break/continue?
+
+		if(ast->GetExpr())
+		{
+			auto int_val = std::dynamic_pointer_cast<ASTToken<t_int>>(ast->GetExpr());
+			auto real_val = std::dynamic_pointer_cast<ASTToken<t_real>>(ast->GetExpr());
+
+			if(int_val)
+				loop_depth = int_val->GetLexerValue();
+			else if(real_val)
+				loop_depth = static_cast<t_int>(std::round(real_val->GetLexerValue()));
+		}
+
+		// reduce to maximum loop depth
+		if(static_cast<std::size_t>(loop_depth) >= m_cur_loop.size())
+			loop_depth = static_cast<t_int>(m_cur_loop.size()-1);
+
+		const std::string& cur_loop = m_cur_loop[loop_depth];
+
+		if(m_binary)
+		{
+			// jump to the beginning (continue) or end (break) of the loop
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+			if(ast->GetJumpType() == ASTJump::JumpType::BREAK)
+				m_loop_end_comefroms.insert(std::make_pair(cur_loop, m_ostr->tellp()));
+			else if(ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
+				m_loop_begin_comefroms.insert(std::make_pair(cur_loop, m_ostr->tellp()));
+			t_vm_addr dummy_addr = 0;
+			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr), sizeof(t_vm_addr));
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
+		}
+		else
+		{
+			if(ast->GetJumpType() == ASTJump::JumpType::BREAK)
+				(*m_ostr) << "jmp end_" << cur_loop << std::endl;
+			else if(ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
+				(*m_ostr) << "jmp begin_" << cur_loop << std::endl;
+		}
 	}
 }

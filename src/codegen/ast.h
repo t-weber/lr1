@@ -585,7 +585,7 @@ public:
 
 public:
 	ASTJump(std::size_t id, std::size_t tableidx,
-		JumpType ty, const t_astbaseptr& expr)
+		JumpType ty, const t_astbaseptr& expr = nullptr)
 		: ASTBaseAcceptor<ASTJump>{id, tableidx},
 			m_jumptype{ty}, m_expr{expr}
 	{}

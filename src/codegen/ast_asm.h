@@ -53,13 +53,17 @@ private:
 	bool m_binary{false};
 
 	SymTab m_symtab{};
-	t_vm_addr m_glob_stack{};           // current offset into global variable stack
+	t_vm_addr m_glob_stack{};              // current offset into global variable stack
 	std::unordered_map<std::string, t_vm_addr> m_local_stack{};
 
-	std::string m_cur_func{};           // currently active function
+	std::string m_cur_func{};              // currently active function
 	std::vector<std::streampos> m_endfunc_comefroms{};
 
-	std::size_t m_glob_label{0};        // jump label counter
+	std::vector<std::string> m_cur_loop{}; // currently active loops in function
+	std::unordered_multimap<std::string, std::streampos> m_loop_begin_comefroms{};
+	std::unordered_multimap<std::string, std::streampos> m_loop_end_comefroms{};
+
+	std::size_t m_glob_label{0};           // jump label counter
 };
 
 
