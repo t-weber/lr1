@@ -528,17 +528,33 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 	{
 		// get function address and push it
 		const SymInfo *sym = m_symtab.GetSymbol(ast->GetName());
-		if(!sym)
+		t_vm_addr func_addr = 0;
+		if(sym)
 		{
-			throw std::runtime_error("Tried to call unknown function \"" + ast->GetName() + "\".");
+			// function address already known
+			func_addr = sym->addr;
 		}
 
-		// push function address
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+		// push absolute function address
+		//m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+		//m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+		//m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
 
+		// push relative function address
+		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+		std::streampos addr_pos = m_ostr->tellp();
+		t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
+		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
+
+		if(!sym)
+		{
+			// function address not yet known
+			m_func_comefroms.emplace_back(
+				std::make_tuple(ast->GetName(), addr_pos));
+		}
 	}
 	else
 	{
@@ -595,7 +611,7 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 		if(static_cast<std::size_t>(loop_depth) >= m_cur_loop.size())
 			loop_depth = static_cast<t_int>(m_cur_loop.size()-1);
 
-		const std::string& cur_loop = m_cur_loop[loop_depth];
+		const std::string& cur_loop = *(m_cur_loop.rbegin() + loop_depth);
 
 		if(m_binary)
 		{
@@ -618,4 +634,33 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 				(*m_ostr) << "jmp begin_" << cur_loop << std::endl;
 		}
 	}
+}
+
+
+/**
+ * fill in function addresses for calls
+ */
+void ASTAsm::PatchFunctionAddresses()
+{
+	for(const auto& [func_name, pos] : m_func_comefroms)
+	{
+		const SymInfo *sym = m_symtab.GetSymbol(func_name);
+		if(!sym)
+		{
+			throw std::runtime_error(
+				"Tried to call unknown function \"" + func_name + "\".");
+		}
+
+		/*std::cout << "Patching function \"" << func_name << "\""
+			<< " at address " << sym->addr
+			<< " to stream position " << pos
+			<< "." << std::endl;*/
+
+		t_vm_addr to_skip = static_cast<t_vm_addr>(sym->addr - pos);
+		// already skipped over address and jmp instruction
+		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+		m_ostr->seekp(pos);
+		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+	}
+	m_ostr->seekp(0, std::ios_base::end);
 }

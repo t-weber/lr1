@@ -46,6 +46,8 @@ public:
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
 
+	void PatchFunctionAddresses();
+
 
 private:
 	std::ostream* m_ostr{&std::cout};
@@ -57,9 +59,11 @@ private:
 	std::unordered_map<std::string, t_vm_addr> m_local_stack{};
 
 	std::string m_cur_func{};              // currently active function
-	std::vector<std::streampos> m_endfunc_comefroms{};
-
 	std::vector<std::string> m_cur_loop{}; // currently active loops in function
+
+	// stream positions where addresses need to be patched in
+	std::vector<std::tuple<std::string, std::streampos>> m_func_comefroms{};
+	std::vector<std::streampos> m_endfunc_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_begin_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_end_comefroms{};
 
