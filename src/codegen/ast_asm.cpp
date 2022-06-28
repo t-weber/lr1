@@ -8,6 +8,8 @@
 #include "ast_asm.h"
 #include <cmath>
 
+#define AST_ABS_FUNC_ADDR  0  // use absolute or relative function addresses
+
 
 ASTAsm::ASTAsm(std::ostream& ostr,
 	std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops)
@@ -535,18 +537,21 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 			func_addr = sym->addr;
 		}
 
-		// push absolute function address
-		//m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-		//m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-		//m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
-
-		// push relative function address
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+#if AST_ABS_FUNC_ADDR != 0
+		// push absolute function address
+		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+		std::streampos addr_pos = m_ostr->tellp();
+		m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
+#else
+		// push relative function address
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+		// already skipped over address and jmp instruction
 		std::streampos addr_pos = m_ostr->tellp();
 		t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
 		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
 		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+#endif
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
 
 		if(!sym)
@@ -656,11 +661,20 @@ void ASTAsm::PatchFunctionAddresses()
 			<< " to stream position " << pos
 			<< "." << std::endl;*/
 
+		m_ostr->seekp(pos);
+
+#if AST_ABS_FUNC_ADDR != 0
+		// write absolute function address
+		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+#else
+		// write relative function address
 		t_vm_addr to_skip = static_cast<t_vm_addr>(sym->addr - pos);
 		// already skipped over address and jmp instruction
 		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
-		m_ostr->seekp(pos);
 		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+#endif
 	}
+
+	// seek to end of stream
 	m_ostr->seekp(0, std::ios_base::end);
 }
