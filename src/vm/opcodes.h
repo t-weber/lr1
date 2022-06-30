@@ -34,6 +34,7 @@ enum class VMType : t_vm_byte
 	REAL     = 0x01,
 	INT      = 0x02,
 	BOOLEAN  = 0x03,
+	STR      = 0x04,
 
 	ADDR_MEM = 0b00001000,  // address refering to absolute memory locations
 	ADDR_IP  = 0b00001001,  // address relative to the instruction pointer
@@ -110,8 +111,9 @@ enum class OpCode : t_vm_byte
 	NEQU     = 0x65,  // !=
 
 	// function calls
-	CALL     = 0x70,
-	RET      = 0x71,
+	CALL     = 0x70,  // call function
+	RET      = 0x71,  // return from function
+	EXTCALL  = 0x72,  // call system function
 };
 
 

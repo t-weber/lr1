@@ -40,21 +40,32 @@ static bool run_vm(const char* _prog = nullptr)
 	try
 	{
 		VM vm(4096);
+		VM::t_addr sp_initial = vm.GetSP();
+
 		//vm.SetDebug(true);
 		vm.SetMem(0, bytes.data(), filesize);
 		vm.Run();
-		VM::t_data dat = vm.TopData();
-		std::cout << "Top of stack: ";
-		std::visit([](auto&& val) -> void
-		{
-			using t_val = std::decay_t<decltype(val)>;
 
-			std::cout << val
-				<< " ["
-				<< vm_type_name<t_val>
-				<< "]";
-		}, dat);
-		std::cout << std::endl;
+		// print remaining stack
+		std::size_t stack_idx = 0;
+		while(vm.GetSP() < sp_initial)
+		{
+			VM::t_data dat = vm.PopData();
+
+			std::cout << "Stack[" << stack_idx << "] = ";
+			std::visit([](auto&& val) -> void
+			{
+				using t_val = std::decay_t<decltype(val)>;
+
+				std::cout << val
+					<< " ["
+					<< vm_type_name<t_val>
+					<< "]";
+			}, dat);
+			std::cout << std::endl;
+
+			++stack_idx;
+		}
 	}
 	catch(const std::exception& err)
 	{

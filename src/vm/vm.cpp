@@ -91,7 +91,7 @@ bool VM::Run()
 					std::cout << "dereferenced address "
 						<< addr << ": "
 						<< std::get<t_real>(val)
-						<< std::endl;
+						<< "." << std::endl;
 				}
 				break;
 			}
@@ -281,7 +281,8 @@ bool VM::Run()
 				if(m_debug)
 				{
 					std::cout << "saved base pointer "
-						<< m_bp << std::endl;
+						<< m_bp << "."
+						<< std::endl;
 				}
 				m_bp = m_sp;
 				m_sp -= m_framesize;
@@ -291,7 +292,7 @@ bool VM::Run()
 				if(m_debug)
 				{
 					std::cout << "calling function "
-						<< funcaddr
+						<< funcaddr << "."
 						<< std::endl;
 				}
 				break;
@@ -316,7 +317,8 @@ bool VM::Run()
 				if(m_debug)
 				{
 					std::cout << "restored base pointer "
-						<< m_bp << std::endl;
+						<< m_bp << "."
+						<< std::endl;
 				}
 
 				// remove function arguments from stack
@@ -324,6 +326,27 @@ bool VM::Run()
 					PopData();
 
 				PushData(retval, VMType::UNKNOWN, false);
+				break;
+			}
+
+			case OpCode::EXTCALL: // external function call
+			{
+				// get function name
+				std::string funcname = std::get<t_str>(PopData());
+
+				// get number of function arguments
+				t_int num_args = std::get<t_int>(PopData());
+
+				if(m_debug)
+				{
+					std::cout << "external function call to \"" << funcname
+						<< "\" with " << num_args << " arguments."
+						<< "." << std::endl;
+				}
+
+				// TODO
+
+				//PushData(retval, VMType::UNKNOWN, false);
 				break;
 			}
 
@@ -362,7 +385,7 @@ VM::t_addr VM::PopAddress()
 	{
 		std::cout << "popped address " << t_int(addr)
 			<< " of type " << t_int(regval)
-			<< std::endl;
+			<< "." << std::endl;
 	}
 
 	// get absolute address using base address from register
@@ -388,6 +411,40 @@ void VM::PushAddress(t_addr addr, VMType ty)
 {
 	PushRaw<t_addr, m_addrsize>(addr);
 	PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
+}
+
+
+/**
+ * pop a string from the stack
+ * a string consists of an t_int giving the length
+ * following by the string (without 0-termination)
+ */
+VM::t_str VM::PopString()
+{
+	t_int len = PopRaw<t_int, m_intsize>();
+	CheckMemoryBounds(m_sp, len);
+
+	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
+	t_str str(begin, len);
+	m_sp += len;
+
+	return str;
+}
+
+
+/**
+ * push a string to the stack
+ */
+void VM::PushString(const VM::t_str& str)
+{
+	t_int len = static_cast<t_int>(str.length());
+	CheckMemoryBounds(m_sp, len);
+
+	m_sp -= len;
+	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
+	std::memcpy(begin, str.data(), len);
+
+	PushRaw<t_int, m_intsize>(len);
 }
 
 
@@ -474,6 +531,12 @@ VM::t_data VM::PopData()
 			break;
 		}
 
+		case VMType::STR:
+		{
+			dat = PopString();
+			break;
+		}
+
 		default:
 		{
 			throw std::runtime_error("Pop: Data type not yet implemented");
@@ -495,7 +558,7 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 		if(m_debug)
 		{
 			std::cout << "pushing real "
-				<< std::get<t_real>(data)
+				<< std::get<t_real>(data) << "."
 				<< std::endl;
 		}
 
@@ -510,7 +573,7 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 		if(m_debug)
 		{
 			std::cout << "pushing int "
-				<< std::get<t_int>(data)
+				<< std::get<t_int>(data) << "."
 				<< std::endl;
 		}
 
@@ -525,7 +588,7 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 		if(m_debug)
 		{
 			std::cout << "pushing address "
-				<< std::get<t_addr>(data)
+				<< std::get<t_addr>(data) << "."
 				<< std::endl;
 		}
 
@@ -534,6 +597,21 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
+	}
+	else if(std::holds_alternative<t_str>(data))
+	{
+		if(m_debug)
+		{
+			std::cout << "pushing string \""
+				<< std::get<t_str>(data) << "\"."
+				<< std::endl;
+		}
+
+		// push the actual string
+		PushString(std::get<t_str>(data));
+
+		// push descriptor
+		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::STR));
 	}
 	else if(err_on_unknown)
 	{
@@ -563,7 +641,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 			{
 				std::cout << "read real " << val
 					<< " from address " << (addr-1)
-					<< std::endl;
+					<< "." << std::endl;
 			}
 			break;
 		}
@@ -576,7 +654,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 			{
 				std::cout << "read int " << val
 					<< " from address " << (addr-1)
-					<< std::endl;
+					<< "." << std::endl;
 			}
 			break;
 		}
@@ -593,7 +671,21 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 			{
 				std::cout << "read address " << t_int(val)
 					<< " from address " << t_int(addr-1)
-					<< std::endl;
+					<< "." << std::endl;
+			}
+			break;
+		}
+
+		case VMType::STR:
+		{
+			t_str str = ReadMemRaw<t_str>(addr);
+			dat = str;
+
+			if(m_debug)
+			{
+				std::cout << "read string \"" << str
+					<< "\" from address " << (addr-1)
+					<< "." << std::endl;
 			}
 			break;
 		}
@@ -621,7 +713,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 			std::cout << "writing real value "
 				<< std::get<t_real>(data)
 				<< " to address " << addr
-				<< std::endl;
+				<< "." << std::endl;
 		}
 
 		// write descriptor prefix
@@ -638,7 +730,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 			std::cout << "writing int value "
 				<< std::get<t_int>(data)
 				<< " to address " << addr
-				<< std::endl;
+				<< "." << std::endl;
 		}
 
 		// write descriptor prefix
@@ -665,6 +757,23 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		// write the actual data
 		WriteMemRaw<t_int>(addr, std::get<t_addr>(data));
 	}*/
+	else if(std::holds_alternative<t_str>(data))
+	{
+		if(m_debug)
+		{
+			std::cout << "writing string \""
+				<< std::get<t_str>(data)
+				<< "\" to address " << addr
+				<< "." << std::endl;
+		}
+
+		// write descriptor prefix
+		WriteMemRaw<t_byte>(addr, static_cast<t_byte>(VMType::STR));
+		addr += m_bytesize;
+
+		// write the actual data
+		WriteMemRaw<t_str>(addr, std::get<t_str>(data));
+	}
 	else
 	{
 		throw std::runtime_error("WriteMem: Data type not yet implemented");
@@ -680,6 +789,8 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 		return m_intsize;
 	else if(std::holds_alternative<t_addr>(data))
 		return m_addrsize;
+	else if(std::holds_alternative<t_str>(data))
+		return m_intsize + std::get<t_str>(data).length();
 
 	return 0;
 }

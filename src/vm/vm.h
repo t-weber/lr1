@@ -12,8 +12,10 @@
 #include <type_traits>
 #include <memory>
 #include <variant>
-#include <cmath>
 #include <iostream>
+#include <string>
+#include <cstring>
+#include <cmath>
 
 //#include "../codegen/lval.h"
 #include "opcodes.h"
@@ -29,9 +31,11 @@ public:
 	using t_real = ::t_vm_real;
 	using t_int = ::t_vm_int;
 	using t_bool = ::t_vm_byte;
+	using t_str = std::string;
+	using t_char = typename t_str::value_type;
 
 	// variant of all data types
-	using t_data = std::variant<t_real, t_int, t_bool, t_addr>;
+	using t_data = std::variant<t_real, t_int, t_bool, t_addr, t_str>;
 
 	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
@@ -73,6 +77,11 @@ public:
 	 */
 	t_data TopData() const;
 
+	/**
+	 * pop data from the stack
+	 */
+	t_data PopData();
+
 
 protected:
 	t_addr GetDataSize(const t_data& data) const;
@@ -90,9 +99,14 @@ protected:
 	void PushAddress(t_addr addr, VMType ty = VMType::ADDR_MEM);
 
 	/**
-	 * pop data from the stack
+	 * pop a string from the stack
 	 */
-	t_data PopData();
+	t_str PopString();
+
+	/**
+	 * push a string to the stack
+	 */
+	void PushString(const t_str& str);
 
 	/**
 	 * push data onto the stack
@@ -117,10 +131,26 @@ protected:
 	template<class t_val>
 	t_val ReadMemRaw(t_addr addr) const
 	{
-		CheckMemoryBounds(addr, sizeof(t_val));
+		// string type
+		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
+		{
+			t_int len = ReadMemRaw<t_int>(addr);
+			addr += m_intsize;
+			CheckMemoryBounds(addr, len);
 
-		t_val val = *reinterpret_cast<t_val*>(&m_mem[addr]);
-		return val;
+			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
+			t_str str(begin, len);
+			return str;
+		}
+
+		// primitive types
+		else
+		{
+			CheckMemoryBounds(addr, sizeof(t_val));
+
+			t_val val = *reinterpret_cast<t_val*>(&m_mem[addr]);
+			return val;
+		}
 	}
 
 
@@ -128,11 +158,30 @@ protected:
 	 * write a raw value to memory
 	 */
 	template<class t_val>
-	void WriteMemRaw(t_addr addr, t_val val)
+	void WriteMemRaw(t_addr addr, const t_val& val)
 	{
-		CheckMemoryBounds(addr, sizeof(t_val));
+		// string type
+		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
+		{
+			t_int len = static_cast<t_int>(val.length());
+			CheckMemoryBounds(addr, m_intsize + len);
 
-		*reinterpret_cast<t_val*>(&m_mem[addr]) = val;
+			// write string length
+			WriteMemRaw<t_int>(addr, len);
+			addr += m_intsize;
+
+			// write string
+			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
+			std::memcpy(begin, val.data(), len);
+		}
+
+		// primitive types
+		else
+		{
+			CheckMemoryBounds(addr, sizeof(t_val));
+
+			*reinterpret_cast<t_val*>(&m_mem[addr]) = val;
+		}
 	}
 
 
@@ -166,7 +215,7 @@ protected:
 	 * push a raw value onto the stack
 	 */
 	template<class t_val, t_addr valsize = sizeof(t_val)>
-	void PushRaw(t_val val)
+	void PushRaw(const t_val& val)
 	{
 		CheckMemoryBounds(m_sp, valsize);
 

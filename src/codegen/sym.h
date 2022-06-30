@@ -14,6 +14,7 @@
 #include "../vm/opcodes.h"
 
 
+
 /**
  * information about a variable in the symbol table
  */
@@ -27,6 +28,7 @@ struct SymInfo
 
 	t_vm_addr arg_size{0};         // size of arguments
 };
+
 
 
 /**
