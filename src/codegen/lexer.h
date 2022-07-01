@@ -24,7 +24,9 @@ using t_tok = std::size_t;
 enum class Token : t_tok
 {
 	REAL     = 1000,
-	IDENT    = 1001,
+	INT      = 1001,
+	STR      = 1002,
+	IDENT    = 1003,
 
 	EQU      = 2000,
 	NEQU     = 2001,

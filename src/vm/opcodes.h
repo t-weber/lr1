@@ -12,11 +12,12 @@
 #include <string>
 
 
-using t_vm_byte = std::int8_t;
+using t_vm_byte = std::uint8_t;
 using t_vm_addr = std::int32_t;
 using t_vm_real = double;
 using t_vm_int = std::int64_t;
 using t_vm_bool = t_vm_byte;
+using t_vm_str = std::string;
 
 using t_vm_longest_type = t_vm_real;
 
@@ -26,6 +27,7 @@ template<> inline std::string vm_type_name<t_vm_byte> = "byte";
 template<> inline std::string vm_type_name<t_vm_addr> = "address";
 template<> inline std::string vm_type_name<t_vm_real> = "real";
 template<> inline std::string vm_type_name<t_vm_int> = "integer";
+template<> inline std::string vm_type_name<t_vm_str> = "string";
 
 
 enum class VMType : t_vm_byte
@@ -114,6 +116,17 @@ enum class OpCode : t_vm_byte
 	CALL     = 0x70,  // call function
 	RET      = 0x71,  // return from function
 	EXTCALL  = 0x72,  // call system function
+
+	// binary operations
+	BINAND   = 0x80,  // &
+	BINOR    = 0x81,  // |
+	BINXOR   = 0x82,  // ^
+	BINNOT   = 0x83,  // ~
+	SHL      = 0x84,  // <<
+	SHR      = 0x85,  // >>
+	ROTL     = 0x86,  // rotate left
+	ROTR     = 0x87,  // rotate right
+
 };
 
 

@@ -185,10 +185,14 @@ public:
 	bool IsLValue() const { return m_islval; }
 	void SetLValue(bool b) { m_islval = b; }
 
+	bool IsIdent() const { return m_isident; }
+	void SetIdent(bool b) { m_isident = b; }
+
 
 private:
 	std::optional<t_lval> m_lexval{}; // lexer value
-	bool m_islval{false}; // names an l-value variable (on lhs of assignment)
+	bool m_islval{false};  // names an l-value variable (on lhs of assignment)
+	bool m_isident{false}; // is this token a variable identifier (or a literal)?
 };
 
 

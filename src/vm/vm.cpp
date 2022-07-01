@@ -8,6 +8,7 @@
 #include "vm.h"
 
 #include <iostream>
+#include <sstream>
 #include <cstring>
 
 
@@ -90,7 +91,7 @@ bool VM::Run()
 				{
 					std::cout << "dereferenced address "
 						<< addr << ": "
-						<< std::get<t_real>(val)
+						//<< std::get<t_real>(val)
 						<< "." << std::endl;
 				}
 				break;
@@ -172,6 +173,64 @@ bool VM::Run()
 				// should also be allowed in boolean expressions
 				t_bool val = PopRaw<t_bool, m_boolsize>();
 				PushRaw<t_bool, m_boolsize>(!val);
+				break;
+			}
+
+			case OpCode::BINAND:
+			{
+				OpBinary<'&'>();
+				break;
+			}
+
+			case OpCode::BINOR:
+			{
+				OpBinary<'|'>();
+				break;
+			}
+
+			case OpCode::BINXOR:
+			{
+				OpBinary<'^'>();
+				break;
+			}
+
+			case OpCode::BINNOT:
+			{
+				t_data val = PopData();
+				if(std::holds_alternative<t_int>(val))
+				{
+					t_int newval = ~std::get<t_int>(val);
+					PushData(newval);
+				}
+				else
+				{
+					throw std::runtime_error("Invalid data type for binary not.");
+				}
+
+				break;
+			}
+
+			case OpCode::SHL:
+			{
+				OpBinary<'<'>();
+				break;
+			}
+
+			case OpCode::SHR:
+			{
+				OpBinary<'>'>();
+				break;
+			}
+
+			case OpCode::ROTL:
+			{
+				OpBinary<'l'>();
+				break;
+			}
+
+			case OpCode::ROTR:
+			{
+				OpBinary<'r'>();
 				break;
 			}
 
@@ -416,12 +475,12 @@ void VM::PushAddress(t_addr addr, VMType ty)
 
 /**
  * pop a string from the stack
- * a string consists of an t_int giving the length
+ * a string consists of an t_addr giving the length
  * following by the string (without 0-termination)
  */
 VM::t_str VM::PopString()
 {
-	t_int len = PopRaw<t_int, m_intsize>();
+	t_addr len = PopRaw<t_addr, m_addrsize>();
 	CheckMemoryBounds(m_sp, len);
 
 	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
@@ -433,18 +492,34 @@ VM::t_str VM::PopString()
 
 
 /**
+ * get a string from the top of the stack
+ */
+VM::t_str VM::TopString(t_addr sp_offs) const
+{
+	t_addr len = TopRaw<t_addr, m_addrsize>(sp_offs);
+	t_addr addr = m_sp + sp_offs + m_addrsize;
+
+	CheckMemoryBounds(addr, len);
+	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + addr);
+	t_str str(begin, len);
+
+	return str;
+}
+
+
+/**
  * push a string to the stack
  */
 void VM::PushString(const VM::t_str& str)
 {
-	t_int len = static_cast<t_int>(str.length());
+	t_addr len = static_cast<t_addr>(str.length());
 	CheckMemoryBounds(m_sp, len);
 
 	m_sp -= len;
 	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
 	std::memcpy(begin, str.data(), len);
 
-	PushRaw<t_int, m_intsize>(len);
+	PushRaw<t_addr, m_addrsize>(len);
 }
 
 
@@ -484,9 +559,18 @@ VM::t_data VM::TopData() const
 			break;
 		}
 
+		case VMType::STR:
+		{
+			dat = TopString(m_bytesize);
+			break;
+		}
+
 		default:
 		{
-			throw std::runtime_error("Top: Data type not yet implemented");
+			std::ostringstream msg;
+			msg << "Top: Data type " << (int)tyval
+				<< " not yet implemented.";
+			throw std::runtime_error(msg.str());
 			break;
 		}
 	}
@@ -790,7 +874,7 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 	else if(std::holds_alternative<t_addr>(data))
 		return m_addrsize;
 	else if(std::holds_alternative<t_str>(data))
-		return m_intsize + std::get<t_str>(data).length();
+		return m_addrsize /*len*/ + std::get<t_str>(data).length();
 
 	return 0;
 }

@@ -63,7 +63,7 @@ static TerminalPtr block_begin, block_end;
 static TerminalPtr keyword_if, keyword_else, keyword_loop,
 	keyword_func, keyword_return, keyword_break, keyword_continue;
 static TerminalPtr comma, stmt_end;
-static TerminalPtr sym, ident;
+static TerminalPtr sym_real, sym_int, sym_str, ident;
 
 
 static void create_grammar()
@@ -104,7 +104,9 @@ static void create_grammar()
 	comma = std::make_shared<Terminal>(',', ",");
 	stmt_end = std::make_shared<Terminal>(';', ";");
 
-	sym = std::make_shared<Terminal>(static_cast<std::size_t>(Token::REAL), "symbol");
+	sym_real = std::make_shared<Terminal>(static_cast<std::size_t>(Token::REAL), "real");
+	sym_int = std::make_shared<Terminal>(static_cast<std::size_t>(Token::INT), "int");
+	sym_str = std::make_shared<Terminal>(static_cast<std::size_t>(Token::STR), "string");
 	ident = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IDENT), "ident");
 
 	keyword_if = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IF), "if");
@@ -137,84 +139,90 @@ static void create_grammar()
 	expr->AddRule({ bracket_open, expr, bracket_close }, semanticindex++);
 	// rule 8: function call, expr -> ident( exprs )
 	expr->AddRule({ ident, bracket_open, exprs, bracket_close }, semanticindex++);
-	// rule 9: expr -> symbol
-	expr->AddRule({ sym }, semanticindex++);
-	// rule 10: expr -> ident
+
+	// rule 9: expr -> real symbol
+	expr->AddRule({ sym_real }, semanticindex++);
+	// rule 10: expr -> int symbol
+	expr->AddRule({ sym_int }, semanticindex++);
+	// rule 11: expr -> string symbol
+	expr->AddRule({ sym_str }, semanticindex++);
+	// rule 12: expr -> ident
 	expr->AddRule({ ident }, semanticindex++);
-	// rule 11, unary-: expr -> -expr
+
+	// rule 13, unary-: expr -> -expr
 	expr->AddRule({ op_minus, expr }, semanticindex++);
-	// rule 12, unary+: expr -> +expr
+	// rule 14, unary+: expr -> +expr
 	expr->AddRule({ op_plus, expr }, semanticindex++);
-	// rule 13, assignment: expr -> ident = expr
+	// rule 15, assignment: expr -> ident = expr
 	expr->AddRule({ ident, op_assign, expr }, semanticindex++);
 
-	// rule 14: stmts -> stmt stmts
+	// rule 16: stmts -> stmt stmts
 	stmts->AddRule({ stmt, stmts }, semanticindex++);
-	// rule 15: stmts -> eps
+	// rule 17: stmts -> eps
 	stmts->AddRule({ g_eps }, semanticindex++);
 
-	// rule 16: stmt -> expr ;
+	// rule 18: stmt -> expr ;
 	stmt->AddRule({ expr, stmt_end }, semanticindex++);
 
-	// rule 17: stmt -> if(bool_expr) { stmts }
+	// rule 19: stmt -> if(bool_expr) { stmts }
 	stmt->AddRule({ keyword_if, bracket_open, bool_expr, bracket_close,
 		block_begin, stmts, block_end }, semanticindex++);
-	// rule 18: stmt -> if(bool_expr) { stmts } else { stmts }
+	// rule 20: stmt -> if(bool_expr) { stmts } else { stmts }
 	stmt->AddRule({ keyword_if, bracket_open, bool_expr, bracket_close,
 		block_begin, stmts, block_end,
 		keyword_else, block_begin, stmts, block_end}, semanticindex++);
-	// rule 19: stmt -> loop(bool_expr) { stmts }
+	// rule 21: stmt -> loop(bool_expr) { stmts }
 	stmt->AddRule({ keyword_loop, bracket_open, bool_expr, bracket_close,
 		block_begin, stmts, block_end }, semanticindex++);
-	// rule 20: stmt -> func name ( idents ) { stmts }
+	// rule 22: stmt -> func name ( idents ) { stmts }
 	stmt->AddRule({ keyword_func, ident, bracket_open, idents, bracket_close,
 		block_begin, stmts, block_end }, semanticindex++);
-	// rule 21: stmt -> break ;
+	// rule 23: stmt -> break ;
 	stmt->AddRule({ keyword_break, stmt_end }, semanticindex++);
-	// rule 22: stmt -> break symbol ;
-	stmt->AddRule({ keyword_break, sym, stmt_end }, semanticindex++);
-	// rule 23: stmt -> continue ;
+	// rule 24: stmt -> break symbol ;
+	stmt->AddRule({ keyword_break, sym_int, stmt_end }, semanticindex++);
+	// rule 25: stmt -> continue ;
 	stmt->AddRule({ keyword_continue, stmt_end }, semanticindex++);
-	// rule 24: stmt -> continue symbol ;
-	stmt->AddRule({ keyword_continue, sym, stmt_end }, semanticindex++);
-	// rule 25: stmt -> return ;
+	// rule 26: stmt -> continue symbol ;
+	stmt->AddRule({ keyword_continue, sym_int, stmt_end }, semanticindex++);
+	// rule 27: stmt -> return ;
 	stmt->AddRule({ keyword_return, stmt_end }, semanticindex++);
-	// rule 26: stmt -> return expr ;
+	// rule 28: stmt -> return expr ;
 	stmt->AddRule({ keyword_return, expr, stmt_end }, semanticindex++);
 
-	// rule 27: bool_expr -> bool_expr & bool_expr
+	// rule 29: bool_expr -> bool_expr & bool_expr
 	bool_expr->AddRule({ bool_expr, op_and, bool_expr }, semanticindex++);
-	// rule 28: bool_expr -> bool_expr | bool_expr
+	// rule 30: bool_expr -> bool_expr | bool_expr
 	bool_expr->AddRule({ bool_expr, op_or, bool_expr }, semanticindex++);
-	// rule 29: bool_expr -> !bool_expr
+	// rule 31: bool_expr -> !bool_expr
 	bool_expr->AddRule({ op_not, bool_expr, }, semanticindex++);
-	// rule 30: bool_expr -> ( bool_expr )
+	// rule 32: bool_expr -> ( bool_expr )
 	bool_expr->AddRule({ bracket_open, bool_expr, bracket_close }, semanticindex++);
-	// rule 31: bool_expr -> expr > expr
+	// rule 33: bool_expr -> expr > expr
 	bool_expr->AddRule({ expr, op_gt, expr }, semanticindex++);
-	// rule 32: bool_expr -> expr < expr
+	// rule 34: bool_expr -> expr < expr
 	bool_expr->AddRule({ expr, op_lt, expr }, semanticindex++);
-	// rule 33: bool_expr -> expr >= expr
+	// rule 35: bool_expr -> expr >= expr
 	bool_expr->AddRule({ expr, op_gequ, expr }, semanticindex++);
-	// rule 34: bool_expr -> expr <= expr
+	// rule 36: bool_expr -> expr <= expr
 	bool_expr->AddRule({ expr, op_lequ, expr }, semanticindex++);
-	// rule 35: bool_expr -> expr == expr
+	// rule 37: bool_expr -> expr == expr
 	bool_expr->AddRule({ expr, op_equ, expr }, semanticindex++);
-	// rule 36: bool_expr -> expr != expr
+	// rule 38: bool_expr -> expr != expr
 	bool_expr->AddRule({ expr, op_nequ, expr }, semanticindex++);
 
-	// rule 37: idents -> ident, idents
+	// rule 39: idents -> ident, idents
 	idents->AddRule({ ident, comma, idents }, semanticindex++);
-	// rule 38: idents -> ident
+	// rule 40: idents -> ident
 	idents->AddRule({ ident }, semanticindex++);
-	// rule 39: idents -> eps
+	// rule 41: idents -> eps
 	idents->AddRule({ g_eps }, semanticindex++);
 
-	// rule 40: exprs -> expr, exprs
+	// rule 42: exprs -> expr, exprs
 	exprs->AddRule({ expr, comma, exprs }, semanticindex++);
-	// rule 41: exprs -> expr
+	// rule 43: exprs -> expr
 	exprs->AddRule({ expr }, semanticindex++);
-	// rule 42: exprs -> eps
+	// rule 44: exprs -> eps
 	exprs->AddRule({ g_eps }, semanticindex++);
 }
 
@@ -497,6 +505,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					throw std::runtime_error("Expected a function mame.");
 
 				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				funcname->SetIdent(true);
 				const std::string& ident = funcname->GetLexerValue();
 
 				std::size_t id = expr->GetId();
@@ -504,7 +513,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTFuncCall>(id, tableidx, ident, args[2]);
 			},
 
-			// rule 9: expr -> symbol
+			// rule 9: expr -> real symbol
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -512,7 +521,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 10: expr -> ident
+			// rule 10: expr -> int symbol
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -520,7 +529,27 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 11, unary-: expr -> -expr
+			// rule 11: expr -> string symbol
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+			},
+
+			// rule 12: expr -> ident
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+
+				auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				ident->SetIdent(true);
+
+				return std::make_shared<ASTDelegate>(id, tableidx, ident);
+			},
+
+			// rule 13, unary-: expr -> -expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -529,7 +558,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[1], op_minus->GetId());
 			},
 
-			// rule 12, unary+: expr -> +expr
+			// rule 14, unary+: expr -> +expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -538,7 +567,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[1], op_plus->GetId());
 			},
 
-			// rule 13, assignment: expr -> ident = expr
+			// rule 15, assignment: expr -> ident = expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				if(args[0]->GetType() != ASTType::TOKEN)
@@ -546,15 +575,16 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 						"Expected a symbol name on lhs of assignment.");
 
 				auto symname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				symname->SetIdent(true);
 				symname->SetLValue(true);
 
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTBinary>(
-					id, tableidx, args[2], args[0], op_assign->GetId());
+					id, tableidx, args[2], symname, op_assign->GetId());
 			},
 
-			// rule 14: stmts -> stmt stmts
+			// rule 16: stmts -> stmt stmts
 			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto stmts_lst = std::dynamic_pointer_cast<ASTList>(args[1]);
@@ -562,7 +592,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return stmts_lst;
 			},
 
-			// rule 15, stmts -> eps
+			// rule 17, stmts -> eps
 			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmts->GetId();
@@ -570,7 +600,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTList>(id, tableidx);
 			},
 
-			// rule 16, stmt -> expr ;
+			// rule 18, stmt -> expr ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -578,7 +608,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 17: stmt -> if(bool_expr) { stmts }
+			// rule 19: stmt -> if(bool_expr) { stmts }
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -587,7 +617,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[2], args[5]);
 			},
 
-			// rule 18: stmt -> if(bool_expr) { stmts } else { stmts }
+			// rule 20: stmt -> if(bool_expr) { stmts } else { stmts }
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -596,7 +626,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[2], args[5], args[9]);
 			},
 
-			// rule 19: stmt -> loop(bool_expr) { stmts }
+			// rule 21: stmt -> loop(bool_expr) { stmts }
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -605,13 +635,14 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[2], args[5]);
 			},
 
-			// rule 20: funcion, stmt -> func name ( idents ) { stmts }
+			// rule 22: funcion, stmt -> func name ( idents ) { stmts }
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				if(args[1]->GetType() != ASTType::TOKEN)
 					throw std::runtime_error("Expected a function mame.");
 
 				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[1]);
+				funcname->SetIdent(true);
 				const std::string& ident = funcname->GetLexerValue();
 
 				std::size_t id = stmt->GetId();
@@ -620,7 +651,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ident, args[3], args[6]);
 			},
 
-			// rule 21: stmt -> break ;
+			// rule 23: stmt -> break ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -629,7 +660,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::BREAK);
 			},
 
-			// rule 22: stmt -> break symbol ;
+			// rule 24: stmt -> break symbol ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -638,7 +669,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::BREAK, args[1]);
 			},
 
-			// rule 23: stmt -> continue ;
+			// rule 25: stmt -> continue ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -647,7 +678,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::CONTINUE);
 			},
 
-			// rule 24: stmt -> continue symbol ;
+			// rule 26: stmt -> continue symbol ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -656,7 +687,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::CONTINUE, args[1]);
 			},
 
-			// rule 25: stmt -> return ;
+			// rule 27: stmt -> return ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -665,7 +696,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::RETURN);
 			},
 
-			// rule 26: stmt -> return expr ;
+			// rule 28: stmt -> return expr ;
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
@@ -674,7 +705,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::RETURN, args[1]);
 			},
 
-			// rule 27: bool_expr -> bool_expr & bool_expr
+			// rule 29: bool_expr -> bool_expr & bool_expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -683,7 +714,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_and->GetId());
 			},
 
-			// rule 28: bool_expr -> bool_expr | bool_expr
+			// rule 30: bool_expr -> bool_expr | bool_expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -692,7 +723,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_or->GetId());
 			},
 
-			// rule 29: bool_expr -> !bool_expr
+			// rule 31: bool_expr -> !bool_expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -701,7 +732,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[1], op_not->GetId());
 			},
 
-			// rule 30: bool_expr -> ( bool_expr )
+			// rule 32: bool_expr -> ( bool_expr )
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -709,7 +740,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTDelegate>(id, tableidx, args[1]);
 			},
 
-			// rule 31: bool_expr -> expr > expr
+			// rule 33: bool_expr -> expr > expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -718,7 +749,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_gt->GetId());
 			},
 
-			// rule 32: bool_expr -> expr < expr
+			// rule 34: bool_expr -> expr < expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -727,7 +758,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_lt->GetId());
 			},
 
-			// rule 33: bool_expr -> expr >= expr
+			// rule 35: bool_expr -> expr >= expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -736,7 +767,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_gequ->GetId());
 			},
 
-			// rule 34: bool_expr -> expr <= expr
+			// rule 36: bool_expr -> expr <= expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -745,7 +776,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_lequ->GetId());
 			},
 
-			// rule 35: bool_expr -> expr == expr
+			// rule 37: bool_expr -> expr == expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -754,7 +785,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_equ->GetId());
 			},
 
-			// rule 36: bool_expr -> expr != expr
+			// rule 38: bool_expr -> expr != expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -763,26 +794,32 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_nequ->GetId());
 			},
 
-			// rule 37: idents -> ident, idents
+			// rule 39: idents -> ident, idents
 			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
+				auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				ident->SetIdent(true);
 				auto idents_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
-				idents_lst->AddChild(args[0], true);
+
+				idents_lst->AddChild(ident, true);
 				return idents_lst;
 			},
 
-			// rule 38: idents -> ident
+			// rule 40: idents -> ident
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = idents->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				auto idents_lst = std::make_shared<ASTList>(id, tableidx);
 
-				idents_lst->AddChild(args[0], true);
+				auto ident = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				ident->SetIdent(true);
+
+				idents_lst->AddChild(ident, true);
 				return idents_lst;
 			},
 
-			// rule 39, idents -> eps
+			// rule 41, idents -> eps
 			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = idents->GetId();
@@ -790,7 +827,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return std::make_shared<ASTList>(id, tableidx);
 			},
 
-			// rule 40: exprs -> expr, exprs
+			// rule 42: exprs -> expr, exprs
 			[](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				auto exprs_lst = std::dynamic_pointer_cast<ASTList>(args[2]);
@@ -798,7 +835,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return exprs_lst;
 			},
 
-			// rule 41: exprs -> expr
+			// rule 43: exprs -> expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = exprs->GetId();
@@ -809,7 +846,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				return exprs_lst;
 			},
 
-			// rule 42, exprs -> eps
+			// rule 44, exprs -> eps
 			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = exprs->GetId();
@@ -942,15 +979,19 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 
 #if RUN_VM != 0
 			VM vm(4096);
+			VM::t_addr ip_initial = vm.GetIP();
 			vm.SetMem(0, strAsmBin);
 			vm.Run();
 
-			std::cout << "Result: ";
-			std::visit([](auto&& val) -> void
+			if(vm.GetIP() != ip_initial)
 			{
-				std::cout << val;
-			}, vm.TopData());
-			std::cout << std::endl;
+				std::cout << "Result: ";
+				std::visit([](auto&& val) -> void
+				{
+					std::cout << val;
+				}, vm.TopData());
+				std::cout << std::endl;
+			}
 #endif
 		}
 	}

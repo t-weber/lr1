@@ -13,6 +13,7 @@
 #include <memory>
 #include <variant>
 #include <iostream>
+#include <bit>
 #include <string>
 #include <cstring>
 #include <cmath>
@@ -30,8 +31,9 @@ public:
 	using t_addr = ::t_vm_addr;
 	using t_real = ::t_vm_real;
 	using t_int = ::t_vm_int;
+	using t_uint = typename std::make_unsigned<t_int>::type;
 	using t_bool = ::t_vm_byte;
-	using t_str = std::string;
+	using t_str = ::t_vm_str;
 	using t_char = typename t_str::value_type;
 
 	// variant of all data types
@@ -104,6 +106,11 @@ protected:
 	t_str PopString();
 
 	/**
+	 * get the string on top of the stack
+	 */
+	t_str TopString(t_addr sp_offs = 0) const;
+
+	/**
 	 * push a string to the stack
 	 */
 	void PushString(const t_str& str);
@@ -134,8 +141,8 @@ protected:
 		// string type
 		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
 		{
-			t_int len = ReadMemRaw<t_int>(addr);
-			addr += m_intsize;
+			t_addr len = ReadMemRaw<t_addr>(addr);
+			addr += m_addrsize;
 			CheckMemoryBounds(addr, len);
 
 			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
@@ -163,12 +170,12 @@ protected:
 		// string type
 		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
 		{
-			t_int len = static_cast<t_int>(val.length());
-			CheckMemoryBounds(addr, m_intsize + len);
+			t_addr len = static_cast<t_addr>(val.length());
+			CheckMemoryBounds(addr, m_addrsize + len);
 
 			// write string length
-			WriteMemRaw<t_int>(addr, len);
-			addr += m_intsize;
+			WriteMemRaw<t_addr>(addr, len);
+			addr += m_addrsize;
 
 			// write string
 			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
@@ -246,20 +253,31 @@ protected:
 	{
 		t_val result{};
 
-		if constexpr(op == '+')
-			result = val1 + val2;
-		else if constexpr(op == '-')
-			result = val1 - val2;
-		else if constexpr(op == '*')
-			result = val1 * val2;
-		else if constexpr(op == '/')
-			result = val1 / val2;
-		else if constexpr(op == '%' && std::is_integral_v<t_val>)
-			result = val1 % val2;
-		else if constexpr(op == '%' && std::is_floating_point_v<t_val>)
-			result = std::fmod(val1, val2);
-		else if constexpr(op == '^' && std::is_floating_point_v<t_val>)
-			result = pow<t_val>(val1, val2);
+		// string operators
+		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
+		{
+			if constexpr(op == '+')
+				result = val1 + val2;
+		}
+
+		// int / real operators
+		else
+		{
+			if constexpr(op == '+')
+				result = val1 + val2;
+			else if constexpr(op == '-')
+				result = val1 - val2;
+			else if constexpr(op == '*')
+				result = val1 * val2;
+			else if constexpr(op == '/')
+				result = val1 / val2;
+			else if constexpr(op == '%' && std::is_integral_v<t_val>)
+				result = val1 % val2;
+			else if constexpr(op == '%' && std::is_floating_point_v<t_val>)
+				result = std::fmod(val1, val2);
+			else if constexpr(op == '^' && std::is_floating_point_v<t_val>)
+				result = pow<t_val>(val1, val2);
+		}
 
 		return result;
 	}
@@ -276,6 +294,7 @@ protected:
 
 		bool is_real = false;
 		bool is_int = false;
+		bool is_str = false;
 
 		if(std::holds_alternative<t_real>(val1) &&
 			std::holds_alternative<t_real>(val2))
@@ -283,6 +302,9 @@ protected:
 		else if(std::holds_alternative<t_int>(val1) &&
 			std::holds_alternative<t_int>(val2))
 			is_int = true;
+		else if(std::holds_alternative<t_str>(val1) &&
+			std::holds_alternative<t_str>(val2))
+			is_str = true;
 
 		t_data result;
 
@@ -295,6 +317,11 @@ protected:
 		{
 			result = OpArithmetic<t_int, op>(
 				std::get<t_int>(val1), std::get<t_int>(val2));
+		}
+		else if(is_str)
+		{
+			result = OpArithmetic<t_str, op>(
+				std::get<t_str>(val1), std::get<t_str>(val2));
 		}
 		else
 		{
@@ -330,6 +357,68 @@ protected:
 
 
 	/**
+	 * binary operation
+	 */
+	template<class t_val, char op>
+	t_val OpBinary(const t_val& val1, const t_val& val2)
+	{
+		t_val result{};
+
+		// int operators
+		if constexpr(std::is_same_v<std::decay_t<t_int>, t_int>)
+		{
+			if constexpr(op == '&')
+				result = val1 & val2;
+			else if constexpr(op == '|')
+				result = val1 | val2;
+			else if constexpr(op == '^')
+				result = val1 ^ val2;
+			else if constexpr(op == '<')  // left shift
+				result = val1 << val2;
+			else if constexpr(op == '>')  // right shift
+				result = val1 >> val2;
+			else if constexpr(op == 'l')  // left rotation
+				result = static_cast<t_int>(std::rotl<t_uint>(val1, static_cast<int>(val2)));
+			else if constexpr(op == 'r')  // right rotation
+				result = static_cast<t_int>(std::rotr<t_uint>(val1, static_cast<int>(val2)));
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * binary operation
+	 */
+	template<char op>
+	void OpBinary()
+	{
+		t_data val2 = PopData();
+		t_data val1 = PopData();
+
+		bool is_int = false;
+
+		if(std::holds_alternative<t_int>(val1) &&
+			std::holds_alternative<t_int>(val2))
+			is_int = true;
+
+		t_data result;
+
+		if(is_int)
+		{
+			result = OpBinary<t_int, op>(
+				std::get<t_int>(val1), std::get<t_int>(val2));
+		}
+		else
+		{
+			throw std::runtime_error("Type mismatch in binary operation.");
+		}
+
+		PushData(result);
+	}
+
+
+	/**
 	 * comparison operation
 	 */
 	template<class t_val, OpCode op>
@@ -338,18 +427,31 @@ protected:
 		t_bool result = 0;
 		// TODO: include an epsilon region for float comparisons
 
-		if constexpr(op == OpCode::GT)
-			result = (val1 > val2);
-		else if constexpr(op == OpCode::LT)
-			result = (val1 < val2);
-		else if constexpr(op == OpCode::GEQU)
-			result = (val1 >= val2);
-		else if constexpr(op == OpCode::LEQU)
-			result = (val1 <= val2);
-		else if constexpr(op == OpCode::EQU)
-			result = (val1 == val2);
-		else if constexpr(op == OpCode::NEQU)
-			result = (val1 != val2);
+		// string comparison
+		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
+		{
+			if constexpr(op == OpCode::EQU)
+				result = (val1 == val2);
+			else if constexpr(op == OpCode::NEQU)
+				result = (val1 != val2);
+		}
+
+		// integer /  real comparison
+		else
+		{
+			if constexpr(op == OpCode::GT)
+				result = (val1 > val2);
+			else if constexpr(op == OpCode::LT)
+				result = (val1 < val2);
+			else if constexpr(op == OpCode::GEQU)
+				result = (val1 >= val2);
+			else if constexpr(op == OpCode::LEQU)
+				result = (val1 <= val2);
+			else if constexpr(op == OpCode::EQU)
+				result = (val1 == val2);
+			else if constexpr(op == OpCode::NEQU)
+				result = (val1 != val2);
+		}
 
 		return result;
 	}
@@ -366,6 +468,7 @@ protected:
 
 		bool is_real = false;
 		bool is_int = false;
+		bool is_str = false;
 
 		if(std::holds_alternative<t_real>(val1) &&
 			std::holds_alternative<t_real>(val2))
@@ -373,6 +476,9 @@ protected:
 		else if(std::holds_alternative<t_int>(val1) &&
 			std::holds_alternative<t_int>(val2))
 			is_int = true;
+		else if(std::holds_alternative<t_str>(val1) &&
+			std::holds_alternative<t_str>(val2))
+			is_str = true;
 
 		t_bool result;
 
@@ -385,6 +491,11 @@ protected:
 		{
 			result = OpComparison<t_int, op>(
 				std::get<t_int>(val1), std::get<t_int>(val2));
+		}
+		else if(is_str)
+		{
+			result = OpComparison<t_str, op>(
+				std::get<t_str>(val1), std::get<t_str>(val2));
 		}
 		else
 		{

@@ -40,7 +40,8 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 		// write type descriptor byte
 		m_ostr->put(static_cast<t_vm_byte>(VMType::REAL));
 		// write value
-		m_ostr->write(reinterpret_cast<const char*>(&val), vm_type_size<VMType::REAL, false>);
+		m_ostr->write(reinterpret_cast<const char*>(&val),
+			vm_type_size<VMType::REAL, false>);
 	}
 	else
 	{
@@ -63,7 +64,8 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 		// write type descriptor byte
 		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
 		// write data
-		m_ostr->write(reinterpret_cast<const char*>(&val), vm_type_size<VMType::INT, false>);
+		m_ostr->write(reinterpret_cast<const char*>(&val),
+			vm_type_size<VMType::INT, false>);
 	}
 	else
 	{
@@ -79,59 +81,89 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		return;
 
 	const std::string& val = ast->GetLexerValue();
-	bool lval = ast->IsLValue();
 
 	if(m_binary)
 	{
-		std::string varname;
-		if(m_cur_func != "")
-			varname = m_cur_func + "/" + val;
-		else
-			varname = val;
-
-		// get variable address and push it
-		const SymInfo *sym = m_symtab.GetSymbol(varname);
-		if(!sym)                      // symbol not yet seen -> register it
+		// the token names a variable identifier
+		if(ast->IsIdent())
 		{
-			constexpr VMType symty = VMType::REAL; // TODO: other data types
+			bool lval = ast->IsLValue();
 
-			if(m_cur_func == "")  // in global scope
+			std::string varname;
+			if(m_cur_func != "")
+				varname = m_cur_func + "/" + val;
+			else
+				varname = val;
+
+			// get variable address and push it
+			const SymInfo *sym = m_symtab.GetSymbol(varname);
+			if(!sym)                      // symbol not yet seen -> register it
 			{
-				sym = m_symtab.AddSymbol(varname, -m_glob_stack,
-					VMType::ADDR_GBP, symty);
-				m_glob_stack += vm_type_size<symty, true>;
-			}
-			else                  // in local function scope
-			{
-				if(m_local_stack.find(m_cur_func) == m_local_stack.end())
+				constexpr VMType symty = VMType::REAL; // TODO: other data types
+
+				if(m_cur_func == "")  // in global scope
 				{
-					// padding of maximum data type size, to avoid overwriting top stack value
-					m_local_stack[m_cur_func] = sizeof(/*t_data*/ t_vm_longest_type) + 1;
+					sym = m_symtab.AddSymbol(varname, -m_glob_stack,
+						VMType::ADDR_GBP, symty);
+					m_glob_stack += vm_type_size<symty, true>;
 				}
+				else                  // in local function scope
+				{
+					if(m_local_stack.find(m_cur_func) == m_local_stack.end())
+					{
+						// padding of maximum data type size, to avoid overwriting top stack value
+						m_local_stack[m_cur_func] = sizeof(/*t_data*/ t_vm_longest_type) + 1;
+					}
 
-				sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
-					VMType::ADDR_BP, symty);
-				m_local_stack[m_cur_func] += vm_type_size<symty, true>;
+					sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
+						VMType::ADDR_BP, symty);
+					m_local_stack[m_cur_func] += vm_type_size<symty, true>;
+				}
 			}
+
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+			// register with base address
+			m_ostr->put(static_cast<t_vm_byte>(sym->loc));
+			// relative address
+			m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+
+			// dereference it, if the variable is on the rhs of an assignment
+			if(!lval)
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
 		}
 
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-		// register with base address
-		m_ostr->put(static_cast<t_vm_byte>(sym->loc));
-		// relative address
-		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
-
-		// dereference it, if the variable is on the rhs of an assignment
-		if(!lval)
-			m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
+		else
+		{
+			// the token names a string literal
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+			// write type descriptor byte
+			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
+			// write string length
+			t_vm_addr len = static_cast<t_vm_addr>(val.length());
+			m_ostr->write(reinterpret_cast<const char*>(&len),
+				vm_type_size<VMType::ADDR_MEM, false>);
+			// write string data
+			m_ostr->write(val.data(), len);
+		}
 	}
 	else
 	{
-		(*m_ostr) << "push addr " << val << std::endl;
+		// the token names a variable identifier
+		if(ast->IsIdent())
+		{
+			(*m_ostr) << "push addr " << val << std::endl;
 
-		// dereference it, if the variable is on the rhs of an assignment
-		if(!lval)
-			(*m_ostr) << "deref" << std::endl;
+			// dereference it, if the variable is on the rhs of an assignment
+			bool lval = ast->IsLValue();
+			if(!lval)
+				(*m_ostr) << "deref" << std::endl;
+		}
+
+		// the token names a string literal
+		else
+		{
+			(*m_ostr) << "push \"" << val << "\"" << std::endl;
+		}
 	}
 }
 

@@ -127,6 +127,7 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 	std::vector<std::tuple<t_tok, t_lval>> longest_matching;
 	bool eof = false;
 	bool in_line_comment = false;
+	bool in_string = false;
 	std::size_t line = 1;
 
 	// find longest matching token
@@ -140,30 +141,45 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 		}
 		//std::cout << "Input: " << c << " (0x" << std::hex << int(c) << ")." << std::endl;
 
-		if(c == '#')
-		{
-			in_line_comment = true;
-			continue;
-		}
-
 		if(in_line_comment && c != '\n')
-		{
 			continue;
-		}
 
 		// if outside any other match...
 		if(longest_matching.size() == 0)
 		{
-			// ...ignore white spaces
-			if(c==' ' || c=='\t')
+			if(c == '\"' && !in_line_comment)
+			{
+				if(!in_string)
+				{
+					in_string = true;
+					continue;
+				}
+				else
+				{
+					in_string = false;
+					return std::make_tuple(
+						static_cast<t_tok>(Token::STR), input);
+				}
+			}
+
+			// ... ignore comments
+			if(c == '#' && !in_string)
+			{
+				in_line_comment = true;
+				continue;
+			}
+
+			// ... ignore white spaces
+			if((c==' ' || c=='\t') && !in_string)
 				continue;
 
-			// ...end on new line
+			// ... end on new line
 			else if(c=='\n')
 			{
 				if(end_on_newline)
 				{
-					return std::make_tuple((t_tok)Token::END, std::nullopt);
+					return std::make_tuple(
+						static_cast<t_tok>(Token::END), std::nullopt);
 				}
 				else
 				{
@@ -175,6 +191,9 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 		}
 
 		input += c;
+		if(in_string)
+			continue;
+
 		auto matching = get_matching_tokens(input);
 		if(matching.size())
 		{
