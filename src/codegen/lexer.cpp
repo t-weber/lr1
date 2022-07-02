@@ -20,6 +20,18 @@ get_matching_tokens(const std::string& str)
 {
 	std::vector<std::tuple<t_tok, t_lval>> matches;
 
+	{	// int
+		std::regex regex{"[0-9]+"};
+		std::smatch smatch;
+		if(std::regex_match(str, smatch, regex))
+		{
+			t_real val{};
+			std::istringstream{str} >> val;
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::INT), val));
+		}
+	}
+
 	{	// real
 		std::regex regex{"[0-9]+(\\.[0-9]*)?"};
 		std::smatch smatch;

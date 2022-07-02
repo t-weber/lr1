@@ -52,7 +52,7 @@ add_library(lr1-codegen STATIC
 	src/parsergen/helpers.h src/parsergen/common.h
 	src/codegen/lexer.cpp src/codegen/lexer.h
 	src/codegen/parser.cpp src/codegen/parser.h
-	src/codegen/ast.h src/vm/opcodes.h
+	src/codegen/ast.h src/vm/opcodes.h src/vm/types.h
 	src/codegen/ast_printer.cpp src/codegen/ast_printer.h
 	src/codegen/ast_asm.cpp src/codegen/ast_asm.h
 	src/codegen/sym.h

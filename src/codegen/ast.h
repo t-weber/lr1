@@ -1,7 +1,7 @@
 /**
  * ast
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 14-jun-2020
+ * @date 14-jun-2022
  * @license see 'LICENSE.EUPL' file
  */
 
@@ -16,6 +16,7 @@
 #include <sstream>
 
 #include "lval.h"
+#include "../vm/types.h"
 
 
 // forward declarations
@@ -51,7 +52,6 @@ enum class ASTType
 	FUNC,
 	FUNCCALL,
 };
-
 
 
 /**
@@ -100,6 +100,45 @@ public:
 	virtual bool IsTerminal() const { return false; };
 	virtual ASTType GetType() const = 0;
 
+	virtual VMType GetDataType() const { return m_datatype; }
+	virtual void SetDataType(VMType ty) { m_datatype = ty; }
+
+	/**
+	 * derive the associated data type (for casting)
+	 */
+	virtual void DeriveDataType()
+	{
+		std::size_t children = NumChildren();
+		for(std::size_t childidx=0; childidx<children; ++childidx)
+		{
+			const t_astbaseptr child = GetChild(childidx);
+
+			if(!child)
+				continue;
+
+			child->DeriveDataType();
+		}
+
+		if(children == 1)
+		{
+			const t_astbaseptr child = GetChild(0);
+			if(child)
+				SetDataType(child->GetDataType());
+		}
+		else if(children == 2)
+		{
+			const t_astbaseptr child1 = GetChild(0);
+			const t_astbaseptr child2 = GetChild(1);
+
+			if(child1 && child2)
+			{
+				VMType ty1 = child1->GetDataType();
+				VMType ty2 = child2->GetDataType();
+				SetDataType(derive_data_type(ty1, ty2));
+			}
+		}
+	}
+
 	virtual std::size_t NumChildren() const { return 0; }
 	virtual t_astbaseptr GetChild(std::size_t) const { return nullptr; }
 	virtual void SetChild(std::size_t, const t_astbaseptr&) { }
@@ -132,6 +171,8 @@ private:
 
 	// index used in parse tables (from lr1.h)
 	std::optional<std::size_t> m_tableidx{};
+
+	VMType m_datatype{VMType::UNKNOWN};
 };
 
 
@@ -190,7 +231,7 @@ public:
 
 
 private:
-	std::optional<t_lval> m_lexval{}; // lexer value
+	std::optional<t_lval> m_lexval{};  // lexer value
 	bool m_islval{false};  // names an l-value variable (on lhs of assignment)
 	bool m_isident{false}; // is this token a variable identifier (or a literal)?
 };

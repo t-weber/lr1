@@ -13,6 +13,7 @@
 #include <memory>
 #include <variant>
 #include <iostream>
+#include <sstream>
 #include <bit>
 #include <string>
 #include <cstring>
@@ -234,14 +235,69 @@ protected:
 	/**
 	 * cast from one variable type to the other
 	 */
-	template<class t_to, t_addr to_size>
+	template<class t_to>
 	void OpCast()
 	{
-		t_data val = PopData();
-		if(std::holds_alternative<t_real>(val))
-			PushData(static_cast<t_to>(std::get<t_real>(val)));
-		else if(std::holds_alternative<t_int>(val))
-			PushData(static_cast<t_to>(std::get<t_int>(val)));
+		t_data data = TopData();
+
+		if(std::holds_alternative<t_real>(data))
+		{
+			if constexpr(std::is_same_v<std::decay_t<t_to>, t_real>)
+				return;  // don't need to cast to the same type
+
+			t_real val = std::get<t_real>(data);
+
+			// convert to string
+			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
+			{
+				std::ostringstream ostr;
+				ostr << val;
+				PopData();
+				PushData(ostr.str());
+			}
+
+			// convert to primitive type
+			else
+			{
+				PopData();
+				PushData(static_cast<t_to>(val));
+			}
+		}
+		else if(std::holds_alternative<t_int>(data))
+		{
+			if constexpr(std::is_same_v<std::decay_t<t_to>, t_int>)
+				return;  // don't need to cast to the same type
+
+			t_int val = std::get<t_int>(data);
+
+			// convert to string
+			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
+			{
+				std::ostringstream ostr;
+				ostr << val;
+				PopData();
+				PushData(ostr.str());
+			}
+
+			// convert to primitive type
+			else
+			{
+				PopData();
+				PushData(static_cast<t_to>(val));
+			}
+		}
+		else if(std::holds_alternative<t_str>(data))
+		{
+			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
+				return;  // don't need to cast to the same type
+
+			const t_str& val = std::get<t_str>(data);
+
+			t_to conv_val{};
+			std::istringstream{val} >> conv_val;
+			PopData();
+			PushData(conv_val);
+		}
 	}
 
 

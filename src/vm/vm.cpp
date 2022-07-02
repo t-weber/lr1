@@ -30,10 +30,10 @@ bool VM::Run()
 
 		if(m_debug)
 		{
-			std::cout << "read instruction at ip = " << t_int(m_ip)
+			std::cout << "*** read instruction at ip = " << t_int(m_ip)
 				<< ", opcode: " << std::hex
 				<< static_cast<std::size_t>(op)
-				<< std::dec << std::endl;
+				<< std::dec << ". ***" << std::endl;
 		}
 
 		switch(op)
@@ -272,13 +272,19 @@ bool VM::Run()
 
 			case OpCode::TOI: // converts value to t_int
 			{
-				OpCast<t_int, m_intsize>();
+				OpCast<t_int>();
 				break;
 			}
 
 			case OpCode::TOF: // converts value to t_real
 			{
-				OpCast<t_real, m_realsize>();
+				OpCast<t_real>();
+				break;
+			}
+
+			case OpCode::TOS: // converts value to t_str
+			{
+				OpCast<t_str>();
 				break;
 			}
 
@@ -596,12 +602,22 @@ VM::t_data VM::PopData()
 		case VMType::REAL:
 		{
 			dat = PopRaw<t_real, m_realsize>();
+			if(m_debug)
+			{
+				std::cout << "popped real " << std::get<t_real>(dat)
+					<< "." << std::endl;
+			}
 			break;
 		}
 
 		case VMType::INT:
 		{
 			dat = PopRaw<t_int, m_intsize>();
+			if(m_debug)
+			{
+				std::cout << "popped int " << std::get<t_int>(dat)
+					<< "." << std::endl;
+			}
 			break;
 		}
 
@@ -612,18 +628,31 @@ VM::t_data VM::PopData()
 		case VMType::ADDR_GBP:
 		{
 			dat = PopRaw<t_addr, m_addrsize>();
+			if(m_debug)
+			{
+				std::cout << "popped address " << std::get<t_addr>(dat)
+					<< "." << std::endl;
+			}
 			break;
 		}
 
 		case VMType::STR:
 		{
 			dat = PopString();
+			if(m_debug)
+			{
+				std::cout << "popped string \"" << std::get<t_str>(dat)
+					<< "\"." << std::endl;
+			}
 			break;
 		}
 
 		default:
 		{
-			throw std::runtime_error("Pop: Data type not yet implemented");
+			std::ostringstream msg;
+			msg << "Pop: Data type " << (int)tyval
+				<< " not yet implemented.";
+			throw std::runtime_error(msg.str());
 			break;
 		}
 	}
@@ -699,7 +728,10 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	}
 	else if(err_on_unknown)
 	{
-		throw std::runtime_error("Push: Data type not yet implemented");
+		std::ostringstream msg;
+		msg << "Push: Data type " << (int)ty
+			<< " not yet implemented.";
+		throw std::runtime_error(msg.str());
 	}
 }
 
@@ -776,7 +808,10 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 
 		default:
 		{
-			throw std::runtime_error("ReadMem: Data type not yet implemented");
+			std::ostringstream msg;
+			msg << "ReadMem: Data type " << (int)tyval
+				<< " not yet implemented.";
+			throw std::runtime_error(msg.str());
 			break;
 		}
 	}

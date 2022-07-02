@@ -518,6 +518,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				args[0]->SetDataType(VMType::REAL);
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
@@ -526,6 +527,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				args[0]->SetDataType(VMType::INT);
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
@@ -534,6 +536,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				args[0]->SetDataType(VMType::STR);
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
@@ -577,6 +580,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				auto symname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 				symname->SetIdent(true);
 				symname->SetLValue(true);
+				symname->SetDataType(args[2]->GetDataType());
 
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -906,6 +910,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 #endif
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0
 			std::cout << "AST:\n";
@@ -979,11 +984,12 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 
 #if RUN_VM != 0
 			VM vm(4096);
-			VM::t_addr ip_initial = vm.GetIP();
+			//vm.SetDebug(true);
+			VM::t_addr sp_initial = vm.GetSP();
 			vm.SetMem(0, strAsmBin);
 			vm.Run();
 
-			if(vm.GetIP() != ip_initial)
+			if(vm.GetSP() != sp_initial)
 			{
 				std::cout << "Result: ";
 				std::visit([](auto&& val) -> void

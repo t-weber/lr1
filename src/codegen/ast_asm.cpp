@@ -1,7 +1,7 @@
 /**
  * zero-address asm code generator
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 14-jun-2020
+ * @date 14-jun-2022
  * @license see 'LICENSE.EUPL' file
  */
 
@@ -87,8 +87,6 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		// the token names a variable identifier
 		if(ast->IsIdent())
 		{
-			bool lval = ast->IsLValue();
-
 			std::string varname;
 			if(m_cur_func != "")
 				varname = m_cur_func + "/" + val;
@@ -128,7 +126,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
 
 			// dereference it, if the variable is on the rhs of an assignment
-			if(!lval)
+			if(!ast->IsLValue())
 				m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
 		}
 
@@ -154,8 +152,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			(*m_ostr) << "push addr " << val << std::endl;
 
 			// dereference it, if the variable is on the rhs of an assignment
-			bool lval = ast->IsLValue();
-			if(!lval)
+			if(!ast->IsLValue())
 				(*m_ostr) << "deref" << std::endl;
 		}
 
@@ -211,11 +208,42 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level)
 
 void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 {
-	ast->GetChild(0)->accept(this, level+1); // operand 1
-	ast->GetChild(1)->accept(this, level+1); // operand 2
-
 	std::size_t opid = ast->GetOpId();
+	VMType ty = ast->GetDataType();
 
+	// iterate the operands
+	for(std::size_t childidx=0; childidx<2; ++childidx)
+	{
+		auto child = ast->GetChild(childidx);
+		child->accept(this, level+1);
+
+		VMType subty = child->GetDataType();
+		if(subty != ty && opid != '=' /* no cast on assignments */)
+		{
+			// child type is different from derived type -> cast
+
+			if(m_binary)
+			{
+				if(ty == VMType::STR)
+					m_ostr->put(static_cast<t_vm_byte>(OpCode::TOS));
+				else if(ty == VMType::INT)
+					m_ostr->put(static_cast<t_vm_byte>(OpCode::TOI));
+				else if(ty == VMType::REAL)
+					m_ostr->put(static_cast<t_vm_byte>(OpCode::TOF));
+			}
+			else
+			{
+				if(ty == VMType::STR)
+					(*m_ostr) << "tos\n";
+				else if(ty == VMType::INT)
+					(*m_ostr) << "toi\n";
+				else if(ty == VMType::REAL)
+					(*m_ostr) << "tof\n";
+			}
+		}
+	}
+
+	// generate the binary operation
 	if(m_binary)
 	{
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
@@ -223,9 +251,9 @@ void ASTAsm::visit(const ASTBinary* ast, [[maybe_unused]] std::size_t level)
 		{
 			m_ostr->put(static_cast<t_vm_byte>(op));
 		}
-		else	// decide on special cases
+		else
 		{
-			// TODO
+			// TODO: decide on special cases
 		}
 	}
 	else
@@ -473,7 +501,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	}
 	else
 	{
-		(*m_ostr) << "jmp " << ast->GetName() << "_ret\n";
+		(*m_ostr) << "jmp " << ast->GetName() << "_end\n";
 		(*m_ostr) << ast->GetName() << ":\n";
 	}
 

@@ -1,7 +1,7 @@
 /**
  * ast asm generator
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 14-jun-2020
+ * @date 14-jun-2022
  * @license see 'LICENSE.EUPL' file
  */
 
@@ -16,7 +16,6 @@
 #include "lval.h"
 #include "ast.h"
 #include "sym.h"
-#include "../vm/opcodes.h"
 
 
 class ASTAsm : public ASTVisitor

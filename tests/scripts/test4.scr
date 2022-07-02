@@ -1,10 +1,14 @@
 func test(arg1, arg2)
 {
-	return arg1 + " " + arg2;
+	return arg1 + " | " + arg2;
 }
 
 
-a = "1234";
+a = "123" + 4;
 a = test(a, "abc");
 
+b = 1.5 + 2;
+
+b;
 a;
+
