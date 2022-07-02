@@ -14,8 +14,6 @@
 #include "../vm/opcodes.h"
 
 
-// TODO: dynamic variable sizes for strings
-
 
 /**
  * information about a variable in the symbol table

@@ -4,11 +4,10 @@ func test(arg1, arg2)
 }
 
 
-a = "123" + 4;
+a = "12345678" + 9;
 a = test(a, "abc");
 
 b = 1.5 + 2;
 
 b;
 a;
-

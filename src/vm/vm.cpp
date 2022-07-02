@@ -33,6 +33,7 @@ bool VM::Run()
 			std::cout << "*** read instruction at ip = " << t_int(m_ip)
 				<< ", opcode: " << std::hex
 				<< static_cast<std::size_t>(op)
+				<< " (" << get_vm_opcode_name(op) << ")"
 				<< std::dec << ". ***" << std::endl;
 		}
 
@@ -445,16 +446,17 @@ VM::t_addr VM::PopAddress()
 
 	// get address from stack
 	t_addr addr = PopRaw<t_addr, m_addrsize>();
+	VMType thereg = static_cast<VMType>(regval);
 
 	if(m_debug)
 	{
 		std::cout << "popped address " << t_int(addr)
 			<< " of type " << t_int(regval)
+			<< " (" << get_vm_type_name(thereg) << ")"
 			<< "." << std::endl;
 	}
 
 	// get absolute address using base address from register
-	VMType thereg = static_cast<VMType>(regval);
 	switch(thereg)
 	{
 		case VMType::ADDR_MEM: break;
@@ -462,7 +464,8 @@ VM::t_addr VM::PopAddress()
 		case VMType::ADDR_SP: addr += m_sp; break;
 		case VMType::ADDR_BP: addr += m_bp; break;
 		case VMType::ADDR_GBP: addr += m_gbp; break;
-		default: throw std::runtime_error("Unknown address base register"); break;
+		//case VMType::ADDR_BP_ARG: break;
+		default: throw std::runtime_error("Unknown address base register."); break;
 	}
 
 	return addr;
@@ -575,6 +578,7 @@ VM::t_data VM::TopData() const
 		{
 			std::ostringstream msg;
 			msg << "Top: Data type " << (int)tyval
+				<< " (" << get_vm_type_name(ty) << ")"
 				<< " not yet implemented.";
 			throw std::runtime_error(msg.str());
 			break;
@@ -651,6 +655,7 @@ VM::t_data VM::PopData()
 		{
 			std::ostringstream msg;
 			msg << "Pop: Data type " << (int)tyval
+				<< " (" << get_vm_type_name(ty) << ")"
 				<< " not yet implemented.";
 			throw std::runtime_error(msg.str());
 			break;
@@ -730,9 +735,60 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 	{
 		std::ostringstream msg;
 		msg << "Push: Data type " << (int)ty
+			<< " (" << get_vm_type_name(ty) << ")"
 			<< " not yet implemented.";
 		throw std::runtime_error(msg.str());
 	}
+}
+
+
+/**
+ * get the address of a function argument variable
+ */
+VM::t_addr VM::GetArgAddr(VM::t_addr addr, VM::t_addr arg_num) const
+{
+	// skip to correct argument index
+	while(arg_num > 0)
+	{
+		// get data type info from memory
+		VMType ty = static_cast<VMType>(ReadMemRaw<t_byte>(addr));
+		addr += m_bytesize;
+
+		switch(ty)
+		{
+			case VMType::REAL:
+				addr += m_realsize;
+				break;
+			case VMType::INT:
+				addr += m_intsize;
+				break;
+			case VMType::ADDR_MEM:
+			case VMType::ADDR_IP:
+			case VMType::ADDR_SP:
+			case VMType::ADDR_BP:
+			case VMType::ADDR_GBP:
+				addr += m_addrsize;
+				break;
+			case VMType::STR:
+			{
+				t_addr len = ReadMemRaw<t_addr>(addr);
+				addr += m_addrsize + len;
+				break;
+			}
+			default:
+			{
+				std::ostringstream msg;
+				msg << "GetArgAddr: Data type " << (int)ty
+					<< " (" << get_vm_type_name(ty) << ")"
+					<< " not yet implemented.";
+				throw std::runtime_error(msg.str());
+			}
+		}
+
+		--arg_num;
+	}
+
+	return addr;
 }
 
 
@@ -747,12 +803,14 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 	VMType ty = static_cast<VMType>(tyval);
 
 	t_data dat;
+
 	switch(ty)
 	{
 		case VMType::REAL:
 		{
 			t_real val = ReadMemRaw<t_real>(addr);
 			dat = val;
+
 			if(m_debug)
 			{
 				std::cout << "read real " << val
@@ -766,6 +824,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_int val = ReadMemRaw<t_int>(addr);
 			dat = val;
+
 			if(m_debug)
 			{
 				std::cout << "read int " << val
@@ -783,12 +842,33 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			t_addr val = ReadMemRaw<t_addr>(addr);
 			dat = val;
+
 			if(m_debug)
 			{
 				std::cout << "read address " << t_int(val)
 					<< " from address " << t_int(addr-1)
 					<< "." << std::endl;
 			}
+			break;
+		}
+
+		case VMType::ADDR_BP_ARG:
+		{
+			t_addr arg_num = ReadMemRaw<t_addr>(addr);
+			t_addr arg_addr = GetArgAddr(m_bp, arg_num) - m_bp;
+			ty = VMType::ADDR_BP;
+
+			dat = arg_addr;
+
+			if(m_debug)
+			{
+				std::cout << "read address " << t_int(arg_addr)
+					<< " for argument #" << t_int(arg_num)
+					<< "." << std::endl;
+			}
+
+			// dereference:
+			//std::tie(ty, dat, std::ignore) = ReadMemData(arg_addr);
 			break;
 		}
 
@@ -810,6 +890,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		{
 			std::ostringstream msg;
 			msg << "ReadMem: Data type " << (int)tyval
+				<< " (" << get_vm_type_name(ty) << ")"
 				<< " not yet implemented.";
 			throw std::runtime_error(msg.str());
 			break;
@@ -895,7 +976,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 	}
 	else
 	{
-		throw std::runtime_error("WriteMem: Data type not yet implemented");
+		throw std::runtime_error("WriteMem: Data type not yet implemented.");
 	}
 }
 
@@ -911,6 +992,7 @@ VM::t_addr VM::GetDataSize(const t_data& data) const
 	else if(std::holds_alternative<t_str>(data))
 		return m_addrsize /*len*/ + std::get<t_str>(data).length();
 
+	throw std::runtime_error("GetDataSize: Data type not yet implemented.");
 	return 0;
 }
 

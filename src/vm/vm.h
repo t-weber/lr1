@@ -123,6 +123,12 @@ protected:
 
 
 	/**
+	 * get the address of a function argument variable
+	 */
+	VM::t_addr GetArgAddr(t_addr addr, t_addr arg_num) const;
+
+
+	/**
 	 * read data from memory
 	 */
 	std::tuple<VMType, t_data> ReadMemData(t_addr addr);

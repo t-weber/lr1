@@ -97,27 +97,42 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			const SymInfo *sym = m_symtab.GetSymbol(varname);
 			if(!sym)                      // symbol not yet seen -> register it
 			{
-				constexpr VMType symty = VMType::REAL; // TODO: other data types
+				VMType symty = ast->GetDataType();
 
 				if(m_cur_func == "")  // in global scope
 				{
 					sym = m_symtab.AddSymbol(varname, -m_glob_stack,
 						VMType::ADDR_GBP, symty);
-					m_glob_stack += vm_type_size<symty, true>;
+					m_glob_stack += get_vm_type_size(symty, true);
+
+					//std::cout << "added global symbol \""
+					//	<< varname << "\" with size "
+					//	<< get_vm_type_size(symty, true)
+					//	<< std::endl;
 				}
 				else                  // in local function scope
 				{
 					if(m_local_stack.find(m_cur_func) == m_local_stack.end())
 					{
 						// padding of maximum data type size, to avoid overwriting top stack value
-						m_local_stack[m_cur_func] = sizeof(/*t_data*/ t_vm_longest_type) + 1;
+						m_local_stack[m_cur_func] = g_vm_longest_size + 1;
 					}
 
 					sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
 						VMType::ADDR_BP, symty);
-					m_local_stack[m_cur_func] += vm_type_size<symty, true>;
+					m_local_stack[m_cur_func] += get_vm_type_size(symty, true);
+
+					//std::cout << "added local symbol \""
+					//	<< varname << "\" with size "
+					//	<< get_vm_type_size(symty, true)
+					//	<< std::endl;
 				}
 			}
+
+			//std::cout << "pushing address " << int(sym->addr)
+			//	<< " relative register " << int(sym->loc)
+			//	<< " of symbol " << "\"" << varname << "\""
+			//	<< std::endl;
 
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 			// register with base address
@@ -510,7 +525,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary && ast->GetArgs())
 	{
 		// skip saved ebp and return address on stack frame
-		t_vm_addr addr_bp = 2 * (sizeof(t_vm_addr) + 1);
+		//t_vm_addr addr_bp = 2 * (sizeof(t_vm_addr) + 1);
 
 		for(std::size_t i=0; i<ast->GetArgs()->NumChildren(); ++i)
 		{
@@ -518,10 +533,13 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 			const std::string& argname = ident->GetLexerValue();
 			std::string varname = m_cur_func + "/" + argname;
 
-			constexpr VMType argty = VMType::REAL; // TODO: implement for other data types
+			constexpr VMType argty = VMType::UNKNOWN;
 			//std::cout << "arg: " << varname << ", addr: " << addr_bp << std::endl;
-			m_symtab.AddSymbol(varname, addr_bp, VMType::ADDR_BP, argty);
-			addr_bp += vm_type_size<argty, true>;
+			//m_symtab.AddSymbol(varname, addr_bp, VMType::ADDR_BP, argty);
+			//addr_bp += vm_type_size<argty, true>;
+
+			//std::cout << "arg: " << varname << ", addr: " << i+2 << std::endl;
+			m_symtab.AddSymbol(varname, i+2, VMType::ADDR_BP_ARG, argty);
 		}
 	}
 

@@ -236,12 +236,12 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 		throw std::runtime_error(ostrErr.str());
 	}
 
-	if(longest_matching.size() > 1)
+	/*if(longest_matching.size() > 1)
 	{
 		std::cerr << "Warning, line " << line
 			<< ": Ambiguous match in lexer for token \""
 			<< input << "\"." << std::endl;
-	}
+	}*/
 
 	return longest_matching[0];
 }
