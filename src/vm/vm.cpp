@@ -398,21 +398,10 @@ bool VM::Run()
 			case OpCode::EXTCALL: // external function call
 			{
 				// get function name
-				std::string funcname = std::get<t_str>(PopData());
+				const t_str/*&*/ funcname = std::get<t_str>(PopData());
 
-				// get number of function arguments
-				t_int num_args = std::get<t_int>(PopData());
-
-				if(m_debug)
-				{
-					std::cout << "external function call to \"" << funcname
-						<< "\" with " << num_args << " arguments."
-						<< "." << std::endl;
-				}
-
-				// TODO
-
-				//PushData(retval, VMType::UNKNOWN, false);
+				t_data retval = CallExternal(funcname);
+				PushData(retval, VMType::UNKNOWN, false);
 				break;
 			}
 
@@ -1017,7 +1006,7 @@ void VM::SetMem(t_addr addr, VM::t_byte data)
 }
 
 
-void VM::SetMem(t_addr addr, const std::string& data)
+void VM::SetMem(t_addr addr, const t_str& data)
 {
 	for(std::size_t i=0; i<data.size(); ++i)
 		SetMem(addr + (t_addr)(i), static_cast<t_byte>(data[i]));

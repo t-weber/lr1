@@ -33,6 +33,7 @@ class ASTLoop;
 class ASTFunc;
 class ASTFuncCall;
 class ASTJump;
+class ASTDeclare;
 
 
 enum class ASTType
@@ -51,6 +52,8 @@ enum class ASTType
 
 	FUNC,
 	FUNCCALL,
+
+	DECLARE,
 };
 
 
@@ -77,6 +80,7 @@ public:
 	virtual void visit(const ASTFunc* ast, std::size_t level) = 0;
 	virtual void visit(const ASTFuncCall* ast, std::size_t level) = 0;
 	virtual void visit(const ASTJump* ast, std::size_t level) = 0;
+	virtual void visit(const ASTDeclare* ast, std::size_t level) = 0;
 };
 
 
@@ -352,6 +356,7 @@ private:
 };
 
 
+
 /**
  * list node, e.g. for statements
  */
@@ -397,6 +402,7 @@ public:
 private:
 	std::vector<t_astbaseptr> m_children{};
 };
+
 
 
 /**
@@ -459,6 +465,7 @@ private:
 };
 
 
+
 /**
  * node for loop statements
  */
@@ -509,6 +516,7 @@ private:
 };
 
 
+
 /**
  * node for functions
  */
@@ -556,12 +564,32 @@ public:
 	void SetBlock(const t_astbaseptr& ast) { m_block = ast; }
 	void SetName(const std::string& name) { m_name = name; }
 
+	/**
+	 * get the number of function arguments
+	 */
+	std::size_t NumArgs() const
+	{
+		if(!m_args)
+			return 0;
+
+		if(m_args->GetType() != ASTType::LIST)
+			return 1;
+
+		if(auto arglist = std::dynamic_pointer_cast<ASTList>(m_args); arglist)
+		{
+			return arglist->NumChildren();
+		}
+
+		return 0;
+	}
+
 
 private:
 	std::string m_name{};
 	t_astbaseptr m_args{};
 	t_astbaseptr m_block{};
 };
+
 
 
 /**
@@ -606,11 +634,31 @@ public:
 	void SetArgs(const t_astbaseptr& ast) { m_args = ast; }
 	void SetName(const std::string& name) { m_name = name; }
 
+	/**
+	 * get the number of function arguments
+	 */
+	std::size_t NumArgs() const
+	{
+		if(!m_args)
+			return 0;
+
+		if(m_args->GetType() != ASTType::LIST)
+			return 1;
+
+		if(auto arglist = std::dynamic_pointer_cast<ASTList>(m_args); arglist)
+		{
+			return arglist->NumChildren();
+		}
+
+		return 0;
+	}
+
 
 private:
 	std::string m_name{};
 	t_astbaseptr m_args{};
 };
+
 
 
 /**
@@ -670,6 +718,97 @@ public:
 private:
 	JumpType m_jumptype{JumpType::UNKNOWN};
 	t_astbaseptr m_expr{};
+};
+
+
+
+/**
+ * node for declarations (at the moment for external functions)
+ */
+class ASTDeclare : public ASTBaseAcceptor<ASTDeclare>
+{
+public:
+	ASTDeclare(std::size_t id, std::size_t tableidx,
+		bool is_external, bool is_func, const t_astbaseptr& idents)
+		: ASTBaseAcceptor<ASTDeclare>{id, tableidx},
+			m_external{is_external}, m_func{is_func}, m_idents{idents}
+	{}
+
+	virtual ~ASTDeclare() = default;
+
+	virtual ASTType GetType() const override { return ASTType::DECLARE; }
+
+	virtual std::size_t NumChildren() const override { return 1; }
+
+	virtual t_astbaseptr GetChild(std::size_t i) const override
+	{
+		switch(i)
+		{
+			case 0: return m_idents;
+		}
+
+		return nullptr;
+	}
+
+	virtual void SetChild(std::size_t i, const t_astbaseptr& ast) override
+	{
+		switch(i)
+		{
+			case 0: m_idents = ast; break;
+		}
+	}
+
+	t_astbaseptr GetIdents() const { return m_idents; }
+	bool IsExternal() const { return m_external; }
+	bool IsFunc() const { return m_func; }
+
+	void SetIdents(const t_astbaseptr& ast) { m_idents = ast; }
+
+
+	/**
+	 * get the number of symbol identifiers
+	 */
+	std::size_t NumIdents() const
+	{
+		if(!m_idents)
+			return 0;
+
+		if(m_idents->GetType() != ASTType::LIST)
+			return 1;
+
+		if(auto idents = std::dynamic_pointer_cast<ASTList>(m_idents); idents)
+		{
+			return idents->NumChildren();
+		}
+
+		return 0;
+	}
+
+
+	/**
+	 * get a symbol identifier
+	 */
+	const std::string* GetIdent(std::size_t idx) const
+	{
+		if(auto idents = std::dynamic_pointer_cast<ASTList>(m_idents); idents)
+		{
+			auto ident = idents->GetChild(idx);
+			if(auto ident_tok = std::dynamic_pointer_cast<ASTToken<std::string>>(ident); ident_tok)
+			{
+				if(!ident_tok->HasLexerValue())
+					return nullptr;
+				return &ident_tok->GetLexerValue();
+			}
+		}
+
+		return nullptr;
+	}
+
+
+private:
+	bool m_external{false};   // external symbols?
+	bool m_func{false};       // are the symbols functions?
+	t_astbaseptr m_idents{};  // symbol names
 };
 
 

@@ -65,6 +65,11 @@ get_matching_tokens(const std::string& str)
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::FUNC), str));
 		}
+		else if(str == "extern")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::EXTERN), str));
+		}
 		else if(str == "return")
 		{
 			matches.emplace_back(std::make_tuple(

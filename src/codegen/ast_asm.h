@@ -9,6 +9,7 @@
 #define __LR1_AST_ASM_H__
 
 #include <unordered_map>
+#include <unordered_set>
 #include <tuple>
 #include <iostream>
 #include <cstdint>
@@ -41,6 +42,7 @@ public:
 	virtual void visit(const ASTFunc* ast, std::size_t level) override;
 	virtual void visit(const ASTFuncCall* ast, std::size_t level) override;
 	virtual void visit(const ASTJump* ast, std::size_t level) override;
+	virtual void visit(const ASTDeclare* ast, std::size_t level) override;
 
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
@@ -61,12 +63,14 @@ private:
 	std::vector<std::string> m_cur_loop{}; // currently active loops in function
 
 	// stream positions where addresses need to be patched in
-	std::vector<std::tuple<std::string, std::streampos>> m_func_comefroms{};
+	std::vector<std::tuple<std::string, std::streampos, t_vm_addr>> m_func_comefroms{};
 	std::vector<std::streampos> m_endfunc_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_begin_comefroms{};
 	std::unordered_multimap<std::string, std::streampos> m_loop_end_comefroms{};
 
 	std::size_t m_glob_label{0};           // jump label counter
+
+	std::unordered_set<std::string> m_ext_funcs{};  // external functions
 };
 
 

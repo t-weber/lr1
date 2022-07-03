@@ -493,14 +493,11 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		throw std::runtime_error("Nested functions are not allowed.");
 
 	// function name
-	m_cur_func = ast->GetName();
+	const std::string& func_name = ast->GetName();
+	m_cur_func = func_name;
 
-	// function arguments
-	t_vm_int num_args = 0;
-	if(ast->GetArgs())
-	{
-		num_args = ast->GetArgs()->NumChildren();
-	}
+	// number of function arguments
+	t_vm_int num_args = static_cast<t_vm_int>(ast->NumArgs());
 
 	std::streampos jmp_end_streampos;
 	t_vm_addr end_func_addr = 0;
@@ -516,8 +513,8 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	}
 	else
 	{
-		(*m_ostr) << "jmp " << ast->GetName() << "_end\n";
-		(*m_ostr) << ast->GetName() << ":\n";
+		(*m_ostr) << "jmp " << func_name << "_end\n";
+		(*m_ostr) << func_name << ":\n";
 	}
 
 
@@ -549,8 +546,8 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary)
 	{
 		// add function to symbol table
-		m_symtab.AddSymbol(ast->GetName(), before_block, VMType::ADDR_MEM, VMType::UNKNOWN, true, 0);
-		//std::cout << "function " << ast->GetName() << " at address " << before_block << std::endl;
+		m_symtab.AddSymbol(func_name, before_block, VMType::ADDR_MEM, VMType::UNKNOWN, true, num_args);
+		//std::cout << "function " << func_name << " at address " << before_block << std::endl;
 	}
 
 	ast->GetBlock()->accept(this, level+1); // block
@@ -586,9 +583,9 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	}
 	else
 	{
-		(*m_ostr) << ast->GetName() << "_ret:" << std::endl;
+		(*m_ostr) << func_name << "_ret:" << std::endl;
 		(*m_ostr) << "ret " << num_args << "\n";
-		(*m_ostr) << ast->GetName() << "_end:" << std::endl;
+		(*m_ostr) << func_name << "_end:" << std::endl;
 	}
 
 	m_cur_func = "";
@@ -598,7 +595,9 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 
 void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 {
-	//std::size_t num_args = ast->GetArgs()->NumChildren();
+	const std::string& func_name = ast->GetName();
+	t_vm_int num_args = static_cast<t_vm_int>(ast->NumArgs());
+	bool is_external_func = (m_ext_funcs.find(func_name) != m_ext_funcs.end());
 
 	// push the function arguments
 	if(ast->GetArgs())
@@ -606,42 +605,82 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 
 	if(m_binary)
 	{
-		// get function address and push it
-		const SymInfo *sym = m_symtab.GetSymbol(ast->GetName());
-		t_vm_addr func_addr = 0;
-		if(sym)
+		// call external function
+		if(is_external_func)
 		{
-			// function address already known
-			func_addr = sym->addr;
+			// push external function name
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+			// write type descriptor byte
+			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
+			// write function name
+			t_vm_addr len = static_cast<t_vm_addr>(func_name.length());
+			m_ostr->write(reinterpret_cast<const char*>(&len),
+				vm_type_size<VMType::ADDR_MEM, false>);
+			// write string data
+			m_ostr->write(func_name.data(), len);
+
+			// TODO: check number of arguments
+
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::EXTCALL));
 		}
 
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
-#if AST_ABS_FUNC_ADDR != 0
-		// push absolute function address
-		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
-		std::streampos addr_pos = m_ostr->tellp();
-		m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
-#else
-		// push relative function address
-		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
-		// already skipped over address and jmp instruction
-		std::streampos addr_pos = m_ostr->tellp();
-		t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
-		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
-		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
-#endif
-		m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
-
-		if(!sym)
+		// call internal function
+		else
 		{
-			// function address not yet known
-			m_func_comefroms.emplace_back(
-				std::make_tuple(ast->GetName(), addr_pos));
+			// get function address and push it
+			const SymInfo *sym = m_symtab.GetSymbol(func_name);
+			t_vm_addr func_addr = 0;
+			if(sym)
+			{
+				// function address already known
+				func_addr = sym->addr;
+
+				if(num_args != sym->num_args)
+				{
+					std::ostringstream msg;
+					msg << "Function \"" << func_name << "\" takes " << sym->num_args
+						<< " arguments, but " << num_args << " were given.";
+					throw std::runtime_error(msg.str());
+				}
+			}
+
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
+	#if AST_ABS_FUNC_ADDR != 0
+			// push absolute function address
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
+			std::streampos addr_pos = m_ostr->tellp();
+			m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
+	#else
+			// push relative function address
+			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
+			// already skipped over address and jmp instruction
+			std::streampos addr_pos = m_ostr->tellp();
+			t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
+			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+	#endif
+			m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
+
+			if(!sym)
+			{
+				// function address not yet known
+				m_func_comefroms.emplace_back(
+					std::make_tuple(func_name, addr_pos, num_args));
+			}
 		}
 	}
 	else
 	{
-		(*m_ostr) << "call " << ast->GetName() << std::endl;
+		if(is_external_func)
+		{
+			// call external function
+			(*m_ostr) << "extcall " << func_name << std::endl;
+		}
+		else
+		{
+			// call internal function
+			(*m_ostr) << "call " << func_name << std::endl;
+		}
 	}
 }
 
@@ -725,13 +764,21 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
  */
 void ASTAsm::PatchFunctionAddresses()
 {
-	for(const auto& [func_name, pos] : m_func_comefroms)
+	for(const auto& [func_name, pos, num_args] : m_func_comefroms)
 	{
 		const SymInfo *sym = m_symtab.GetSymbol(func_name);
 		if(!sym)
 		{
 			throw std::runtime_error(
 				"Tried to call unknown function \"" + func_name + "\".");
+		}
+
+		if(num_args != sym->num_args)
+		{
+			std::ostringstream msg;
+			msg << "Function \"" << func_name << "\" takes " << sym->num_args
+				<< " arguments, but " << num_args << " were given.";
+			throw std::runtime_error(msg.str());
 		}
 
 		/*std::cout << "Patching function \"" << func_name << "\""
@@ -755,4 +802,22 @@ void ASTAsm::PatchFunctionAddresses()
 
 	// seek to end of stream
 	m_ostr->seekp(0, std::ios_base::end);
+}
+
+
+
+void ASTAsm::visit(const ASTDeclare* ast, [[maybe_unused]] std::size_t level)
+{
+	std::size_t num_idents = ast->NumIdents();
+
+	// external function declarations
+	if(ast->IsFunc() && ast->IsExternal())
+	{
+		for(std::size_t idx=0; idx<num_idents; ++idx)
+		{
+			const std::string* func_name = ast->GetIdent(idx);
+			if(func_name)
+				m_ext_funcs.insert(*func_name);
+		}
+	}
 }

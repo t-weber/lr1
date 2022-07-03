@@ -26,7 +26,7 @@ struct SymInfo
 	VMType ty{VMType::UNKNOWN};    // data type
 	bool is_func{false};           // function or variable
 
-	t_vm_addr arg_size{0};         // size of arguments
+	t_vm_int num_args{0};          // number of arguments
 };
 
 
@@ -53,7 +53,7 @@ public:
 	const SymInfo* AddSymbol(const std::string& name,
 		t_vm_addr addr, VMType loc = VMType::ADDR_BP,
 		VMType ty = VMType::UNKNOWN, bool is_func = false,
-		t_vm_addr arg_size = 0)
+		t_vm_int num_args = 0)
 	{
 		SymInfo info
 		{
@@ -61,7 +61,7 @@ public:
 			.loc = loc,
 			.ty = ty,
 			.is_func = is_func,
-			.arg_size = arg_size,
+			.num_args = num_args,
 		};
 
 		return &m_syms.insert_or_assign(name, info).first->second;

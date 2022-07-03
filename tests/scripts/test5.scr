@@ -1,0 +1,6 @@
+extern func sin, cos, tan, sqrt, pow;
+extern func print;
+
+#sin(1.);
+
+print("2^5 = " + pow(2, 5));

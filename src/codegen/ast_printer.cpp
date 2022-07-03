@@ -31,6 +31,7 @@ std::string ASTPrinter::get_ast_typename(const ASTBase* ast)
 			std::string subty = get_jump_typename(jump);
 			return ty + "/" + subty;
 		}
+		case ASTType::DECLARE: return "declaration";
 	}
 
 	return "<unknown>";
@@ -189,6 +190,12 @@ void ASTPrinter::visit(const ASTFuncCall* ast, std::size_t level)
 
 
 void ASTPrinter::visit(const ASTJump* ast, std::size_t level)
+{
+	print_base(ast, level);
+}
+
+
+void ASTPrinter::visit(const ASTDeclare* ast, std::size_t level)
 {
 	print_base(ast, level);
 }

@@ -38,7 +38,9 @@ public:
 	using t_char = typename t_str::value_type;
 
 	// variant of all data types
-	using t_data = std::variant<t_real, t_int, t_bool, t_addr, t_str>;
+	using t_data = std::variant<
+		std::monostate /*prevents default-construction of first type (t_real)*/,
+		t_real, t_int, t_bool, t_addr, t_str>;
 
 	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
@@ -87,7 +89,16 @@ public:
 
 
 protected:
+	/**
+	 * return the size of the held data
+	 */
 	t_addr GetDataSize(const t_data& data) const;
+
+
+	/**
+	 * call external function
+	 */
+	t_data CallExternal(const t_str& func_name);
 
 
 	/**
