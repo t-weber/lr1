@@ -10,6 +10,8 @@
 #include <sstream>
 #include <memory>
 #include <regex>
+#include <boost/algorithm/string.hpp>
+
 
 
 /**
@@ -25,7 +27,7 @@ get_matching_tokens(const std::string& str)
 		std::smatch smatch;
 		if(std::regex_match(str, smatch, regex))
 		{
-			t_real val{};
+			t_int val{};
 			std::istringstream{str} >> val;
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::INT), val));
@@ -88,7 +90,7 @@ get_matching_tokens(const std::string& str)
 		else
 		{
 			// identifier
-			std::regex regex{"[A-Za-z]+[A-Za-z0-9]*"};
+			std::regex regex{"[_A-Za-z]+[_A-Za-z0-9]*"};
 			std::smatch smatch;
 			if(std::regex_match(str, smatch, regex))
 				matches.emplace_back(std::make_tuple(
@@ -135,6 +137,19 @@ get_matching_tokens(const std::string& str)
 }
 
 
+
+/**
+ * replace escape sequences
+ */
+static void replace_escapes(std::string& str)
+{
+	boost::replace_all(str, "\\n", "\n");
+	boost::replace_all(str, "\\t", "\t");
+	boost::replace_all(str, "\\r", "\r");
+}
+
+
+
 /**
  * get next token and attribute
  */
@@ -173,6 +188,7 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 				}
 				else
 				{
+					replace_escapes(input);
 					in_string = false;
 					return std::make_tuple(
 						static_cast<t_tok>(Token::STR), input);
@@ -252,6 +268,7 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 }
 
 
+
 template<std::size_t IDX> struct _Lval_LoopFunc
 {
 	void operator()(
@@ -267,6 +284,7 @@ template<std::size_t IDX> struct _Lval_LoopFunc
 		}
 	};
 };
+
 
 
 /**

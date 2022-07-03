@@ -47,6 +47,8 @@ public:
 	void SetStream(std::ostream* ostr) { m_ostr = ostr; }
 	void SetBinary(bool bin) { m_binary = bin; }
 
+	void AddExternalFunc(const std::string& name) { m_ext_funcs.insert(name); }
+	void AlwaysCallExternal(bool b) { m_always_call_ext = b; }
 	void PatchFunctionAddresses();
 
 
@@ -70,6 +72,7 @@ private:
 
 	std::size_t m_glob_label{0};           // jump label counter
 
+	bool m_always_call_ext{false};         // always call external function
 	std::unordered_set<std::string> m_ext_funcs{};  // external functions
 };
 

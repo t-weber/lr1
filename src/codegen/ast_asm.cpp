@@ -45,7 +45,7 @@ void ASTAsm::visit(const ASTToken<t_real>* ast,
 	}
 	else
 	{
-		(*m_ostr) << "push " << val << std::endl;
+		(*m_ostr) << "push real " << val << std::endl;
 	}
 }
 
@@ -69,7 +69,7 @@ void ASTAsm::visit(const ASTToken<t_int>* ast,
 	}
 	else
 	{
-		(*m_ostr) << "push " << val << std::endl;
+		(*m_ostr) << "push int " << val << std::endl;
 	}
 }
 
@@ -174,7 +174,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 		// the token names a string literal
 		else
 		{
-			(*m_ostr) << "push \"" << val << "\"" << std::endl;
+			(*m_ostr) << "push string \"" << val << "\"" << std::endl;
 		}
 	}
 }
@@ -597,7 +597,8 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 {
 	const std::string& func_name = ast->GetName();
 	t_vm_int num_args = static_cast<t_vm_int>(ast->NumArgs());
-	bool is_external_func = (m_ext_funcs.find(func_name) != m_ext_funcs.end());
+	bool is_external_func = (m_always_call_ext ||
+		m_ext_funcs.find(func_name) != m_ext_funcs.end());
 
 	// push the function arguments
 	if(ast->GetArgs())

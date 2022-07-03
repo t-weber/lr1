@@ -1,3 +1,5 @@
+extern func input_int, print;
+
 #
 # factorials
 #
@@ -34,8 +36,14 @@ func fibo(arg1)
 }
 
 
-a = fac(5);
-b = fibo(10);
-a;
-b;
-a + b;
+
+loop(1 == 1)
+{
+	print("\nn = ");
+	n = input_int();
+	a = fac(n);
+	b = fibo(n);
+
+	print(n + "! = " + a + "\n");
+	print("fibo(" + n + ") = " + b + "\n");
+}

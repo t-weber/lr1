@@ -6,6 +6,7 @@
  */
 
 #include "ast_printer.h"
+#include "../vm/types.h"
 
 
 /**
@@ -65,7 +66,8 @@ void ASTPrinter::print_base(
 {
 	for(std::size_t i=0; i<level; ++i)
 		m_ostr << "  ";
-	m_ostr << get_ast_typename(ast) << ", id=" << ast->GetId();
+	m_ostr << get_ast_typename(ast) << ", id = " << ast->GetId();
+	m_ostr << ", data type = " << get_vm_type_name(ast->GetDataType());
 	//if(ast->GetId() < 256)
 	//	m_ostr << " (" << (char)ast->GetId() << ")";
 	if(extrainfo)
@@ -142,7 +144,7 @@ void ASTPrinter::visit(
 void ASTPrinter::visit(const ASTUnary* ast, std::size_t level)
 {
 	std::ostringstream _ostr;
-	_ostr << ", op=" << ast->GetOpId();
+	_ostr << ", op = " << ast->GetOpId();
 	if(ast->GetOpId() < 256)
 		_ostr << " (" << (char)ast->GetOpId() << ")";
 	print_base(ast, level, _ostr.str().c_str());
@@ -152,7 +154,7 @@ void ASTPrinter::visit(const ASTUnary* ast, std::size_t level)
 void ASTPrinter::visit(const ASTBinary* ast, std::size_t level)
 {
 	std::ostringstream _ostr;
-	_ostr << ", op=" << ast->GetOpId();
+	_ostr << ", op = " << ast->GetOpId();
 	if(ast->GetOpId() < 256)
 		_ostr << " (" << (char)ast->GetOpId() << ")";
 	print_base(ast, level, _ostr.str().c_str());

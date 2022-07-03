@@ -58,7 +58,20 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	{
 		OpCast<t_str>();
 		const t_str/*&*/ arg = std::get<t_str>(PopData());
-		std::cout << arg << std::endl;
+		std::cout << arg;
+		std::cout.flush();
+	}
+	else if(func_name == "input_real")
+	{
+		t_real val{};
+		std::cin >> val;
+		retval = val;
+	}
+	else if(func_name == "input_int")
+	{
+		t_int val{};
+		std::cin >> val;
+		retval = val;
 	}
 
 	return retval;

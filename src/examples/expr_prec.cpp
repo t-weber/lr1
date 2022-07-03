@@ -38,7 +38,7 @@ static NonTerminalPtr start, expr;
 
 static TerminalPtr op_plus, op_minus, op_mult, op_div, op_mod, op_pow;
 static TerminalPtr bracket_open, bracket_close, comma;
-static TerminalPtr sym, ident;
+static TerminalPtr sym_real, sym_int, ident;
 
 
 static void create_grammar()
@@ -55,7 +55,8 @@ static void create_grammar()
 	bracket_open = std::make_shared<Terminal>('(', "(");
 	bracket_close = std::make_shared<Terminal>(')', ")");
 	comma = std::make_shared<Terminal>(',', ",");
-	sym = std::make_shared<Terminal>((std::size_t)Token::REAL, "symbol");
+	sym_real = std::make_shared<Terminal>((std::size_t)Token::REAL, "real");
+	sym_int = std::make_shared<Terminal>((std::size_t)Token::INT, "integer");
 	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
 
 	std::size_t semanticindex = 0;
@@ -83,13 +84,15 @@ static void create_grammar()
 	expr->AddRule({ ident, bracket_open, expr, bracket_close }, semanticindex++);
 	// rule 10: expr -> ident(expr, expr)
 	expr->AddRule({ ident, bracket_open, expr, comma, expr, bracket_close }, semanticindex++);
-	// rule 11: expr -> symbol
-	expr->AddRule({ sym }, semanticindex++);
-	// rule 12: expr -> ident
+	// rule 11: expr -> real symbol
+	expr->AddRule({ sym_real }, semanticindex++);
+	// rule 12: expr -> int symbol
+	expr->AddRule({ sym_int }, semanticindex++);
+	// rule 13: expr -> ident
 	expr->AddRule({ ident }, semanticindex++);
-	// rule 13, unary-: expr -> -expr
+	// rule 14, unary-: expr -> -expr
 	expr->AddRule({ op_minus, expr }, semanticindex++);
-	// rule 14, unary+: expr -> +expr
+	// rule 15, unary+: expr -> +expr
 	expr->AddRule({ op_plus, expr }, semanticindex++);
 }
 
@@ -344,30 +347,75 @@ static void lr1_run_parser()
 			},
 
 			// rule 8: expr -> ident()
-			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				// TODO: function call
-				std::cerr << "not yet implemented" << std::endl;
-				return nullptr;
+				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				funcname->SetIdent(true);
+				const std::string& ident = funcname->GetLexerValue();
+
+				std::size_t args_id = expr->GetId();
+				std::size_t args_tableidx = mapNonTermIdx.find(args_id)->second;
+				auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
+
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
 			},
 
 			// rule 9: expr -> ident(expr)
-			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				// TODO: function call
-				std::cerr << "not yet implemented" << std::endl;
-				return nullptr;
+				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				funcname->SetIdent(true);
+				const std::string& ident = funcname->GetLexerValue();
+
+				std::size_t args_id = expr->GetId();
+				std::size_t args_tableidx = mapNonTermIdx.find(args_id)->second;
+				auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
+				funcargs->AddChild(args[2], false);
+
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
 			},
 
 			// rule 10: expr -> ident(expr, expr)
-			[]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
-				// TODO: function call
-				std::cerr << "not yet implemented" << std::endl;
-				return nullptr;
+				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
+				funcname->SetIdent(true);
+				const std::string& ident = funcname->GetLexerValue();
+
+				std::size_t args_id = expr->GetId();
+				std::size_t args_tableidx = mapNonTermIdx.find(args_id)->second;
+				auto funcargs = std::make_shared<ASTList>(args_id, args_tableidx);
+				funcargs->AddChild(args[4], false);
+				funcargs->AddChild(args[2], false);
+
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTFuncCall>(id, tableidx, ident, funcargs);
 			},
 
-			// rule 11: expr -> symbol
+			// rule 11: expr -> real symbol
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				args[0]->SetDataType(VMType::REAL);
+				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+			},
+
+			// rule 12: expr -> int symbol
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				args[0]->SetDataType(VMType::INT);
+				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
+			},
+
+			// rule 13: expr -> ident
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -375,15 +423,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
 			},
 
-			// rule 12: expr -> ident
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
-			{
-				std::size_t id = expr->GetId();
-				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTDelegate>(id, tableidx, args[0]);
-			},
-
-			// rule 13, unary-: expr -> -expr
+			// rule 14, unary-: expr -> -expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -391,7 +431,7 @@ static void lr1_run_parser()
 				return std::make_shared<ASTUnary>(id, tableidx, args[1], op_minus->GetId());
 			},
 
-			// rule 14, unary+: expr -> +expr
+			// rule 15, unary+: expr -> +expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = expr->GetId();
@@ -413,7 +453,7 @@ static void lr1_run_parser()
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "Tokens: ";
+			std::cout << "\nTokens: ";
 			for(const t_toknode& tok : tokens)
 			{
 				std::size_t tokid = tok->GetId();
@@ -427,9 +467,10 @@ static void lr1_run_parser()
 #endif
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "AST:\n";
+			std::cout << "\nAST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
 #endif
@@ -447,12 +488,14 @@ static void lr1_run_parser()
 #if DEBUG_CODEGEN != 0
 			std::ostringstream ostrAsm;
 			ASTAsm astasm{ostrAsm, &ops};
+			astasm.AlwaysCallExternal(true);
 			ast->accept(&astasm);
 #endif
 
 			std::ostringstream ostrAsmBin(
 				std::ios_base::out | std::ios_base::binary);
 			ASTAsm astasmbin{ostrAsmBin, &ops};
+			astasmbin.AlwaysCallExternal(true);
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
 			std::string strAsmBin = ostrAsmBin.str();
@@ -474,19 +517,22 @@ static void lr1_run_parser()
 #endif
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "Generated code ("
+			std::cout << "\nGenerated code ("
 				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();
 #endif
 
 			VM vm(1024);
+			//vm.SetDebug(true);
 			vm.SetMem(0, strAsmBin);
 			vm.Run();
 
-			std::cout << "Result: ";
+			std::cout << "\nResult: ";
 			std::visit([](auto&& val) -> void
 			{
-				std::cout << val;
+				using t_val = std::decay_t<decltype(val)>;
+				if constexpr(!std::is_same_v<t_val, std::monostate>)
+					std::cout << val;
 			}, vm.TopData());
 			std::cout << std::endl;
 		}

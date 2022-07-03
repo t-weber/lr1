@@ -19,6 +19,16 @@
 #include <iomanip>
 #include <cstdint>
 
+#if __has_include(<filesystem>)
+	#include <filesystem>
+	namespace fs = std::filesystem;
+#elif __has_include(<boost/filesystem.hpp>)
+	#include <boost/filesystem.hpp>
+	namespace fs = boost::filesystem;
+#else
+	#error No filesystem support found.
+#endif
+
 
 #define USE_LALR          1
 #define DEBUG_PARSERGEN   1
@@ -106,7 +116,7 @@ static void create_grammar()
 	stmt_end = std::make_shared<Terminal>(';', ";");
 
 	sym_real = std::make_shared<Terminal>(static_cast<std::size_t>(Token::REAL), "real");
-	sym_int = std::make_shared<Terminal>(static_cast<std::size_t>(Token::INT), "int");
+	sym_int = std::make_shared<Terminal>(static_cast<std::size_t>(Token::INT), "integer");
 	sym_str = std::make_shared<Terminal>(static_cast<std::size_t>(Token::STR), "string");
 	ident = std::make_shared<Terminal>(static_cast<std::size_t>(Token::IDENT), "ident");
 
@@ -909,7 +919,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			auto tokens = get_all_tokens(*istr, &mapTermIdx, end_on_newline);
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "Tokens: ";
+			std::cout << "\nTokens: ";
 			for(const t_toknode& tok : tokens)
 			{
 				std::size_t tokid = tok->GetId();
@@ -926,7 +936,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "AST:\n";
+			std::cout << "\nAST:\n";
 			ASTPrinter printer{std::cout};
 			ast->accept(&printer);
 #endif
@@ -971,29 +981,33 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			std::string strAsmBin = ostrAsmBin.str();
 
 #if DEBUG_CODEGEN != 0
-			std::cout << "Generated code ("
+			std::cout << "\nGenerated code ("
 				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();
 #endif
 
-			std::string binfile{"script.bin"};
-			std::ofstream ofstrAsmBin(binfile, std::ios_base::binary);
+			fs::path binfile(script_file);
+			binfile = binfile.filename();
+			binfile.replace_extension(".bin");
+
+			std::ofstream ofstrAsmBin(binfile.string(), std::ios_base::binary);
 			if(!ofstrAsmBin)
 			{
 				std::cerr << "Cannot open \""
-					<< binfile << "\"." << std::endl;
+					<< binfile.string() << "\"." << std::endl;
 				return false;
 			}
 			ofstrAsmBin.write(strAsmBin.data(), strAsmBin.size());
 			if(ofstrAsmBin.fail())
 			{
 				std::cerr << "Cannot write \""
-					<< binfile << "\"." << std::endl;
+					<< binfile.string() << "\"." << std::endl;
 				return false;
 			}
+			ofstrAsmBin.flush();
 
-			std::cout << "Created compiled program \""
-				<< binfile << "\"." << std::endl;
+			std::cout << "\nCreated compiled program \""
+				<< binfile.string() << "\"." << std::endl;
 
 #if RUN_VM != 0
 			VM vm(4096);
@@ -1004,7 +1018,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 
 			if(vm.GetSP() != sp_initial)
 			{
-				std::cout << "Result: ";
+				std::cout << "\nResult: ";
 				std::visit([](auto&& val) -> void
 				{
 					using t_val = std::decay_t<decltype(val)>;
