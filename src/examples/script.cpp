@@ -986,7 +986,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				<< ostrAsm.str();
 #endif
 
-			fs::path binfile(script_file);
+			fs::path binfile(script_file ? script_file : "script.scr");
 			binfile = binfile.filename();
 			binfile.replace_extension(".bin");
 

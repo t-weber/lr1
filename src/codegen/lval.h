@@ -14,8 +14,11 @@
 #include <cstdint>
 
 
+//using t_real = float;
+//using t_int = std::int32_t;
 using t_real = double;
 using t_int = std::int64_t;
+
 using t_lval = std::optional<std::variant<t_real, t_int, std::string>>;
 
 

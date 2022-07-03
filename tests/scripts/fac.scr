@@ -41,6 +41,11 @@ loop(1 == 1)
 {
 	print("\nn = ");
 	n = input_int();
+	if(n < 0)
+	{
+		break;
+	}
+
 	a = fac(n);
 	b = fibo(n);
 

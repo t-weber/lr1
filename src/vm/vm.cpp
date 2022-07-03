@@ -12,7 +12,8 @@
 #include <cstring>
 
 
-VM::VM(t_addr memsize) : m_memsize{memsize}
+VM::VM(t_addr memsize, std::optional<t_addr> framesize)
+	: m_memsize{memsize}, m_framesize{framesize ? *framesize : memsize/16}
 {
 	m_mem.reset(new t_byte[m_memsize]);
 	Reset();
@@ -92,7 +93,7 @@ bool VM::Run()
 				{
 					std::cout << "dereferenced address "
 						<< addr << ": "
-						//<< std::get<t_real>(val)
+						//<< std::get<m_realidx>(val)
 						<< "." << std::endl;
 				}
 				break;
@@ -103,12 +104,20 @@ bool VM::Run()
 				t_data val = PopData();
 				t_data result;
 
-				if(std::holds_alternative<t_real>(val))
-					result = -std::get<t_real>(val);
-				else if(std::holds_alternative<t_int>(val))
-					result = -std::get<t_int>(val);
+				if(val.index() == m_realidx)
+				{
+					result = t_data{std::in_place_index<m_realidx>,
+						-std::get<m_realidx>(val)};
+				}
+				else if(val.index() == m_intidx)
+				{
+					result = t_data{std::in_place_index<m_intidx>,
+						-std::get<m_intidx>(val)};
+				}
 				else
+				{
 					throw std::runtime_error("Type mismatch in arithmetic operation.");
+				}
 
 				PushData(result);
 				break;
@@ -198,10 +207,10 @@ bool VM::Run()
 			case OpCode::BINNOT:
 			{
 				t_data val = PopData();
-				if(std::holds_alternative<t_int>(val))
+				if(val.index() == m_intidx)
 				{
-					t_int newval = ~std::get<t_int>(val);
-					PushData(newval);
+					t_int newval = ~std::get<m_intidx>(val);
+					PushData(t_data{std::in_place_index<m_intidx>, newval});
 				}
 				else
 				{
@@ -273,19 +282,19 @@ bool VM::Run()
 
 			case OpCode::TOI: // converts value to t_int
 			{
-				OpCast<t_int>();
+				OpCast<t_int, m_intidx>();
 				break;
 			}
 
 			case OpCode::TOF: // converts value to t_real
 			{
-				OpCast<t_real>();
+				OpCast<t_real, m_realidx>();
 				break;
 			}
 
 			case OpCode::TOS: // converts value to t_str
 			{
-				OpCast<t_str>();
+				OpCast<t_str, m_stridx>();
 				break;
 			}
 
@@ -367,7 +376,7 @@ bool VM::Run()
 			case OpCode::RET: // return from function
 			{
 				// get number of function arguments
-				t_int num_args = std::get<t_int>(PopData());
+				t_int num_args = std::get<m_intidx>(PopData());
 
 				// if there's still a value on the stack, use it as return value
 				t_data retval;
@@ -398,7 +407,7 @@ bool VM::Run()
 			case OpCode::EXTCALL: // external function call
 			{
 				// get function name
-				const t_str/*&*/ funcname = std::get<t_str>(PopData());
+				const t_str/*&*/ funcname = std::get<m_stridx>(PopData());
 
 				t_data retval = CallExternal(funcname);
 				PushData(retval, VMType::UNKNOWN, false);
@@ -537,13 +546,15 @@ VM::t_data VM::TopData() const
 	{
 		case VMType::REAL:
 		{
-			dat = TopRaw<t_real, m_realsize>(m_bytesize);
+			dat = t_data{std::in_place_index<m_realidx>,
+				TopRaw<t_real, m_realsize>(m_bytesize)};
 			break;
 		}
 
 		case VMType::INT:
 		{
-			dat = TopRaw<t_int, m_intsize>(m_bytesize);
+			dat = t_data{std::in_place_index<m_intidx>,
+				TopRaw<t_int, m_intsize>(m_bytesize)};
 			break;
 		}
 
@@ -553,13 +564,15 @@ VM::t_data VM::TopData() const
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
 		{
-			dat = TopRaw<t_addr, m_addrsize>(m_bytesize);
+			dat = t_data{std::in_place_index<m_addridx>,
+				TopRaw<t_addr, m_addrsize>(m_bytesize)};
 			break;
 		}
 
 		case VMType::STR:
 		{
-			dat = TopString(m_bytesize);
+			dat = t_data{std::in_place_index<m_stridx>,
+				TopString(m_bytesize)};
 			break;
 		}
 
@@ -594,10 +607,11 @@ VM::t_data VM::PopData()
 	{
 		case VMType::REAL:
 		{
-			dat = PopRaw<t_real, m_realsize>();
+			dat = t_data{std::in_place_index<m_realidx>,
+				PopRaw<t_real, m_realsize>()};
 			if(m_debug)
 			{
-				std::cout << "popped real " << std::get<t_real>(dat)
+				std::cout << "popped real " << std::get<m_realidx>(dat)
 					<< "." << std::endl;
 			}
 			break;
@@ -605,10 +619,11 @@ VM::t_data VM::PopData()
 
 		case VMType::INT:
 		{
-			dat = PopRaw<t_int, m_intsize>();
+			dat = t_data{std::in_place_index<m_intidx>,
+				PopRaw<t_int, m_intsize>()};
 			if(m_debug)
 			{
-				std::cout << "popped int " << std::get<t_int>(dat)
+				std::cout << "popped int " << std::get<m_intidx>(dat)
 					<< "." << std::endl;
 			}
 			break;
@@ -620,10 +635,11 @@ VM::t_data VM::PopData()
 		case VMType::ADDR_BP:
 		case VMType::ADDR_GBP:
 		{
-			dat = PopRaw<t_addr, m_addrsize>();
+			dat = t_data{std::in_place_index<m_addridx>,
+				PopRaw<t_addr, m_addrsize>()};
 			if(m_debug)
 			{
-				std::cout << "popped address " << std::get<t_addr>(dat)
+				std::cout << "popped address " << std::get<m_addridx>(dat)
 					<< "." << std::endl;
 			}
 			break;
@@ -631,10 +647,11 @@ VM::t_data VM::PopData()
 
 		case VMType::STR:
 		{
-			dat = PopString();
+			dat = t_data{std::in_place_index<m_stridx>,
+				PopString()};
 			if(m_debug)
 			{
-				std::cout << "popped string \"" << std::get<t_str>(dat)
+				std::cout << "popped string \"" << std::get<m_stridx>(dat)
 					<< "\"." << std::endl;
 			}
 			break;
@@ -660,62 +677,62 @@ VM::t_data VM::PopData()
  */
 void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 {
-	if(std::holds_alternative<t_real>(data))
+	if(data.index() == m_realidx)
 	{
 		if(m_debug)
 		{
 			std::cout << "pushing real "
-				<< std::get<t_real>(data) << "."
+				<< std::get<m_realidx>(data) << "."
 				<< std::endl;
 		}
 
 		// push the actual data
-		PushRaw<t_real, m_realsize>(std::get<t_real>(data));
+		PushRaw<t_real, m_realsize>(std::get<m_realidx>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::REAL));
 	}
-	else if(std::holds_alternative<t_int>(data))
+	else if(data.index() == m_intidx)
 	{
 		if(m_debug)
 		{
 			std::cout << "pushing int "
-				<< std::get<t_int>(data) << "."
+				<< std::get<m_intidx>(data) << "."
 				<< std::endl;
 		}
 
 		// push the actual data
-		PushRaw<t_int, m_intsize>(std::get<t_int>(data));
+		PushRaw<t_int, m_intsize>(std::get<m_intidx>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::INT));
 	}
-	else if(std::holds_alternative<t_addr>(data))
+	else if(data.index() == m_addridx)
 	{
 		if(m_debug)
 		{
 			std::cout << "pushing address "
-				<< std::get<t_addr>(data) << "."
+				<< std::get<m_addridx>(data) << "."
 				<< std::endl;
 		}
 
 		// push the actual address
-		PushRaw<t_addr, m_addrsize>(std::get<t_addr>(data));
+		PushRaw<t_addr, m_addrsize>(std::get<m_addridx>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(ty));
 	}
-	else if(std::holds_alternative<t_str>(data))
+	else if(data.index() == m_stridx)
 	{
 		if(m_debug)
 		{
 			std::cout << "pushing string \""
-				<< std::get<t_str>(data) << "\"."
+				<< std::get<m_stridx>(data) << "\"."
 				<< std::endl;
 		}
 
 		// push the actual string
-		PushString(std::get<t_str>(data));
+		PushString(std::get<m_stridx>(data));
 
 		// push descriptor
 		PushRaw<t_byte, m_bytesize>(static_cast<t_byte>(VMType::STR));
@@ -798,7 +815,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::REAL:
 		{
 			t_real val = ReadMemRaw<t_real>(addr);
-			dat = val;
+			dat = t_data{std::in_place_index<m_realidx>, val};
 
 			if(m_debug)
 			{
@@ -812,7 +829,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::INT:
 		{
 			t_int val = ReadMemRaw<t_int>(addr);
-			dat = val;
+			dat = t_data{std::in_place_index<m_intidx>, val};
 
 			if(m_debug)
 			{
@@ -830,7 +847,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::ADDR_GBP:
 		{
 			t_addr val = ReadMemRaw<t_addr>(addr);
-			dat = val;
+			dat = t_data{std::in_place_index<m_addridx>, val};
 
 			if(m_debug)
 			{
@@ -847,7 +864,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 			t_addr arg_addr = GetArgAddr(m_bp, arg_num) - m_bp;
 			ty = VMType::ADDR_BP;
 
-			dat = arg_addr;
+			dat = t_data{std::in_place_index<m_addridx>, arg_addr};
 
 			if(m_debug)
 			{
@@ -864,7 +881,7 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
 		case VMType::STR:
 		{
 			t_str str = ReadMemRaw<t_str>(addr);
-			dat = str;
+			dat = t_data{std::in_place_index<m_stridx>, str};
 
 			if(m_debug)
 			{
@@ -895,12 +912,12 @@ std::tuple<VMType, VM::t_data> VM::ReadMemData(VM::t_addr addr)
  */
 void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 {
-	if(std::holds_alternative<t_real>(data))
+	if(data.index() == m_realidx)
 	{
 		if(m_debug)
 		{
 			std::cout << "writing real value "
-				<< std::get<t_real>(data)
+				<< std::get<m_realidx>(data)
 				<< " to address " << addr
 				<< "." << std::endl;
 		}
@@ -910,14 +927,14 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		addr += m_bytesize;
 
 		// write the actual data
-		WriteMemRaw<t_real>(addr, std::get<t_real>(data));
+		WriteMemRaw<t_real>(addr, std::get<m_realidx>(data));
 	}
-	else if(std::holds_alternative<t_int>(data))
+	else if(data.index() == m_intidx)
 	{
 		if(m_debug)
 		{
 			std::cout << "writing int value "
-				<< std::get<t_int>(data)
+				<< std::get<m_intidx>(data)
 				<< " to address " << addr
 				<< "." << std::endl;
 		}
@@ -927,14 +944,14 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		addr += m_bytesize;
 
 		// write the actual data
-		WriteMemRaw<t_int>(addr, std::get<t_int>(data));
+		WriteMemRaw<t_int>(addr, std::get<m_intidx>(data));
 	}
-	/*else if(std::holds_alternative<t_addr>(data))
+	/*else if(data.index() == m_addridx)
 	{
 		if(m_debug)
 		{
 			std::cout << "writing address value "
-				<< std::get<t_addr>(data)
+				<< std::get<m_addridx>(data)
 				<< " to address " << addr
 				<< std::endl;
 		}
@@ -944,14 +961,14 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		addr += m_bytesize;
 
 		// write the actual data
-		WriteMemRaw<t_int>(addr, std::get<t_addr>(data));
+		WriteMemRaw<t_int>(addr, std::get<m_addridx>(data));
 	}*/
-	else if(std::holds_alternative<t_str>(data))
+	else if(data.index() == m_stridx)
 	{
 		if(m_debug)
 		{
 			std::cout << "writing string \""
-				<< std::get<t_str>(data)
+				<< std::get<m_stridx>(data)
 				<< "\" to address " << addr
 				<< "." << std::endl;
 		}
@@ -961,7 +978,7 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 		addr += m_bytesize;
 
 		// write the actual data
-		WriteMemRaw<t_str>(addr, std::get<t_str>(data));
+		WriteMemRaw<t_str>(addr, std::get<m_stridx>(data));
 	}
 	else
 	{
@@ -972,14 +989,14 @@ void VM::WriteMemData(VM::t_addr addr, const VM::t_data& data)
 
 VM::t_addr VM::GetDataSize(const t_data& data) const
 {
-	if(std::holds_alternative<t_real>(data))
+	if(data.index() == m_realidx)
 		return m_realsize;
-	else if(std::holds_alternative<t_int>(data))
+	else if(data.index() == m_intidx)
 		return m_intsize;
-	else if(std::holds_alternative<t_addr>(data))
+	else if(data.index() == m_addridx)
 		return m_addrsize;
-	else if(std::holds_alternative<t_str>(data))
-		return m_addrsize /*len*/ + std::get<t_str>(data).length();
+	else if(data.index() == m_stridx)
+		return m_addrsize /*len*/ + std::get<m_stridx>(data).length();
 
 	throw std::runtime_error("GetDataSize: Data type not yet implemented.");
 	return 0;
@@ -1017,4 +1034,18 @@ void VM::SetMem(t_addr addr, const VM::t_byte* data, std::size_t size)
 {
 	for(std::size_t i=0; i<size; ++i)
 		SetMem(addr + t_addr(i), data[i]);
+}
+
+
+const char* VM::GetDataTypeName(const t_data& dat)
+{
+	switch(dat.index())
+	{
+		case m_realidx: return "real";
+		case m_intidx: return "integer";
+		case m_stridx: return "string";
+		case m_addridx: return "address";
+		case m_boolidx: return "boolean";
+		default: return "unknown";
+	}
 }

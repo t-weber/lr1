@@ -11,6 +11,7 @@
 
 #include <type_traits>
 #include <memory>
+#include <optional>
 #include <variant>
 #include <iostream>
 #include <sstream>
@@ -28,19 +29,27 @@ class VM
 {
 public:
 	// data types
-	using t_byte = ::t_vm_byte;
 	using t_addr = ::t_vm_addr;
-	using t_real = ::t_vm_real;
 	using t_int = ::t_vm_int;
-	using t_uint = typename std::make_unsigned<t_int>::type;
+	using t_real = ::t_vm_real;
+	using t_byte = ::t_vm_byte;
 	using t_bool = ::t_vm_byte;
 	using t_str = ::t_vm_str;
+	using t_uint = typename std::make_unsigned<t_int>::type;
 	using t_char = typename t_str::value_type;
 
 	// variant of all data types
 	using t_data = std::variant<
 		std::monostate /*prevents default-construction of first type (t_real)*/,
 		t_real, t_int, t_bool, t_addr, t_str>;
+
+	// use variant type indices and std::in_place_index instead of direct types
+	// because two types might be identical (e.g. t_int and t_addr)
+	static constexpr const std::size_t m_realidx = 1;
+	static constexpr const std::size_t m_intidx  = 2;
+	static constexpr const std::size_t m_boolidx = 3;
+	static constexpr const std::size_t m_addridx = 4;
+	static constexpr const std::size_t m_stridx  = 5;
 
 	// data type sizes
 	static constexpr const t_addr m_bytesize = sizeof(t_byte);
@@ -55,10 +64,11 @@ public:
 
 
 public:
-	VM(t_addr memsize = 1024);
+	VM(t_addr memsize = 0x1000, std::optional<t_addr> framesize = std::nullopt);
 	~VM() = default;
 
 	void SetDebug(bool b) { m_debug = b; }
+	static const char* GetDataTypeName(const t_data& dat);
 
 	void Reset();
 	bool Run();
@@ -218,6 +228,7 @@ protected:
 	{
 		t_addr addr = m_sp + sp_offs;
 		CheckMemoryBounds(addr, valsize);
+
 		return *reinterpret_cast<t_val*>(m_mem.get() + addr);
 	}
 
@@ -232,6 +243,7 @@ protected:
 
 		t_val val = *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
 		m_sp += valsize;	// stack grows to lower addresses
+
 		return val;
 	}
 
@@ -252,17 +264,17 @@ protected:
 	/**
 	 * cast from one variable type to the other
 	 */
-	template<class t_to>
+	template<class t_to, std::size_t toidx>
 	void OpCast()
 	{
 		t_data data = TopData();
 
-		if(std::holds_alternative<t_real>(data))
+		if(data.index() == m_realidx)
 		{
 			if constexpr(std::is_same_v<std::decay_t<t_to>, t_real>)
 				return;  // don't need to cast to the same type
 
-			t_real val = std::get<t_real>(data);
+			t_real val = std::get<m_realidx>(data);
 
 			// convert to string
 			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
@@ -270,22 +282,24 @@ protected:
 				std::ostringstream ostr;
 				ostr << val;
 				PopData();
-				PushData(ostr.str());
+				PushData(t_data{std::in_place_index<m_stridx>,
+					ostr.str()});
 			}
 
 			// convert to primitive type
 			else
 			{
 				PopData();
-				PushData(static_cast<t_to>(val));
+				PushData(t_data{std::in_place_index<toidx>,
+					static_cast<t_to>(val)});
 			}
 		}
-		else if(std::holds_alternative<t_int>(data))
+		else if(data.index() == m_intidx)
 		{
 			if constexpr(std::is_same_v<std::decay_t<t_to>, t_int>)
 				return;  // don't need to cast to the same type
 
-			t_int val = std::get<t_int>(data);
+			t_int val = std::get<m_intidx>(data);
 
 			// convert to string
 			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
@@ -293,27 +307,30 @@ protected:
 				std::ostringstream ostr;
 				ostr << val;
 				PopData();
-				PushData(ostr.str());
+				PushData(t_data{std::in_place_index<m_stridx>,
+					ostr.str()});
 			}
 
 			// convert to primitive type
 			else
 			{
 				PopData();
-				PushData(static_cast<t_to>(val));
+				PushData(t_data{std::in_place_index<toidx>,
+					static_cast<t_to>(val)});
 			}
 		}
-		else if(std::holds_alternative<t_str>(data))
+		else if(data.index() == m_stridx)
 		{
 			if constexpr(std::is_same_v<std::decay_t<t_to>, t_str>)
 				return;  // don't need to cast to the same type
 
-			const t_str& val = std::get<t_str>(data);
+			const t_str& val = std::get<m_stridx>(data);
 
 			t_to conv_val{};
 			std::istringstream{val} >> conv_val;
 			PopData();
-			PushData(conv_val);
+			PushData(t_data{std::in_place_index<toidx>,
+				conv_val});
 		}
 	}
 
@@ -365,40 +382,33 @@ protected:
 		t_data val2 = PopData();
 		t_data val1 = PopData();
 
-		bool is_real = false;
-		bool is_int = false;
-		bool is_str = false;
-
-		if(std::holds_alternative<t_real>(val1) &&
-			std::holds_alternative<t_real>(val2))
-			is_real = true;
-		else if(std::holds_alternative<t_int>(val1) &&
-			std::holds_alternative<t_int>(val2))
-			is_int = true;
-		else if(std::holds_alternative<t_str>(val1) &&
-			std::holds_alternative<t_str>(val2))
-			is_str = true;
+		if(val1.index() != val2.index())
+		{
+			throw std::runtime_error("Type mismatch in arithmetic operation."
+				"Type indices: " + std::to_string(val1.index()) +
+					", " + std::to_string(val2.index()) + ".");
+		}
 
 		t_data result;
 
-		if(is_real)
+		if(val1.index() == m_realidx)
 		{
-			result = OpArithmetic<t_real, op>(
-				std::get<t_real>(val1), std::get<t_real>(val2));
+			result = t_data{std::in_place_index<m_realidx>, OpArithmetic<t_real, op>(
+				std::get<m_realidx>(val1), std::get<m_realidx>(val2))};
 		}
-		else if(is_int)
+		else if(val1.index() == m_intidx)
 		{
-			result = OpArithmetic<t_int, op>(
-				std::get<t_int>(val1), std::get<t_int>(val2));
+			result = t_data{std::in_place_index<m_intidx>, OpArithmetic<t_int, op>(
+				std::get<m_intidx>(val1), std::get<m_intidx>(val2))};
 		}
-		else if(is_str)
+		else if(val1.index() == m_stridx)
 		{
-			result = OpArithmetic<t_str, op>(
-				std::get<t_str>(val1), std::get<t_str>(val2));
+			result = t_data{std::in_place_index<m_stridx>, OpArithmetic<t_str, op>(
+				std::get<m_stridx>(val1), std::get<m_stridx>(val2))};
 		}
 		else
 		{
-			throw std::runtime_error("Type mismatch in arithmetic operation.");
+			throw std::runtime_error("Invalid type in arithmetic operation.");
 		}
 
 		PushData(result);
@@ -469,22 +479,23 @@ protected:
 		t_data val2 = PopData();
 		t_data val1 = PopData();
 
-		bool is_int = false;
-
-		if(std::holds_alternative<t_int>(val1) &&
-			std::holds_alternative<t_int>(val2))
-			is_int = true;
+		if(val1.index() != val2.index())
+		{
+			throw std::runtime_error("Type mismatch in binary operation."
+				"Type indices: " + std::to_string(val1.index()) +
+					", " + std::to_string(val2.index()) + ".");
+		}
 
 		t_data result;
 
-		if(is_int)
+		if(val1.index() == m_intidx)
 		{
-			result = OpBinary<t_int, op>(
-				std::get<t_int>(val1), std::get<t_int>(val2));
+			result = t_data{std::in_place_index<m_intidx>, OpBinary<t_int, op>(
+				std::get<m_intidx>(val1), std::get<m_intidx>(val2))};
 		}
 		else
 		{
-			throw std::runtime_error("Type mismatch in binary operation.");
+			throw std::runtime_error("Invalid type in binary operation.");
 		}
 
 		PushData(result);
@@ -539,40 +550,33 @@ protected:
 		t_data val2 = PopData();
 		t_data val1 = PopData();
 
-		bool is_real = false;
-		bool is_int = false;
-		bool is_str = false;
-
-		if(std::holds_alternative<t_real>(val1) &&
-			std::holds_alternative<t_real>(val2))
-			is_real = true;
-		else if(std::holds_alternative<t_int>(val1) &&
-			std::holds_alternative<t_int>(val2))
-			is_int = true;
-		else if(std::holds_alternative<t_str>(val1) &&
-			std::holds_alternative<t_str>(val2))
-			is_str = true;
+		if(val1.index() != val2.index())
+		{
+			throw std::runtime_error("Type mismatch in comparison operation."
+				"Type indices: " + std::to_string(val1.index()) +
+					", " + std::to_string(val2.index()) + ".");
+		}
 
 		t_bool result;
 
-		if(is_real)
+		if(val1.index() == m_realidx)
 		{
 			result = OpComparison<t_real, op>(
-				std::get<t_real>(val1), std::get<t_real>(val2));
+				std::get<m_realidx>(val1), std::get<m_realidx>(val2));
 		}
-		else if(is_int)
+		else if(val1.index() == m_intidx)
 		{
 			result = OpComparison<t_int, op>(
-				std::get<t_int>(val1), std::get<t_int>(val2));
+				std::get<m_intidx>(val1), std::get<m_intidx>(val2));
 		}
-		else if(is_str)
+		else if(val1.index() == m_stridx)
 		{
 			result = OpComparison<t_str, op>(
-				std::get<t_str>(val1), std::get<t_str>(val2));
+				std::get<m_stridx>(val1), std::get<m_stridx>(val2));
 		}
 		else
 		{
-			throw std::runtime_error("Type mismatch in comparison operation.");
+			throw std::runtime_error("Invalid type in comparison operation.");
 		}
 
 		PushRaw<t_bool, m_boolsize>(result);

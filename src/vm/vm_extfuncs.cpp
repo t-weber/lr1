@@ -13,7 +13,7 @@
  */
 VM::t_data VM::CallExternal(const t_str& func_name)
 {
-	VM::t_data retval;
+	t_data retval;
 
 	if(m_debug)
 	{
@@ -24,40 +24,49 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 
 	if(func_name == "sqrt")
 	{
-		OpCast<t_real>();
-		t_real arg = std::get<t_real>(PopData());
-		retval = std::sqrt(arg);
+		OpCast<t_real, m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>, std::sqrt(arg)};
 	}
 	else if(func_name == "pow")
 	{
-		OpCast<t_real>();
-		t_real arg1 = std::get<t_real>(PopData());
-		OpCast<t_real>();
-		t_real arg2 = std::get<t_real>(PopData());
-		retval = std::pow(arg1, arg2);
+		OpCast<t_real, m_realidx>();
+		t_real arg1 = std::get<m_realidx>(PopData());
+		OpCast<t_real, m_realidx>();
+		t_real arg2 = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::pow(arg1, arg2)};
 	}
 	else if(func_name == "sin")
 	{
-		OpCast<t_real>();
-		t_real arg = std::get<t_real>(PopData());
-		retval = std::sin(arg);
+		OpCast<t_real, m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::sin(arg)};
 	}
 	else if(func_name == "cos")
 	{
-		OpCast<t_real>();
-		t_real arg = std::get<t_real>(PopData());
-		retval = std::cos(arg);
+		OpCast<t_real, m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::cos(arg)};
 	}
 	else if(func_name == "tan")
 	{
-		OpCast<t_real>();
-		t_real arg = std::get<t_real>(PopData());
-		retval = std::tan(arg);
+		OpCast<t_real, m_realidx>();
+		t_real arg = std::get<m_realidx>(PopData());
+
+		retval = t_data{std::in_place_index<m_realidx>,
+			std::tan(arg)};
 	}
 	else if(func_name == "print")
 	{
-		OpCast<t_str>();
-		const t_str/*&*/ arg = std::get<t_str>(PopData());
+		OpCast<t_str, m_stridx>();
+		const t_str/*&*/ arg = std::get<m_stridx>(PopData());
 		std::cout << arg;
 		std::cout.flush();
 	}
@@ -65,13 +74,15 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	{
 		t_real val{};
 		std::cin >> val;
-		retval = val;
+
+		retval = t_data{std::in_place_index<m_realidx>, val};
 	}
 	else if(func_name == "input_int")
 	{
 		t_int val{};
 		std::cin >> val;
-		retval = val;
+
+		retval = t_data{std::in_place_index<m_intidx>, val};
 	}
 
 	return retval;

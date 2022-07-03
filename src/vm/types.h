@@ -10,13 +10,14 @@
 
 #include <cstdint>
 #include <string>
+#include "../codegen/lval.h"
 
 
-
-using t_vm_byte = std::uint8_t;
+using t_vm_int = ::t_int;
+using t_vm_real = ::t_real;
+//using t_vm_addr = std::int16_t;
 using t_vm_addr = std::int32_t;
-using t_vm_real = double;
-using t_vm_int = std::int64_t;
+using t_vm_byte = std::uint8_t;
 using t_vm_bool = t_vm_byte;
 using t_vm_str = std::string;
 
@@ -29,12 +30,12 @@ constexpr const t_vm_addr g_vm_longest_size = 64;
  * get a string representation of a type name
  * (static version)
  */
-template<class t_val> std::string vm_type_name = "unknown";
+/*template<class t_val> std::string vm_type_name = "unknown";
 template<> inline std::string vm_type_name<t_vm_byte> = "byte";
 template<> inline std::string vm_type_name<t_vm_addr> = "address";
 template<> inline std::string vm_type_name<t_vm_real> = "real";
 template<> inline std::string vm_type_name<t_vm_int> = "integer";
-template<> inline std::string vm_type_name<t_vm_str> = "string";
+template<> inline std::string vm_type_name<t_vm_str> = "string";*/
 
 
 

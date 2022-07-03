@@ -165,7 +165,7 @@ std::tuple<t_tok, t_lval> get_next_token(std::istream& istr, bool end_on_newline
 	// find longest matching token
 	while(!(eof = istr.eof()))
 	{
-		char c = istr.get();
+		int c = istr.get();
 		if(c == std::char_traits<char>::eof())
 		{
 			eof = true;

@@ -51,16 +51,18 @@ static bool run_vm(const char* _prog = nullptr)
 		while(vm.GetSP() < sp_initial)
 		{
 			VM::t_data dat = vm.PopData();
+			const char* type_name = VM::GetDataTypeName(dat);
 
 			std::cout << "Stack[" << stack_idx << "] = ";
-			std::visit([](auto&& val) -> void
+			std::visit([type_name](auto&& val) -> void
 			{
 				using t_val = std::decay_t<decltype(val)>;
+				// variant not empty?
 				if constexpr(!std::is_same_v<t_val, std::monostate>)
 				{
 					std::cout << val
 						<< " ["
-						<< vm_type_name<t_val>
+						<< type_name
 						<< "]";
 				}
 			}, dat);
