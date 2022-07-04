@@ -17,6 +17,7 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <chrono>
 #include <cstdint>
 
 #if __has_include(<filesystem>)
@@ -28,6 +29,10 @@
 #else
 	#error No filesystem support found.
 #endif
+
+using t_clock = std::chrono::steady_clock;
+using t_timepoint = std::chrono::time_point<t_clock>;
+using t_duration = std::chrono::duration<t_real>;
 
 
 #define USE_LALR          1
@@ -245,7 +250,7 @@ static void create_grammar()
 
 #ifdef CREATE_PARSER
 
-static void lr1_create_parser()
+static bool lr1_create_parser()
 {
 	try
 	{
@@ -407,10 +412,13 @@ static void lr1_create_parser()
 	catch(const std::exception& err)
 	{
 		std::cerr << "Error: " << err.what() << std::endl;
+		return false;
 	}
+
+	return true;
 }
 
-#endif
+#endif  // CREATE_PARSER
 
 
 
@@ -418,11 +426,16 @@ static void lr1_create_parser()
 
 #if !__has_include("script.tab")
 
-static bool lr1_run_parser([[maybe_unused]] const char* script_file = nullptr)
+static std::tuple<bool, std::string>
+lr1_run_parser([[maybe_unused]] const char* script_file = nullptr)
 {
-	std::cerr << "No parsing tables available, please run ./script_create first and rebuild."
+	std::cerr << "No parsing tables available, please\n"
+		"\t- run \"./script_create\" first,\n"
+		"\t- \"touch " __FILE__ "\", and\n"
+		"\t- rebuild using \"make\"."
 		<< std::endl;
-	return false;
+
+	return std::make_tuple(false, "");
 }
 
 #else
@@ -430,7 +443,8 @@ static bool lr1_run_parser([[maybe_unused]] const char* script_file = nullptr)
 #include "codegen/parser.h"
 #include "script.tab"
 
-static bool lr1_run_parser(const char* script_file = nullptr)
+static std::tuple<bool, std::string>
+lr1_run_parser(const char* script_file = nullptr)
 {
 	try
 	{
@@ -900,7 +914,7 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 				{
 					std::cerr << "Error: Cannot open file \""
 						<< script_file << "\"." << std::endl;
-					return false;
+					return std::make_tuple(false, "");
 				}
 
 				std::cout << "Running \"" << script_file << "\"." << std::endl;
@@ -995,53 +1009,62 @@ static bool lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::cerr << "Cannot open \""
 					<< binfile.string() << "\"." << std::endl;
-				return false;
+				return std::make_tuple(false, "");
 			}
 			ofstrAsmBin.write(strAsmBin.data(), strAsmBin.size());
 			if(ofstrAsmBin.fail())
 			{
 				std::cerr << "Cannot write \""
 					<< binfile.string() << "\"." << std::endl;
-				return false;
+				return std::make_tuple(false, "");
 			}
 			ofstrAsmBin.flush();
 
 			std::cout << "\nCreated compiled program \""
 				<< binfile.string() << "\"." << std::endl;
 
-#if RUN_VM != 0
-			VM vm(4096);
-			//vm.SetDebug(true);
-			VM::t_addr sp_initial = vm.GetSP();
-			vm.SetMem(0, strAsmBin);
-			vm.Run();
-
-			if(vm.GetSP() != sp_initial)
-			{
-				std::cout << "\nResult: ";
-				std::visit([](auto&& val) -> void
-				{
-					using t_val = std::decay_t<decltype(val)>;
-					if constexpr(!std::is_same_v<t_val, std::monostate>)
-						std::cout << val;
-					else
-						std::cout << "<none>";
-				}, vm.TopData());
-				std::cout << std::endl;
-			}
-#endif
+			return std::make_tuple(true, strAsmBin);
 		}
 	}
 	catch(const std::exception& err)
 	{
 		std::cerr << "Error: " << err.what() << std::endl;
-		return false;
+		return std::make_tuple(false, "");
+	}
+
+	return std::make_tuple(true, "");
+}
+
+#endif
+#endif  // RUN_PARSER
+
+
+
+#if defined(RUN_PARSER) && RUN_VM != 0
+static bool run_vm(const std::string& prog)
+{
+	VM vm(4096);
+	//vm.SetDebug(true);
+	VM::t_addr sp_initial = vm.GetSP();
+	vm.SetMem(0, prog);
+	vm.Run();
+
+	if(vm.GetSP() != sp_initial)
+	{
+		std::cout << "\nResult: ";
+		std::visit([](auto&& val) -> void
+		{
+			using t_val = std::decay_t<decltype(val)>;
+			if constexpr(!std::is_same_v<t_val, std::monostate>)
+				std::cout << val;
+			else
+				std::cout << "<none>";
+		}, vm.TopData());
+		std::cout << std::endl;
 	}
 
 	return true;
 }
-
-#endif
 #endif
 
 
@@ -1051,17 +1074,37 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	std::ios_base::sync_with_stdio(false);
 
 #ifdef CREATE_PARSER
+	t_timepoint start_parsergen = t_clock::now();
+
 	create_grammar();
-	lr1_create_parser();
+	if(lr1_create_parser())
+	{
+		t_duration time_parsergen = t_clock::now() - start_parsergen;
+		std::cout << "Parser generation time: " << time_parsergen.count() << " s." << std::endl;
+	}
 #endif
 
 #ifdef RUN_PARSER
+	t_timepoint start_codegen = t_clock::now();
 	const char* script_file = nullptr;
 	if(argc >= 2)
 		script_file = argv[1];
 
 	create_grammar();
-	lr1_run_parser(script_file);
+	if(auto [code_ok, prog] = lr1_run_parser(script_file); code_ok)
+	{
+		t_duration time_codegen = t_clock::now() - start_codegen;
+		std::cout << "Code generation time: " << time_codegen.count() << " s." << std::endl;
+
+#if RUN_VM != 0
+		t_timepoint start_vm = t_clock::now();
+		if(run_vm(prog))
+		{
+			t_duration time_vm = t_clock::now() - start_vm;
+			std::cout << "VM execution time: " << time_vm.count() << " s." << std::endl;
+		}
+#endif
+	}
 #endif
 
 	return 0;

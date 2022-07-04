@@ -207,7 +207,7 @@ protected:
 
 			// write string
 			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
-			std::memcpy(begin, val.data(), len);
+			std::memcpy(begin, val.data(), len*sizeof(t_char));
 		}
 
 		// primitive types
@@ -264,9 +264,10 @@ protected:
 	/**
 	 * cast from one variable type to the other
 	 */
-	template<class t_to, std::size_t toidx>
+	template<std::size_t toidx>
 	void OpCast()
 	{
+		using t_to = std::variant_alternative_t<toidx, t_data>;
 		t_data data = TopData();
 
 		if(data.index() == m_realidx)

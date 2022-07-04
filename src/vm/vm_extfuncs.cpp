@@ -24,16 +24,16 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 
 	if(func_name == "sqrt")
 	{
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg = std::get<m_realidx>(PopData());
 
 		retval = t_data{std::in_place_index<m_realidx>, std::sqrt(arg)};
 	}
 	else if(func_name == "pow")
 	{
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg1 = std::get<m_realidx>(PopData());
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg2 = std::get<m_realidx>(PopData());
 
 		retval = t_data{std::in_place_index<m_realidx>,
@@ -41,7 +41,7 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	}
 	else if(func_name == "sin")
 	{
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg = std::get<m_realidx>(PopData());
 
 		retval = t_data{std::in_place_index<m_realidx>,
@@ -49,7 +49,7 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	}
 	else if(func_name == "cos")
 	{
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg = std::get<m_realidx>(PopData());
 
 		retval = t_data{std::in_place_index<m_realidx>,
@@ -57,7 +57,7 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	}
 	else if(func_name == "tan")
 	{
-		OpCast<t_real, m_realidx>();
+		OpCast<m_realidx>();
 		t_real arg = std::get<m_realidx>(PopData());
 
 		retval = t_data{std::in_place_index<m_realidx>,
@@ -65,7 +65,7 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 	}
 	else if(func_name == "print")
 	{
-		OpCast<t_str, m_stridx>();
+		OpCast<m_stridx>();
 		const t_str/*&*/ arg = std::get<m_stridx>(PopData());
 		std::cout << arg;
 		std::cout.flush();

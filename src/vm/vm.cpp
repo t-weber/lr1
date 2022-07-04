@@ -282,19 +282,19 @@ bool VM::Run()
 
 			case OpCode::TOI: // converts value to t_int
 			{
-				OpCast<t_int, m_intidx>();
+				OpCast<m_intidx>();
 				break;
 			}
 
 			case OpCode::TOF: // converts value to t_real
 			{
-				OpCast<t_real, m_realidx>();
+				OpCast<m_realidx>();
 				break;
 			}
 
 			case OpCode::TOS: // converts value to t_str
 			{
-				OpCast<t_str, m_stridx>();
+				OpCast<m_stridx>();
 				break;
 			}
 
@@ -524,7 +524,7 @@ void VM::PushString(const VM::t_str& str)
 
 	m_sp -= len;
 	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
-	std::memcpy(begin, str.data(), len);
+	std::memcpy(begin, str.data(), len*sizeof(t_char));
 
 	PushRaw<t_addr, m_addrsize>(len);
 }
