@@ -17,17 +17,87 @@ VM::VM(t_addr memsize, std::optional<t_addr> framesize)
 {
 	m_mem.reset(new t_byte[m_memsize]);
 	Reset();
+
+	m_timer_running = true;
+	m_timer_thread = std::thread(&VM::TimerFunc, this);
+}
+
+
+VM::~VM()
+{
+	m_timer_running = false;
+	m_timer_thread.join();
+}
+
+
+/**
+ * function for timer thread
+ */
+void VM::TimerFunc()
+{
+	while(m_timer_running)
+	{
+		std::this_thread::sleep_for(m_timer_ticks);
+		RequestInterrupt(m_timer_interrupt);
+	}
+}
+
+
+/**
+ * signals an interrupt
+ */
+void VM::RequestInterrupt(t_addr num)
+{
+	m_irqs[num] = true;
+}
+
+
+/**
+ * sets the address of an interrupt service routine
+ */
+void VM::SetISR(t_addr num, t_addr addr)
+{
+	m_isrs[num] = addr;
+
+	if(m_debug)
+		std::cout << "Set isr " << num << " to address " << addr << "." << std::endl;
 }
 
 
 bool VM::Run()
 {
 	bool running = true;
-
 	while(running)
 	{
-		t_byte _op = m_mem[m_ip++];
-		OpCode op = static_cast<OpCode>(_op);
+		OpCode op{OpCode::INVALID};
+		bool irq_active = false;
+
+		// tests for interrupt requests
+		for(t_addr irq=0; irq<m_num_interrupts; ++irq)
+		{
+			if(!m_irqs[irq])
+				continue;
+
+			m_irqs[irq] = false;
+			if(!m_isrs[irq])
+				continue;
+
+			irq_active = true;
+
+			// call interrupt service routine
+			PushAddress(*m_isrs[irq], VMType::ADDR_MEM);
+			op = OpCode::CALL;
+
+			// TODO: add specialised ICALL and IRET instructions
+			// in case of additional registers that might need saving
+			break;
+		}
+
+		if(!irq_active)
+		{
+			t_byte _op = m_mem[m_ip++];
+			op = static_cast<OpCode>(_op);
+		}
 
 		if(m_debug)
 		{
@@ -38,6 +108,8 @@ bool VM::Run()
 				<< std::dec << ". ***" << std::endl;
 		}
 
+
+		// run instruction
 		switch(op)
 		{
 			case OpCode::HALT:
@@ -417,7 +489,7 @@ bool VM::Run()
 			default:
 			{
 				std::cerr << "Error: Invalid instruction " << std::hex
-					<< static_cast<t_addr>(_op) << std::dec
+					<< static_cast<t_addr>(op) << std::dec
 					<< std::endl;
 				return false;
 			}

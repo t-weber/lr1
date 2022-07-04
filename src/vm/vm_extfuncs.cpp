@@ -84,6 +84,22 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 
 		retval = t_data{std::in_place_index<m_intidx>, val};
 	}
+	else if(func_name == "set_isr")
+	{
+		OpCast<m_intidx>();
+		t_addr num = static_cast<t_addr>(std::get<m_intidx>(PopData()));
+		t_addr addr = PopAddress();
+
+		SetISR(num, addr);
+	}
+	else if(func_name == "sleep")
+	{
+		OpCast<m_intidx>();
+		t_int num = std::get<m_intidx>(PopData());
+
+		std::chrono::milliseconds ms{num};
+		std::this_thread::sleep_for(ms);
+	}
 
 	return retval;
 }

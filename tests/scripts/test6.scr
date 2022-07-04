@@ -1,0 +1,35 @@
+extern func set_isr, sleep, print;
+
+
+func timer_isr()
+{
+	print("In timer ISR.\n");
+}
+
+
+set_isr(0, timer_isr);
+
+
+n = 0;
+loop(n < 100)
+{
+	sleep(100);
+
+	print(fac(n % 10) + "\n");
+	n = n+1;
+}
+
+
+func fac(arg1)
+{
+	if(arg1 <= 1)
+	{
+		return 1;
+	}
+	else
+	{
+		a = arg1;
+		b = fac(arg1-1);
+		return a * b;
+	}
+}

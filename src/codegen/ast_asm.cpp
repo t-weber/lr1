@@ -95,11 +95,13 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 			// get variable address and push it
 			const SymInfo *sym = m_symtab.GetSymbol(varname);
-			if(!sym)                      // symbol not yet seen -> register it
+			// symbol not yet seen -> register it
+			if(!sym)
 			{
 				VMType symty = ast->GetDataType();
 
-				if(m_cur_func == "")  // in global scope
+				// in global scope
+				if(m_cur_func == "")
 				{
 					sym = m_symtab.AddSymbol(varname, -m_glob_stack,
 						VMType::ADDR_GBP, symty);
@@ -110,7 +112,9 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 					//	<< get_vm_type_size(symty, true)
 					//	<< std::endl;
 				}
-				else                  // in local function scope
+
+				// in local function scope
+				else
 				{
 					if(m_local_stack.find(m_cur_func) == m_local_stack.end())
 					{
@@ -129,10 +133,9 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 				}
 			}
 
-			//std::cout << "pushing address " << int(sym->addr)
-			//	<< " relative register " << int(sym->loc)
-			//	<< " of symbol " << "\"" << varname << "\""
-			//	<< std::endl;
+			//std::cout << "pushing " << get_vm_type_name(sym->loc) << " "
+			//	<< int(sym->addr) << " of symbol " << "\"" << varname << "\""
+			//	<< "." << std::endl;
 
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 			// register with base address
@@ -141,7 +144,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
 
 			// dereference it, if the variable is on the rhs of an assignment
-			if(!ast->IsLValue())
+			if(!ast->IsLValue() && !sym->is_func)
 				m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
 		}
 

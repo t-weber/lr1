@@ -11,11 +11,15 @@
 
 #include <type_traits>
 #include <memory>
+#include <array>
 #include <optional>
 #include <variant>
 #include <iostream>
 #include <sstream>
 #include <bit>
+#include <thread>
+#include <chrono>
+#include <atomic>
 #include <string>
 #include <cstring>
 #include <cmath>
@@ -58,14 +62,13 @@ public:
 	static constexpr const t_addr m_intsize = sizeof(t_int);
 	static constexpr const t_addr m_boolsize = sizeof(t_bool);
 
-	// memory sizes and ranges
-	t_addr m_memsize = 0x1000;
-	t_addr m_framesize = 0x100;
+	static constexpr const t_addr m_num_interrupts = 16;
+	static constexpr const t_addr m_timer_interrupt = 0;
 
 
 public:
 	VM(t_addr memsize = 0x1000, std::optional<t_addr> framesize = std::nullopt);
-	~VM() = default;
+	~VM();
 
 	void SetDebug(bool b) { m_debug = b; }
 	static const char* GetDataTypeName(const t_data& dat);
@@ -96,6 +99,11 @@ public:
 	 * pop data from the stack
 	 */
 	t_data PopData();
+
+	/**
+	 * signals an interrupt
+	 */
+	void RequestInterrupt(t_addr num);
 
 
 protected:
@@ -584,12 +592,21 @@ protected:
 	}
 
 
+	/**
+	 * sets the address of an interrupt service routine
+	 */
+	void SetISR(t_addr num, t_addr addr);
+
+
 private:
 	void CheckMemoryBounds(t_addr addr, std::size_t size = 1) const
 	{
 		if(std::size_t(addr) + size > std::size_t(m_memsize) || addr < 0)
 			throw std::runtime_error("Tried to access out of memory bounds.");
 	}
+
+
+	void TimerFunc();
 
 
 private:
@@ -601,6 +618,19 @@ private:
 	t_addr m_sp{};	// stack pointer
 	t_addr m_bp{};  // base pointer for local variables
 	t_addr m_gbp{}; // global base pointer
+
+	// memory sizes and ranges
+	t_addr m_memsize = 0x1000;
+	t_addr m_framesize = 0x100;
+
+	// signals interrupt requests
+	std::array<std::atomic_bool, m_num_interrupts> m_irqs{};
+	// addresses of the interrupt service routines
+	std::array<std::optional<t_addr>, m_num_interrupts> m_isrs{};
+
+	std::thread m_timer_thread{};
+	bool m_timer_running{true};
+	std::chrono::milliseconds m_timer_ticks{250};
 };
 
 
