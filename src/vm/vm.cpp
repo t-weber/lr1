@@ -17,16 +17,30 @@ VM::VM(t_addr memsize, std::optional<t_addr> framesize)
 {
 	m_mem.reset(new t_byte[m_memsize]);
 	Reset();
-
-	m_timer_running = true;
-	m_timer_thread = std::thread(&VM::TimerFunc, this);
 }
 
 
 VM::~VM()
 {
+	StopTimer();
+}
+
+
+void VM::StartTimer()
+{
+	if(!m_timer_running)
+	{
+		m_timer_running = true;
+		m_timer_thread = std::thread(&VM::TimerFunc, this);
+	}
+}
+
+
+void VM::StopTimer()
+{
 	m_timer_running = false;
-	m_timer_thread.join();
+	if(m_timer_thread.joinable())
+		m_timer_thread.join();
 }
 
 

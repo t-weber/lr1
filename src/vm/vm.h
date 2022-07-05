@@ -597,6 +597,9 @@ protected:
 	 */
 	void SetISR(t_addr num, t_addr addr);
 
+	void StartTimer();
+	void StopTimer();
+
 
 private:
 	void CheckMemoryBounds(t_addr addr, std::size_t size = 1) const
@@ -629,7 +632,7 @@ private:
 	std::array<std::optional<t_addr>, m_num_interrupts> m_isrs{};
 
 	std::thread m_timer_thread{};
-	bool m_timer_running{true};
+	bool m_timer_running{false};
 	std::chrono::milliseconds m_timer_ticks{250};
 };
 

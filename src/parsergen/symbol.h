@@ -118,6 +118,12 @@ public:
 	virtual void print(std::ostream& ostr, bool bnf=false) const override;
 	virtual std::size_t hash() const override;
 
+	void SetPrecedence(std::size_t prec) { m_precedence = prec; }
+	void SetAssociativity(char assoc) { m_associativity = assoc; }
+
+	std::optional<std::size_t> GetPrecedence() const { return m_precedence; }
+	std::optional<char> GetAssociativity() const { return m_associativity; }
+
 
 public:
 	//using t_terminalset = std::set<TerminalPtr, Symbol::CompareSymbolsLess>;
@@ -128,6 +134,10 @@ public:
 private:
 	// semantic rule
 	std::optional<std::size_t> m_semantic{};
+
+	// operator precedence and associativity
+	std::optional<std::size_t> m_precedence{};
+	std::optional<char> m_associativity{};     // 'l' or 'r'
 };
 
 

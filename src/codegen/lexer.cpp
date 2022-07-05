@@ -10,6 +10,8 @@
 #include <sstream>
 #include <memory>
 #include <regex>
+#include <bitset>
+#include <type_traits>
 #include <boost/algorithm/string.hpp>
 
 
@@ -23,14 +25,43 @@ get_matching_tokens(const std::string& str)
 	std::vector<std::tuple<t_tok, t_lval>> matches;
 
 	{	// int
-		std::regex regex{"[0-9]+"};
+		std::regex regex{"(0[xb])?([0-9]+)"};
 		std::smatch smatch;
 		if(std::regex_match(str, smatch, regex))
 		{
 			t_int val{};
-			std::istringstream{str} >> val;
+
+			if(smatch.str(1) == "0x")
+			{
+				// hexadecimal integers
+				std::istringstream{smatch.str(0)} >> std::hex >> val;
+			}
+			else if(smatch.str(1) == "0b")
+			{
+				// binary integers
+				using t_bits = std::bitset<sizeof(t_int)*8>;
+				t_bits bits(smatch.str(2));
+
+				using t_ulong = std::result_of_t<decltype(&t_bits::to_ulong)(t_bits*)>;
+				if constexpr(sizeof(t_ulong) >= sizeof(t_int))
+					val = static_cast<t_int>(bits.to_ulong());
+				else
+					val = static_cast<t_int>(bits.to_ullong());
+			}
+			else
+			{
+				// decimal integers
+				std::istringstream{smatch.str(2)} >> std::dec >> val;
+			}
+
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::INT), val));
+		}
+		else if(str == "0x" || str == "0b")
+		{
+			// dummy matches to continue searching for longest int
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::INT), 0));
 		}
 	}
 
@@ -110,6 +141,21 @@ get_matching_tokens(const std::string& str)
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::NEQU), str));
 		}
+		if(str == "||" || str == "or")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::OR), str));
+		}
+		if(str == "&&" || str == "and")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::AND), str));
+		}
+		if(str == "xor")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::BIN_XOR), str));
+		}
 		else if(str == ">=")
 		{
 			matches.emplace_back(std::make_tuple(
@@ -119,6 +165,16 @@ get_matching_tokens(const std::string& str)
 		{
 			matches.emplace_back(std::make_tuple(
 				static_cast<t_tok>(Token::LEQU), str));
+		}
+		else if(str == "<<")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::SHIFT_LEFT), str));
+		}
+		else if(str == ">>")
+		{
+			matches.emplace_back(std::make_tuple(
+				static_cast<t_tok>(Token::SHIFT_RIGHT), str));
 		}
 
 		// tokens represented by themselves

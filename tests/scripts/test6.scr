@@ -1,5 +1,4 @@
-extern func set_isr, sleep, print;
-
+extern func set_isr, sleep, set_timer, print;
 
 func timer_isr()
 {
@@ -8,6 +7,7 @@ func timer_isr()
 
 
 set_isr(0, timer_isr);
+set_timer(150);
 
 
 n = 0;

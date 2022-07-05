@@ -209,8 +209,10 @@ void ASTAsm::visit(const ASTUnary* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary)
 	{
 		OpCode op = std::get<OpCode>(m_ops->at(opid));
-		if(op == OpCode::ADD) op = OpCode::NOP;
-		else if(op == OpCode::SUB) op = OpCode::USUB;
+		if(op == OpCode::ADD)
+			op = OpCode::NOP;
+		else if(op == OpCode::SUB)
+			op = OpCode::USUB;
 		m_ostr->put(static_cast<t_vm_byte>(op));
 	}
 	else

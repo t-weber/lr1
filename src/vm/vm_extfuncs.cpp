@@ -70,6 +70,12 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 		std::cout << arg;
 		std::cout.flush();
 	}
+	else if(func_name == "println")
+	{
+		OpCast<m_stridx>();
+		const t_str/*&*/ arg = std::get<m_stridx>(PopData());
+		std::cout << arg << std::endl;
+	}
 	else if(func_name == "input_real")
 	{
 		t_real val{};
@@ -99,6 +105,21 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 
 		std::chrono::milliseconds ms{num};
 		std::this_thread::sleep_for(ms);
+	}
+	else if(func_name == "set_timer")
+	{
+		OpCast<m_intidx>();
+		t_int delay = std::get<m_intidx>(PopData());
+
+		if(delay < 0)
+		{
+			StopTimer();
+		}
+		else
+		{
+			m_timer_ticks = std::chrono::milliseconds{delay};
+			StartTimer();
+		}
 	}
 
 	return retval;

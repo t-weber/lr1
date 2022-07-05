@@ -22,6 +22,8 @@ option(BUILD_TESTS "build test programs" TRUE)
 find_package(Boost REQUIRED)
 add_definitions(${Boost_CXX_FLAGS})
 
+find_package(Threads REQUIRED)
+
 
 include_directories(
 	"${PROJECT_SOURCE_DIR}"
@@ -70,7 +72,7 @@ add_library(lr1-vm STATIC
 	src/vm/opcodes.h src/vm/helpers.h
 )
 
-target_link_libraries(lr1-vm ${Boost_LIBRARIES})
+target_link_libraries(lr1-vm ${Boost_LIBRARIES} Threads::Threads)
 # -----------------------------------------------------------------------------
 
 

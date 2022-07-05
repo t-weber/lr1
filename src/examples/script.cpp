@@ -70,9 +70,11 @@ static NonTerminalPtr start,
  * terminals
  */
 static TerminalPtr op_assign, op_plus, op_minus,
-	op_mult, op_div, op_mod, op_pow,
-	op_and, op_or, op_not,
+	op_mult, op_div, op_mod, op_pow;
+static TerminalPtr op_and, op_or, op_not,
 	op_equ, op_nequ, op_lt, op_gt, op_gequ, op_lequ;
+static TerminalPtr op_shift_left, op_shift_right;
+static TerminalPtr op_binand, op_binor, op_binxor, op_binnot;
 static TerminalPtr bracket_open, bracket_close;
 static TerminalPtr block_begin, block_end;
 static TerminalPtr keyword_if, keyword_else, keyword_loop,
@@ -106,11 +108,18 @@ static void create_grammar()
 	op_nequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::NEQU), "!=");
 	op_gequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::GEQU), ">=");
 	op_lequ = std::make_shared<Terminal>(static_cast<std::size_t>(Token::LEQU), "<=");
+	op_and = std::make_shared<Terminal>(static_cast<std::size_t>(Token::AND), "&&");
+	op_or = std::make_shared<Terminal>(static_cast<std::size_t>(Token::OR), "||");
 	op_gt = std::make_shared<Terminal>('>', ">");
 	op_lt = std::make_shared<Terminal>('<', "<");
 	op_not = std::make_shared<Terminal>('!', "!");
-	op_and = std::make_shared<Terminal>('&', "&");
-	op_or = std::make_shared<Terminal>('|', "|");
+	op_binand = std::make_shared<Terminal>('&', "&");
+	op_binor = std::make_shared<Terminal>('|', "|");
+	op_binnot = std::make_shared<Terminal>('~', "~");
+	op_binxor = std::make_shared<Terminal>(static_cast<std::size_t>(Token::BIN_XOR), "xor");
+
+	op_shift_left = std::make_shared<Terminal>(static_cast<std::size_t>(Token::SHIFT_LEFT), "<<");
+	op_shift_right = std::make_shared<Terminal>(static_cast<std::size_t>(Token::SHIFT_RIGHT), ">>");
 
 	bracket_open = std::make_shared<Terminal>('(', "(");
 	bracket_close = std::make_shared<Terminal>(')', ")");
@@ -133,6 +142,65 @@ static void create_grammar()
 	keyword_return = std::make_shared<Terminal>(static_cast<std::size_t>(Token::RETURN), "return");
 	keyword_continue = std::make_shared<Terminal>(static_cast<std::size_t>(Token::CONTINUE), "continue");
 	keyword_break = std::make_shared<Terminal>(static_cast<std::size_t>(Token::BREAK), "break");
+
+	{
+		// operator precedences and associativities
+		// see: https://en.cppreference.com/w/c/language/operator_precedence
+		op_assign->SetPrecedence(10);
+		op_assign->SetAssociativity('r');
+
+		op_or->SetPrecedence(20);
+		op_and->SetPrecedence(21);
+		op_or->SetAssociativity('l');
+		op_and->SetAssociativity('l');
+
+		op_binor->SetPrecedence(30);
+		op_binxor->SetPrecedence(31);
+		op_binand->SetPrecedence(32);
+		op_binor->SetAssociativity('l');
+		op_binxor->SetAssociativity('l');
+		op_binand->SetAssociativity('l');
+
+		op_equ->SetPrecedence(40);
+		op_nequ->SetPrecedence(40);
+		op_equ->SetAssociativity('l');
+		op_nequ->SetAssociativity('l');
+
+		op_lt->SetPrecedence(50);
+		op_gt->SetPrecedence(50);
+		op_gequ->SetPrecedence(50);
+		op_lequ->SetPrecedence(50);
+		op_lt->SetAssociativity('l');
+		op_gt->SetAssociativity('l');
+		op_gequ->SetAssociativity('l');
+		op_lequ->SetAssociativity('l');
+
+		op_shift_left->SetPrecedence(60);
+		op_shift_right->SetPrecedence(60);
+		op_shift_left->SetAssociativity('l');
+		op_shift_right->SetAssociativity('l');
+
+		op_plus->SetPrecedence(70);
+		op_minus->SetPrecedence(70);
+		op_plus->SetAssociativity('l');
+		op_minus->SetAssociativity('l');
+
+		op_mult->SetPrecedence(80);
+		op_div->SetPrecedence(80);
+		op_mod->SetPrecedence(80);
+		op_mult->SetAssociativity('l');
+		op_div->SetAssociativity('l');
+		op_mod->SetAssociativity('l');
+
+		op_not->SetPrecedence(90);
+		op_not->SetAssociativity('l');
+
+		op_binnot->SetPrecedence(100);
+		op_binnot->SetAssociativity('l');
+
+		op_pow->SetPrecedence(110);
+		op_pow->SetAssociativity('r');
+	}
 
 	// rule number
 	std::size_t semanticindex = 0;
@@ -210,9 +278,9 @@ static void create_grammar()
 	// rule 29: stmt -> return expr ;
 	stmt->AddRule({ keyword_return, expr, stmt_end }, semanticindex++);
 
-	// rule 30: bool_expr -> bool_expr & bool_expr
+	// rule 30: bool_expr -> bool_expr and bool_expr
 	bool_expr->AddRule({ bool_expr, op_and, bool_expr }, semanticindex++);
-	// rule 31: bool_expr -> bool_expr | bool_expr
+	// rule 31: bool_expr -> bool_expr or bool_expr
 	bool_expr->AddRule({ bool_expr, op_or, bool_expr }, semanticindex++);
 	// rule 32: bool_expr -> !bool_expr
 	bool_expr->AddRule({ op_not, bool_expr, }, semanticindex++);
@@ -244,6 +312,19 @@ static void create_grammar()
 	exprs->AddRule({ expr }, semanticindex++);
 	// rule 45: exprs -> eps
 	exprs->AddRule({ g_eps }, semanticindex++);
+
+	// rule 46, binary not: expr -> ~expr
+	expr->AddRule({ op_binnot, expr }, semanticindex++);
+	// rule 47: expr -> expr bin_and expr
+	expr->AddRule({ expr, op_binand, expr }, semanticindex++);
+	// rule 48: expr -> expr bin_or expr
+	expr->AddRule({ expr, op_binor, expr }, semanticindex++);
+	// rule 49: expr -> expr bin_xor expr
+	expr->AddRule({ expr, op_binxor, expr }, semanticindex++);
+	// rule 50: expr -> expr << expr
+	expr->AddRule({ expr, op_shift_left, expr }, semanticindex++);
+	// rule 51: expr -> expr >> expr
+	expr->AddRule({ expr, op_shift_right, expr }, semanticindex++);
 }
 
 
@@ -338,8 +419,8 @@ static bool lr1_create_parser()
 #endif
 #endif
 
-		// solutions for conflicts
-		std::vector<t_conflictsolution> conflicts{{
+		// explicit solutions for conflicts
+		/*std::vector<t_conflictsolution> conflicts{{
 			// left-associativity of operators
 			std::make_tuple(op_plus, op_plus, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_minus, op_minus, ConflictSolution::FORCE_REDUCE),
@@ -357,6 +438,14 @@ static bool lr1_create_parser()
 			std::make_tuple(op_and, op_and, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_or, op_or, ConflictSolution::FORCE_REDUCE),
 			std::make_tuple(op_not, op_not, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_binand, op_binand, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_binor, op_binor, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_binxor, op_binxor, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_binnot, op_binnot, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_shift_left, op_shift_left, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_shift_right, op_shift_right, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_shift_left, op_shift_right, ConflictSolution::FORCE_REDUCE),
+			std::make_tuple(op_shift_right, op_shift_left, ConflictSolution::FORCE_REDUCE),
 
 			// right-associativity of operators
 			std::make_tuple(op_pow, op_pow, ConflictSolution::FORCE_SHIFT),
@@ -399,13 +488,17 @@ static bool lr1_create_parser()
 			std::make_tuple(op_assign, op_div, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_assign, op_mod, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_assign, op_pow, ConflictSolution::FORCE_SHIFT),
-        }};
+			std::make_tuple(op_assign, op_binand, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_binor, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_binxor, ConflictSolution::FORCE_SHIFT),
+			std::make_tuple(op_assign, op_binnot, ConflictSolution::FORCE_SHIFT),
+		}};*/
 
 #if USE_LALR != 0
-		auto parsetables = collsLALR.CreateParseTables(&conflicts);
+		auto parsetables = collsLALR.CreateParseTables(/*&conflicts*/);
 		collsLALR.SaveParseTables(parsetables, "script.tab");
 #else
-		auto parsetables = colls.CreateParseTables(&conflicts);
+		auto parsetables = colls.CreateParseTables(/*&conflicts*/);
 		colls.SaveParseTables(parsetables, "script.tab");
 #endif
 	}
@@ -746,7 +839,7 @@ lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, ASTJump::JumpType::RETURN, args[1]);
 			},
 
-			// rule 30: bool_expr -> bool_expr & bool_expr
+			// rule 30: bool_expr -> bool_expr and bool_expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -755,7 +848,7 @@ lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_and->GetId());
 			},
 
-			// rule 31: bool_expr -> bool_expr | bool_expr
+			// rule 31: bool_expr -> bool_expr or bool_expr
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = bool_expr->GetId();
@@ -894,6 +987,60 @@ lr1_run_parser(const char* script_file = nullptr)
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
 				return std::make_shared<ASTList>(id, tableidx);
 			},
+
+			// rule 46, binary not: expr -> ~expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTUnary>(
+					id, tableidx, args[1], op_binnot->GetId());
+			},
+
+			// rule 47: expr -> expr bin_and expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_binand->GetId());
+			},
+
+			// rule 48: expr -> expr bin_or expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_binor->GetId());
+			},
+
+			// rule 49: expr -> expr bin_xor expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_binxor->GetId());
+			},
+
+			// rule 50: expr -> expr << expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_shift_left->GetId());
+			},
+
+			// rule 51: expr -> expr >> expr
+			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			{
+				std::size_t id = expr->GetId();
+				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+				return std::make_shared<ASTBinary>(
+					id, tableidx, args[0], args[2], op_shift_right->GetId());
+			},
 		}};
 
 
@@ -966,6 +1113,12 @@ lr1_run_parser(const char* script_file = nullptr)
 
 				std::make_pair('=', std::make_tuple("wrmem", OpCode::WRMEM)),
 
+				std::make_pair('&', std::make_tuple("binand", OpCode::BINAND)),
+				std::make_pair('|', std::make_tuple("binand", OpCode::BINOR)),
+				std::make_pair('~', std::make_tuple("binand", OpCode::BINNOT)),
+
+				std::make_pair('>', std::make_tuple("gt", OpCode::GT)),
+				std::make_pair('<', std::make_tuple("lt", OpCode::LT)),
 				std::make_pair(static_cast<std::size_t>(Token::EQU),
 					std::make_tuple("equ", OpCode::EQU)),
 				std::make_pair(static_cast<std::size_t>(Token::NEQU),
@@ -974,10 +1127,17 @@ lr1_run_parser(const char* script_file = nullptr)
 					std::make_tuple("gequ", OpCode::GEQU)),
 				std::make_pair(static_cast<std::size_t>(Token::LEQU),
 					std::make_tuple("lequ", OpCode::LEQU)),
-				std::make_pair('>', std::make_tuple("gt", OpCode::GT)),
-				std::make_pair('<', std::make_tuple("lt", OpCode::LT)),
-				std::make_pair('&', std::make_tuple("and", OpCode::AND)),
-				std::make_pair('|', std::make_tuple("or", OpCode::OR)),
+				std::make_pair(static_cast<std::size_t>(Token::AND),
+					std::make_tuple("and", OpCode::AND)),
+				std::make_pair(static_cast<std::size_t>(Token::OR),
+					std::make_tuple("or", OpCode::OR)),
+
+				std::make_pair(static_cast<std::size_t>(Token::BIN_XOR),
+					std::make_tuple("binxor", OpCode::BINXOR)),
+				std::make_pair(static_cast<std::size_t>(Token::SHIFT_LEFT),
+					std::make_tuple("shl", OpCode::SHL)),
+				std::make_pair(static_cast<std::size_t>(Token::SHIFT_RIGHT),
+					std::make_tuple("shr", OpCode::SHR)),
 			}};
 
 #if DEBUG_CODEGEN != 0

@@ -9,6 +9,7 @@
 #define __LR1_LEXER_H__
 
 #include <iostream>
+#include <string>
 #include <vector>
 #include <utility>
 #include <optional>
@@ -23,31 +24,38 @@ using t_tok = std::size_t;
 
 enum class Token : t_tok
 {
-	REAL     = 1000,
-	INT      = 1001,
-	STR      = 1002,
-	IDENT    = 1003,
+	REAL        = 1000,
+	INT         = 1001,
+	STR         = 1002,
+	IDENT       = 1003,
 
-	EQU      = 2000,
-	NEQU     = 2001,
-	GEQU     = 2002,
-	LEQU     = 2003,
+	EQU         = 2000,
+	NEQU        = 2001,
+	GEQU        = 2002,
+	LEQU        = 2003,
 
-	AND      = 3000,
-	OR       = 3001,
+	// logical operators
+	AND         = 3000,
+	OR          = 3001,
 
-	IF       = 4000,
-	ELSE     = 4001,
+	// binary operators
+	BIN_XOR     = 3100,
 
-	LOOP     = 5000,
-	BREAK    = 5001,
-	CONTINUE = 5002,
+	IF          = 4000,
+	ELSE        = 4001,
 
-	FUNC     = 6000,
-	RETURN   = 6001,
-	EXTERN   = 6002,
+	LOOP        = 5000,
+	BREAK       = 5001,
+	CONTINUE    = 5002,
 
-	END     = END_IDENT,
+	FUNC        = 6000,
+	RETURN      = 6001,
+	EXTERN      = 6002,
+
+	SHIFT_LEFT  = 7000,
+	SHIFT_RIGHT = 7001,
+
+	END         = END_IDENT,
 };
 
 

@@ -589,12 +589,16 @@ Collection::CreateParseTables(
 
 			std::optional<std::string> termid;
 			ElementPtr conflictelem = nullptr;
+			SymbolPtr sym_at_cursor = nullptr;
+
 			if(auto termiter = seen_terminals.find(termidx);
 				termiter != seen_terminals.end())
 			{
 				termid = termiter->second->GetStrId();
 				conflictelem = closureState->
 					GetElementWithCursorAtSymbol(termiter->second);
+				if(conflictelem)
+					sym_at_cursor = conflictelem->GetSymbolAtCursor();
 			}
 
 			// both have an entry?
@@ -602,9 +606,10 @@ Collection::CreateParseTables(
 			{
 				bool solution_found = false;
 
-				// try to resolve conflict
+				// try to resolve conflict using explicit solutions list
 				if(conflictsol && conflictelem)
 				{
+					// iterate solutions
 					for(const t_conflictsolution& sol : *conflictsol)
 					{
 						ConflictSolution solution = ConflictSolution::NONE;
@@ -612,14 +617,14 @@ Collection::CreateParseTables(
 						// solution has a lhs nonterminal and a lookahead terminal
 						if(std::holds_alternative<NonTerminalPtr>(std::get<0>(sol)) &&
 							*std::get<NonTerminalPtr>(std::get<0>(sol)) == *conflictelem->GetLhs() &&
-							*std::get<1>(sol) == *conflictelem->GetSymbolAtCursor())
+							*std::get<1>(sol) == *sym_at_cursor)
 						{
 							solution = std::get<2>(sol);
 						}
 
 						// solution has a lookback terminal and a lookahead terminal
 						else if(std::holds_alternative<TerminalPtr>(std::get<0>(sol)) &&
-							*std::get<1>(sol) == *conflictelem->GetSymbolAtCursor())
+							*std::get<1>(sol) == *sym_at_cursor)
 						{
 							// see if the given lookback terminal is in the closure's list
 							for(const TerminalPtr& comefromTerm : comefromTerms)
@@ -651,6 +656,61 @@ Collection::CreateParseTables(
 							break;
 					}
 				}
+
+				// try to resolve conflict using operator precedences/associativities
+				if(sym_at_cursor && sym_at_cursor->IsTerminal())
+				{
+					const TerminalPtr term_at_cursor =
+						std::dynamic_pointer_cast<Terminal>(sym_at_cursor);
+
+					for(const TerminalPtr& comefromTerm : comefromTerms)
+					{
+						auto prec_lhs = comefromTerm->GetPrecedence();
+						auto prec_rhs = term_at_cursor->GetPrecedence();
+
+						// both terminals have a precedence
+						if(prec_lhs && prec_rhs)
+						{
+							if(*prec_lhs < *prec_rhs)       // shift
+							{
+								reduceEntry = errorVal;
+								solution_found = true;
+							}
+							else if(*prec_lhs > *prec_rhs)  // reduce
+							{
+								shiftEntry = errorVal;
+								solution_found = true;
+							}
+
+							// same precedence -> use associativity
+						}
+
+						if(!solution_found)
+						{
+							auto assoc_lhs = comefromTerm->GetAssociativity();
+							auto assoc_rhs = term_at_cursor->GetAssociativity();
+
+							// both terminals have an associativity
+							if(assoc_lhs && assoc_rhs && *assoc_lhs == *assoc_rhs)
+							{
+								if(*assoc_lhs == 'r')      // shift
+								{
+									reduceEntry = errorVal;
+									solution_found = true;
+								}
+								else if(*assoc_lhs == 'l') // reduce
+								{
+									shiftEntry = errorVal;
+									solution_found = true;
+								}
+							}
+						}
+
+						if(solution_found)
+							break;
+					}
+				}
+
 
 				if(!solution_found)
 				{
