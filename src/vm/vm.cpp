@@ -83,6 +83,8 @@ bool VM::Run()
 	bool running = true;
 	while(running)
 	{
+		CheckPointerBounds();
+
 		OpCode op{OpCode::INVALID};
 		bool irq_active = false;
 
@@ -116,6 +118,9 @@ bool VM::Run()
 		if(m_debug)
 		{
 			std::cout << "*** read instruction at ip = " << t_int(m_ip)
+				<< ", sp = " << t_int(m_sp)
+				<< ", bp = " << t_int(m_bp)
+				<< ", gbp = " << t_int(m_gbp)
 				<< ", opcode: " << std::hex
 				<< static_cast<std::size_t>(op)
 				<< " (" << get_vm_opcode_name(op) << ")"
@@ -1097,7 +1102,28 @@ void VM::Reset()
 	m_bp -= sizeof(t_data) + 1; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
 
-	std::memset(m_mem.get(), 0, m_memsize);
+	std::memset(m_mem.get(), static_cast<t_byte>(OpCode::HALT), m_memsize);
+	m_code_range[0] = m_code_range[1] = -1;
+}
+
+
+/**
+ * sets or updates the range of memory where executable code resides
+ */
+void VM::UpdateCodeRange(t_addr begin, t_addr end)
+{
+	if(m_code_range[0] < 0 || m_code_range[1] < 0)
+	{
+		// set range
+		m_code_range[0] = begin;
+		m_code_range[1] = end;
+	}
+	else
+	{
+		// update range
+		m_code_range[0] = std::min(m_code_range[0], begin);
+		m_code_range[1] = std::max(m_code_range[1], end);
+	}
 }
 
 
@@ -1109,15 +1135,21 @@ void VM::SetMem(t_addr addr, VM::t_byte data)
 }
 
 
-void VM::SetMem(t_addr addr, const t_str& data)
+void VM::SetMem(t_addr addr, const t_str& data, bool is_code)
 {
+	if(is_code)
+		UpdateCodeRange(addr, addr + data.size());
+
 	for(std::size_t i=0; i<data.size(); ++i)
 		SetMem(addr + (t_addr)(i), static_cast<t_byte>(data[i]));
 }
 
 
-void VM::SetMem(t_addr addr, const VM::t_byte* data, std::size_t size)
+void VM::SetMem(t_addr addr, const VM::t_byte* data, std::size_t size, bool is_code)
 {
+	if(is_code)
+		UpdateCodeRange(addr, addr + size);
+
 	for(std::size_t i=0; i<size; ++i)
 		SetMem(addr + t_addr(i), data[i]);
 }
@@ -1133,5 +1165,50 @@ const char* VM::GetDataTypeName(const t_data& dat)
 		case m_addridx: return "address";
 		case m_boolidx: return "boolean";
 		default: return "unknown";
+	}
+}
+
+
+void VM::CheckMemoryBounds(t_addr addr, std::size_t size) const
+{
+	if(!m_checks)
+		return;
+
+	if(std::size_t(addr) + size > std::size_t(m_memsize) || addr < 0)
+		throw std::runtime_error("Tried to access out of memory bounds.");
+}
+
+
+void VM::CheckPointerBounds() const
+{
+	if(!m_checks)
+		return;
+
+	// check code range?
+	bool chk_c = (m_code_range[0] >= 0 && m_code_range[1] >= 0);
+
+	if(m_ip > m_memsize || m_ip < 0 || (chk_c && (m_ip < m_code_range[0] || m_ip >= m_code_range[1])))
+	{
+		std::ostringstream msg;
+		msg << "Instruction pointer " << t_int(m_ip) << " is out of memory bounds.";
+		throw std::runtime_error(msg.str());
+	}
+	if(m_sp > m_memsize || m_sp < 0 || (chk_c && m_sp >= m_code_range[0] && m_sp < m_code_range[1]))
+	{
+		std::ostringstream msg;
+		msg << "Stack pointer " << t_int(m_sp) << " is out of memory bounds.";
+		throw std::runtime_error(msg.str());
+	}
+	if(m_bp > m_memsize || m_bp < 0 || (chk_c && m_bp >= m_code_range[0] && m_bp < m_code_range[1]))
+	{
+		std::ostringstream msg;
+		msg << "Base pointer " << t_int(m_bp) << " is out of memory bounds.";
+		throw std::runtime_error(msg.str());
+	}
+	if(m_gbp > m_memsize || m_gbp < 0 || (chk_c && m_gbp >= m_code_range[0] && m_gbp < m_code_range[1]))
+	{
+		std::ostringstream msg;
+		msg << "Global base pointer " << t_int(m_gbp) << " is out of memory bounds.";
+		throw std::runtime_error(msg.str());
 	}
 }

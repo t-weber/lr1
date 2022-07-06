@@ -786,7 +786,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 24: stmt -> break ;
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -804,7 +804,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 26: stmt -> continue ;
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -822,7 +822,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			},
 
 			// rule 28: stmt -> return ;
-			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
+			[&mapNonTermIdx]([[maybe_unused]] const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
@@ -1152,6 +1152,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
 			astasmbin.PatchFunctionAddresses();
+			astasmbin.FinishCodegen();
 			std::string strAsmBin = ostrAsmBin.str();
 
 #if DEBUG_CODEGEN != 0
@@ -1206,7 +1207,7 @@ static bool run_vm(const std::string& prog)
 	VM vm(4096);
 	//vm.SetDebug(true);
 	VM::t_addr sp_initial = vm.GetSP();
-	vm.SetMem(0, prog);
+	vm.SetMem(0, prog, true);
 	vm.Run();
 
 	if(vm.GetSP() != sp_initial)

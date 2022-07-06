@@ -498,6 +498,7 @@ static void lr1_run_parser()
 			astasmbin.AlwaysCallExternal(true);
 			astasmbin.SetBinary(true);
 			ast->accept(&astasmbin);
+			astasmbin.FinishCodegen();
 			std::string strAsmBin = ostrAsmBin.str();
 
 #if WRITE_BINFILE != 0

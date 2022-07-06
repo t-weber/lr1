@@ -765,6 +765,23 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 }
 
 
+void ASTAsm::visit(const ASTDeclare* ast, [[maybe_unused]] std::size_t level)
+{
+	std::size_t num_idents = ast->NumIdents();
+
+	// external function declarations
+	if(ast->IsFunc() && ast->IsExternal())
+	{
+		for(std::size_t idx=0; idx<num_idents; ++idx)
+		{
+			const std::string* func_name = ast->GetIdent(idx);
+			if(func_name)
+				m_ext_funcs.insert(*func_name);
+		}
+	}
+}
+
+
 /**
  * fill in function addresses for calls
  */
@@ -811,19 +828,8 @@ void ASTAsm::PatchFunctionAddresses()
 }
 
 
-
-void ASTAsm::visit(const ASTDeclare* ast, [[maybe_unused]] std::size_t level)
+void ASTAsm::FinishCodegen()
 {
-	std::size_t num_idents = ast->NumIdents();
-
-	// external function declarations
-	if(ast->IsFunc() && ast->IsExternal())
-	{
-		for(std::size_t idx=0; idx<num_idents; ++idx)
-		{
-			const std::string* func_name = ast->GetIdent(idx);
-			if(func_name)
-				m_ext_funcs.insert(*func_name);
-		}
-	}
+	// add a final halt instruction
+	m_ostr->put(static_cast<t_vm_byte>(OpCode::HALT));
 }

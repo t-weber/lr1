@@ -71,14 +71,15 @@ public:
 	~VM();
 
 	void SetDebug(bool b) { m_debug = b; }
+	void SetChecks(bool b) { m_checks = b; }
 	static const char* GetDataTypeName(const t_data& dat);
 
 	void Reset();
 	bool Run();
 
 	void SetMem(t_addr addr, t_byte data);
-	void SetMem(t_addr addr, const t_byte* data, std::size_t size);
-	void SetMem(t_addr addr, const std::string& data);
+	void SetMem(t_addr addr, const t_byte* data, std::size_t size, bool is_code = false);
+	void SetMem(t_addr addr, const std::string& data, bool is_code = false);
 
 	t_addr GetSP() const { return m_sp; }
 	t_addr GetBP() const { return m_bp; }
@@ -179,9 +180,10 @@ protected:
 		{
 			t_addr len = ReadMemRaw<t_addr>(addr);
 			addr += m_addrsize;
-			CheckMemoryBounds(addr, len);
 
+			CheckMemoryBounds(addr, len);
 			t_char* begin = reinterpret_cast<t_char*>(&m_mem[addr]);
+
 			t_str str(begin, len);
 			return str;
 		}
@@ -190,8 +192,8 @@ protected:
 		else
 		{
 			CheckMemoryBounds(addr, sizeof(t_val));
-
 			t_val val = *reinterpret_cast<t_val*>(&m_mem[addr]);
+
 			return val;
 		}
 	}
@@ -602,29 +604,29 @@ protected:
 
 
 private:
-	void CheckMemoryBounds(t_addr addr, std::size_t size = 1) const
-	{
-		if(std::size_t(addr) + size > std::size_t(m_memsize) || addr < 0)
-			throw std::runtime_error("Tried to access out of memory bounds.");
-	}
-
+	void CheckMemoryBounds(t_addr addr, std::size_t size = 1) const;
+	void CheckPointerBounds() const;
+	void UpdateCodeRange(t_addr begin, t_addr end);
 
 	void TimerFunc();
 
 
 private:
-	bool m_debug{false};
-	std::unique_ptr<t_byte[]> m_mem{};
+	bool m_debug{false};               // write debug messages
+	bool m_checks{true};               // do memory boundary checks
+
+	std::unique_ptr<t_byte[]> m_mem{}; // ram
+	t_addr m_code_range[2]{-1, -1};    // address range where the code resides
 
 	// registers
-	t_addr m_ip{};	// instruction pointer
-	t_addr m_sp{};	// stack pointer
-	t_addr m_bp{};  // base pointer for local variables
-	t_addr m_gbp{}; // global base pointer
+	t_addr m_ip{};	                   // instruction pointer
+	t_addr m_sp{};	                   // stack pointer
+	t_addr m_bp{};                     // base pointer for local variables
+	t_addr m_gbp{};                    // global base pointer
 
 	// memory sizes and ranges
-	t_addr m_memsize = 0x1000;
-	t_addr m_framesize = 0x100;
+	t_addr m_memsize = 0x1000;         // total memory size
+	t_addr m_framesize = 0x100;        // size per function stack frame
 
 	// signals interrupt requests
 	std::array<std::atomic_bool, m_num_interrupts> m_irqs{};

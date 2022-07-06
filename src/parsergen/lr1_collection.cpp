@@ -228,7 +228,7 @@ void Collection::DoLALRTransitions(const ClosurePtr closure_from, t_closurecache
 			closure_to_existing->m_comefrom_transitions.emplace(
 				std::make_tuple(trans_sym, closure_from, false));
 
-			// if a lookahead old an old closure has changed,
+			// if a lookahead of an old closure has changed,
 			// the transitions of that closure need to be redone
 			if(lookaheads_added)
 				DoLALRTransitions(closure_to_existing, closure_cache);

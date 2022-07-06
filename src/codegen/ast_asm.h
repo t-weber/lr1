@@ -50,6 +50,7 @@ public:
 	void AddExternalFunc(const std::string& name) { m_ext_funcs.insert(name); }
 	void AlwaysCallExternal(bool b) { m_always_call_ext = b; }
 	void PatchFunctionAddresses();
+	void FinishCodegen();
 
 
 private:
