@@ -475,6 +475,10 @@ bool VM::Run()
 				if(m_sp + m_framesize < m_bp)
 					retval = PopData();
 
+				// zero the stack frame
+				if(m_zeropoppedvals)
+					std::memset(m_mem.get()+m_sp, 0, (m_bp-m_sp)*m_bytesize);
+
 				// remove the function's stack frame
 				m_sp = m_bp;
 
