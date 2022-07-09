@@ -71,7 +71,9 @@ public:
 	~VM();
 
 	void SetDebug(bool b) { m_debug = b; }
+	void SetDrawMemImages(bool b) { m_drawmemimages = b; }
 	void SetChecks(bool b) { m_checks = b; }
+	void SetZeroPoppedVals(bool b) { m_zeropoppedvals = b; }
 	static const char* GetDataTypeName(const t_data& dat);
 
 	void Reset();
@@ -105,6 +107,11 @@ public:
 	 * signals an interrupt
 	 */
 	void RequestInterrupt(t_addr num);
+
+	/**
+	 * visualises vm memory utilisation
+	 */
+	void DrawMemoryImage();
 
 
 protected:
@@ -251,7 +258,12 @@ protected:
 	{
 		CheckMemoryBounds(m_sp, valsize);
 
-		t_val val = *reinterpret_cast<t_val*>(m_mem.get() + m_sp);
+		t_val *valptr = reinterpret_cast<t_val*>(m_mem.get() + m_sp);
+		t_val val = *valptr;
+
+		if(m_zeropoppedvals)
+			*valptr = 0;
+
 		m_sp += valsize;	// stack grows to lower addresses
 
 		return val;
@@ -614,13 +626,15 @@ private:
 private:
 	bool m_debug{false};               // write debug messages
 	bool m_checks{true};               // do memory boundary checks
+	bool m_drawmemimages{false};       // write memory dump images
+	bool m_zeropoppedvals{false};      // zero memory of popped values
 
 	std::unique_ptr<t_byte[]> m_mem{}; // ram
 	t_addr m_code_range[2]{-1, -1};    // address range where the code resides
 
 	// registers
-	t_addr m_ip{};	                   // instruction pointer
-	t_addr m_sp{};	                   // stack pointer
+	t_addr m_ip{};                     // instruction pointer
+	t_addr m_sp{};                     // stack pointer
 	t_addr m_bp{};                     // base pointer for local variables
 	t_addr m_gbp{};                    // global base pointer
 

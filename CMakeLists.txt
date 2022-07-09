@@ -4,7 +4,7 @@
 # @license see 'LICENSE.EUPL' file
 #
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.12)
 
 project(lr1)
 enable_language(CXX)
@@ -15,6 +15,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 add_definitions(-Wall -Wextra -Weffc++)
 
 
+option(USE_BOOST_GIL "use boost.gil" TRUE)
 option(BUILD_EXAMPLES "build example programs" TRUE)
 option(BUILD_TESTS "build test programs" TRUE)
 
@@ -23,6 +24,11 @@ find_package(Boost REQUIRED)
 add_definitions(${Boost_CXX_FLAGS})
 
 find_package(Threads REQUIRED)
+
+if(USE_BOOST_GIL)
+	find_package(PNG REQUIRED)
+	add_definitions(-DUSE_BOOST_GIL)
+endif()
 
 
 include_directories(
@@ -68,11 +74,14 @@ target_link_libraries(lr1-codegen ${Boost_LIBRARIES})
 # vm library
 add_library(lr1-vm STATIC
 	src/vm/vm.cpp src/vm/vm.h
-	src/vm/vm_extfuncs.cpp
+	src/vm/vm_extfuncs.cpp src/vm/vm_memdump.cpp
 	src/vm/opcodes.h src/vm/helpers.h
 )
 
-target_link_libraries(lr1-vm ${Boost_LIBRARIES} Threads::Threads)
+target_link_libraries(lr1-vm ${Boost_LIBRARIES}
+	$<$<TARGET_EXISTS:Threads::Threads>:Threads::Threads>
+	$<$<TARGET_EXISTS:PNG::PNG>:PNG::PNG>
+)
 # -----------------------------------------------------------------------------
 
 

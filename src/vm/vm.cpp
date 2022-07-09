@@ -84,6 +84,8 @@ bool VM::Run()
 	while(running)
 	{
 		CheckPointerBounds();
+		if(m_drawmemimages)
+			DrawMemoryImage();
 
 		OpCode op{OpCode::INVALID};
 		bool irq_active = false;
@@ -126,7 +128,6 @@ bool VM::Run()
 				<< " (" << get_vm_opcode_name(op) << ")"
 				<< std::dec << ". ***" << std::endl;
 		}
-
 
 		// run instruction
 		switch(op)
@@ -584,6 +585,9 @@ VM::t_str VM::PopString()
 	t_char* begin = reinterpret_cast<t_char*>(m_mem.get() + m_sp);
 	t_str str(begin, len);
 	m_sp += len;
+
+	if(m_zeropoppedvals)
+		std::memset(begin, 0, len*m_bytesize);
 
 	return str;
 }
@@ -1102,7 +1106,7 @@ void VM::Reset()
 	m_bp -= sizeof(t_data) + 1; // padding of max. data type size to avoid writing beyond memory size
 	m_gbp = m_bp;
 
-	std::memset(m_mem.get(), static_cast<t_byte>(OpCode::HALT), m_memsize);
+	std::memset(m_mem.get(), static_cast<t_byte>(OpCode::HALT), m_memsize*m_bytesize);
 	m_code_range[0] = m_code_range[1] = -1;
 }
 

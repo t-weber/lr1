@@ -1206,6 +1206,8 @@ static bool run_vm(const std::string& prog)
 {
 	VM vm(4096);
 	//vm.SetDebug(true);
+	//vm.SetZeroPoppedVals(true);
+	//vm.SetDrawMemImages(true);
 	VM::t_addr sp_initial = vm.GetSP();
 	vm.SetMem(0, prog, true);
 	vm.Run();
