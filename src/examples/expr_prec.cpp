@@ -467,6 +467,7 @@ static void lr1_run_parser()
 #endif
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0

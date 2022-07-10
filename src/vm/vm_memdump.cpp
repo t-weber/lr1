@@ -54,7 +54,7 @@ void VM::DrawMemoryImage()
 			t_pixel pixel[] { 0x00, 0x00, 0x00 };
 			if(mem_byte < static_cast<std::uint64_t>(m_memsize))
 			{
-				bool thebit = (m_mem[mem_byte] & (1 << (8-mem_bit))) != 0;
+				bool thebit = (m_mem[mem_byte] & (1 << (8-mem_bit-1))) != 0;
 
 				// memory bit set?
 				if(thebit)

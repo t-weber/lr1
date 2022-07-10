@@ -11,6 +11,38 @@
 #define AST_ABS_FUNC_ADDR  0  // use absolute or relative function addresses
 
 
+/**
+ * exit with an error
+ */
+static void throw_err(const ASTBase* ast, const std::string& err)
+{
+	if(ast)
+	{
+		std::ostringstream ostr;
+
+		if(auto line_range = ast->GetLineRange(); line_range)
+		{
+			auto start_line = std::get<0>(*line_range);
+			auto end_line = std::get<1>(*line_range);
+
+			if(start_line == end_line)
+				ostr << "Line " << start_line << ": ";
+			else
+				ostr << "Lines " << start_line << "..." << end_line << ": ";
+
+			ostr << err;
+		}
+
+		throw std::runtime_error(ostr.str());
+	}
+	else
+	{
+		throw std::runtime_error(err);
+	}
+}
+
+
+
 ASTAsm::ASTAsm(std::ostream& ostr,
 	std::unordered_map<std::size_t, std::tuple<std::string, OpCode>> *ops)
 	: m_ostr{&ostr}, m_ops{ops}
@@ -495,7 +527,7 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 {
 	if(m_cur_func != "")
-		throw std::runtime_error("Nested functions are not allowed.");
+		throw_err(ast, "Nested functions are not allowed.");
 
 	// function name
 	const std::string& func_name = ast->GetName();
@@ -646,7 +678,7 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 					std::ostringstream msg;
 					msg << "Function \"" << func_name << "\" takes " << sym->num_args
 						<< " arguments, but " << num_args << " were given.";
-					throw std::runtime_error(msg.str());
+					throw_err(ast, msg.str());
 				}
 			}
 
@@ -671,7 +703,7 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 			{
 				// function address not yet known
 				m_func_comefroms.emplace_back(
-					std::make_tuple(func_name, addr_pos, num_args));
+					std::make_tuple(func_name, addr_pos, num_args, ast));
 			}
 		}
 	}
@@ -699,7 +731,7 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 			ast->GetExpr()->accept(this, level+1);
 
 		if(m_cur_func == "")
-			throw std::runtime_error("Tried to return outside any function.");
+			throw_err(ast, "Tried to return outside any function.");
 
 		if(m_binary)
 		{
@@ -720,7 +752,7 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 		|| ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
 	{
 		if(!m_cur_loop.size())
-			throw std::runtime_error("Tried to use break/continue outside loop.");
+			throw_err(ast, "Tried to use break/continue outside loop.");
 
 		t_int loop_depth = 0; // how many loop levels to break/continue?
 
@@ -787,12 +819,12 @@ void ASTAsm::visit(const ASTDeclare* ast, [[maybe_unused]] std::size_t level)
  */
 void ASTAsm::PatchFunctionAddresses()
 {
-	for(const auto& [func_name, pos, num_args] : m_func_comefroms)
+	for(const auto& [func_name, pos, num_args, call_ast] : m_func_comefroms)
 	{
 		const SymInfo *sym = m_symtab.GetSymbol(func_name);
 		if(!sym)
 		{
-			throw std::runtime_error(
+			throw_err(call_ast,
 				"Tried to call unknown function \"" + func_name + "\".");
 		}
 
@@ -801,7 +833,7 @@ void ASTAsm::PatchFunctionAddresses()
 			std::ostringstream msg;
 			msg << "Function \"" << func_name << "\" takes " << sym->num_args
 				<< " arguments, but " << num_args << " were given.";
-			throw std::runtime_error(msg.str());
+			throw_err(call_ast, msg.str());
 		}
 
 		/*std::cout << "Patching function \"" << func_name << "\""

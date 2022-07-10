@@ -67,6 +67,17 @@ void ASTPrinter::print_base(
 	for(std::size_t i=0; i<level; ++i)
 		m_ostr << "  ";
 	m_ostr << get_ast_typename(ast) << ", id = " << ast->GetId();
+	if(const auto& line_range = ast->GetLineRange(); line_range)
+	{
+		auto start_line = std::get<0>(*line_range);
+		auto end_line = std::get<1>(*line_range);
+
+		if(start_line == end_line)
+			m_ostr << ", line = " << start_line;
+		else
+			m_ostr << ", lines = [" << start_line
+				<< ", " << end_line << "]";
+	}
 	m_ostr << ", data type = " << get_vm_type_name(ast->GetDataType());
 	//if(ast->GetId() < 256)
 	//	m_ostr << " (" << (char)ast->GetId() << ")";

@@ -21,6 +21,9 @@
 
 using t_tok = std::size_t;
 
+// [ token, lvalue, line number ]
+using t_lexer_match = std::tuple<t_tok, t_lval, std::size_t>;
+
 
 enum class Token : t_tok
 {
@@ -62,15 +65,16 @@ enum class Token : t_tok
 /**
  * find all matching tokens for input string
  */
-extern std::vector<std::tuple<t_tok, t_lval>> get_matching_tokens(
-	const std::string& str);
+extern std::vector<t_lexer_match>
+	get_matching_tokens(const std::string& str, std::size_t line);
 
 
 /**
  * get next token and attribute
  */
-extern std::tuple<t_tok, t_lval> get_next_token(
-	std::istream& istr = std::cin, bool end_on_newline = true);
+extern t_lexer_match
+	get_next_token(std::istream& istr = std::cin,
+		bool end_on_newline = true, std::size_t* line = nullptr);
 
 
 /**

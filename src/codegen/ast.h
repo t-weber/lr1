@@ -10,7 +10,9 @@
 
 #include <memory>
 #include <vector>
+#include <utility>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <iostream>
 #include <sstream>
@@ -84,12 +86,39 @@ public:
 };
 
 
+/**
+ * get the source line number range of child node lines
+ */
+template<class t_line_range, class t_opt_range = std::optional<t_line_range>>
+t_opt_range get_minmax_lines(const std::vector<t_opt_range>& lines)
+{
+	using t_line = std::decay_t<decltype(std::get<0>(t_line_range{}))>;
+	t_opt_range range;
+
+	for(const auto& line : lines)
+	{
+		if(!line)
+			continue;
+		if(!range)
+			range = t_line_range(std::numeric_limits<t_line>::max(), t_line(0));
+
+		std::get<0>(*range) = std::min(std::get<0>(*line), std::get<0>(*range));
+		std::get<1>(*range) = std::max(std::get<1>(*line), std::get<1>(*range));
+	}
+
+	return range;
+}
+
 
 /**
  * syntax tree base
  */
 class ASTBase
 {
+public:
+	using t_line_range = std::pair<std::size_t, std::size_t>;
+
+
 public:
 	ASTBase(std::size_t id, std::optional<std::size_t> tableidx=std::nullopt)
 		: m_id{id}, m_tableidx{tableidx}
@@ -98,11 +127,25 @@ public:
 	virtual ~ASTBase() = default;
 
 	std::size_t GetId() const { return m_id; }
+
 	std::size_t GetTableIdx() const { return *m_tableidx; }
 	void SetTableIdx(std::size_t tableidx) { m_tableidx = tableidx; }
 
 	virtual bool IsTerminal() const { return false; };
 	virtual ASTType GetType() const = 0;
+
+	virtual const std::optional<t_line_range>& GetLineRange() const
+	{
+		return m_line_range;
+	}
+	virtual void SetLineRange(const t_line_range& lines)
+	{
+		m_line_range = lines;
+	}
+	virtual void SetLineRange(const std::optional<t_line_range>& lines)
+	{
+		m_line_range = lines;
+	}
 
 	virtual VMType GetDataType() const { return m_datatype; }
 	virtual void SetDataType(VMType ty) { m_datatype = ty; }
@@ -116,7 +159,6 @@ public:
 		for(std::size_t childidx=0; childidx<children; ++childidx)
 		{
 			const t_astbaseptr child = GetChild(childidx);
-
 			if(!child)
 				continue;
 
@@ -140,6 +182,31 @@ public:
 				VMType ty2 = child2->GetDataType();
 				SetDataType(derive_data_type(ty1, ty2));
 			}
+		}
+	}
+
+	/**
+	 * assigns the source line numbers from the token lines
+	 */
+	virtual void AssignLineNumbers()
+	{
+		std::vector<std::optional<t_line_range>> lines;
+
+		std::size_t children = NumChildren();
+		for(std::size_t childidx=0; childidx<children; ++childidx)
+		{
+			const t_astbaseptr child = GetChild(childidx);
+			if(!child)
+				continue;
+
+			child->AssignLineNumbers();
+			lines.push_back(child->GetLineRange());
+		}
+
+		if(lines.size())
+		{
+			lines.push_back(GetLineRange());
+			SetLineRange(get_minmax_lines<t_line_range>(lines));
 		}
 	}
 
@@ -177,6 +244,9 @@ private:
 	std::optional<std::size_t> m_tableidx{};
 
 	VMType m_datatype{VMType::UNKNOWN};
+
+	// line number range
+	std::optional<t_line_range> m_line_range{std::nullopt};
 };
 
 
@@ -208,13 +278,17 @@ template<class t_lval>
 class ASTToken : public ASTBaseAcceptor<ASTToken<t_lval>>
 {
 public:
-	ASTToken(std::size_t id, std::size_t tableidx)
+	ASTToken(std::size_t id, std::size_t tableidx, std::size_t line)
 		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lexval{std::nullopt}
-	{}
+	{
+		ASTBase::SetLineRange(std::make_pair(line, line));
+	}
 
-	ASTToken(std::size_t id, std::size_t tableidx, t_lval lval)
+	ASTToken(std::size_t id, std::size_t tableidx, t_lval lval, std::size_t line)
 		: ASTBaseAcceptor<ASTToken<t_lval>>{id, tableidx}, m_lexval{lval}
-	{}
+	{
+		ASTBase::SetLineRange(std::make_pair(line, line));
+	}
 
 	virtual ~ASTToken() = default;
 

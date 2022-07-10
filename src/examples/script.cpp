@@ -632,7 +632,10 @@ lr1_run_parser(const char* script_file = nullptr)
 
 				std::size_t id = expr->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTFuncCall>(id, tableidx, ident, args[2]);
+
+				auto funccall = std::make_shared<ASTFuncCall>(id, tableidx, ident, args[2]);
+				funccall->SetLineRange(funcname->GetLineRange());
+				return funccall;
 			},
 
 			// rule 9: expr -> real symbol
@@ -773,8 +776,11 @@ lr1_run_parser(const char* script_file = nullptr)
 
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTFunc>(
-					id, tableidx, ident, args[3], args[6]);
+
+				auto func = std::make_shared<ASTFunc>(id, tableidx, ident, args[3], args[6]);
+				func->SetLineRange(funcname->GetLineRange());
+
+				return func;
 			},
 
 			// rule 23: stmt -> extern func idents ;
@@ -790,8 +796,11 @@ lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTJump>(
+
+				auto jump = std::make_shared<ASTJump>(
 					id, tableidx, ASTJump::JumpType::BREAK);
+				jump->SetLineRange(args[0]->GetLineRange());
+				return jump;
 			},
 
 			// rule 25: stmt -> break symbol ;
@@ -799,6 +808,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
+
 				return std::make_shared<ASTJump>(
 					id, tableidx, ASTJump::JumpType::BREAK, args[1]);
 			},
@@ -808,8 +818,11 @@ lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTJump>(
+
+				auto jump = std::make_shared<ASTJump>(
 					id, tableidx, ASTJump::JumpType::CONTINUE);
+				jump->SetLineRange(args[0]->GetLineRange());
+				return jump;
 			},
 
 			// rule 27: stmt -> continue symbol ;
@@ -826,8 +839,11 @@ lr1_run_parser(const char* script_file = nullptr)
 			{
 				std::size_t id = stmt->GetId();
 				std::size_t tableidx = mapNonTermIdx.find(id)->second;
-				return std::make_shared<ASTJump>(
+
+				auto jump = std::make_shared<ASTJump>(
 					id, tableidx, ASTJump::JumpType::RETURN);
+				jump->SetLineRange(args[0]->GetLineRange());
+				return jump;
 			},
 
 			// rule 29: stmt -> return expr ;
@@ -1094,6 +1110,7 @@ lr1_run_parser(const char* script_file = nullptr)
 #endif
 
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 
 #if DEBUG_CODEGEN != 0
