@@ -1173,6 +1173,9 @@ lr1_run_parser(const char* script_file = nullptr)
 			std::string strAsmBin = ostrAsmBin.str();
 
 #if DEBUG_CODEGEN != 0
+			std::cout << "\nSymbol table:\n";
+			std::cout << astasmbin.GetSymbolTable();
+
 			std::cout << "\nGenerated code ("
 				<< strAsmBin.size() << " bytes):\n"
 				<< ostrAsm.str();

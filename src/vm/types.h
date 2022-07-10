@@ -59,6 +59,27 @@ enum class VMType : t_vm_byte
 
 
 /**
+ * get a string representation of a base register name
+ */
+template<class t_str = const char*>
+constexpr t_str get_vm_base_reg(VMType ty)
+{
+	switch(ty)
+	{
+		case VMType::UNKNOWN:     return "unknown";
+		case VMType::ADDR_MEM:    return "absolute";
+		case VMType::ADDR_IP:     return "ip";
+		case VMType::ADDR_SP:     return "sp";
+		case VMType::ADDR_BP:     return "bp";
+		case VMType::ADDR_GBP:    return "gbp";
+		case VMType::ADDR_BP_ARG: return "index/bp";
+		default:                  return "<unknown>";
+	}
+}
+
+
+
+/**
  * get a string representation of a type name
  * (run-time version)
  */

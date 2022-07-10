@@ -16,7 +16,7 @@
 
 // see: https://github.com/boostorg/gil/tree/develop/example
 #include <boost/gil/image.hpp>
-#include <boost/gil/extension/io/png.hpp>
+#include <boost/gil/extension/io/png/write.hpp>
 
 
 /**
@@ -24,30 +24,28 @@
  */
 void VM::DrawMemoryImage()
 {
-	namespace gil = boost::gil;
-
-	//using t_img = gil::gray8_image_t;
-	using t_img = gil::rgb8_image_t;
+	//using t_img = boost::gil::gray8_image_t;
+	using t_img = boost::gil::rgb8_image_t;
 	using t_view = typename t_img::view_t;
 	using t_coord = typename t_view::coord_t;
-	using t_pixel = typename gil::channel_type<t_img>::type;
-	using t_format = typename gil::png_tag;
+	using t_pixel = typename boost::gil::channel_type<t_img>::type;
+	using t_format = typename boost::gil::png_tag;
 
 	std::size_t length = static_cast<std::size_t>(
 		std::ceil(std::sqrt(static_cast<t_real>(m_memsize * 8))));
 
-	int pixel_scale = 2;
+	int pixel_scale = 4;
 	length *= pixel_scale;
 
 	t_img img(length, length);
-	t_view view = gil::view(img);
+	t_view view = boost::gil::view(img);
 
-	for(t_coord y = 0; y < img.height(); ++y)
+	for(t_coord y = 0; y < view.height(); ++y)
 	{
 		t_coord x = 0;
 		for(auto iter = view.row_begin(y); iter != view.row_end(y); ++iter)
 		{
-			std::uint64_t mem_pos = y/pixel_scale*img.width()/pixel_scale + x/pixel_scale;
+			std::uint64_t mem_pos = y/pixel_scale*view.width()/pixel_scale + x/pixel_scale;
 			std::uint64_t mem_byte = mem_pos / 8;
 			std::uint8_t mem_bit = mem_pos % 8;
 
@@ -79,7 +77,7 @@ void VM::DrawMemoryImage()
 
 	static std::size_t ctr = 0;
 	std::string file = "mem_" + std::to_string(ctr++) + ".png";
-	gil::write_view(file, view, t_format{});
+	boost::gil::write_view(file, view, t_format{});
 }
 
 

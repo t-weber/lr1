@@ -17,6 +17,7 @@
 #include "lval.h"
 #include "ast.h"
 #include "sym.h"
+#include "../vm/opcodes.h"
 
 
 class ASTAsm : public ASTVisitor
@@ -51,6 +52,8 @@ public:
 	void AlwaysCallExternal(bool b) { m_always_call_ext = b; }
 	void PatchFunctionAddresses();
 	void FinishCodegen();
+
+	const SymTab& GetSymbolTable() const { return m_symtab; }
 
 
 private:

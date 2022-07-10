@@ -10,8 +10,10 @@
 
 
 #include <unordered_map>
+#include <ostream>
+#include <iomanip>
 
-#include "../vm/opcodes.h"
+#include "../vm/types.h"
 
 
 
@@ -65,6 +67,60 @@ public:
 		};
 
 		return &m_syms.insert_or_assign(name, info).first->second;
+	}
+
+
+	const std::unordered_map<std::string, SymInfo>& GetSymbols() const
+	{
+		return m_syms;
+	}
+
+
+	/**
+	 * print symbol table
+	 */
+	friend std::ostream& operator<<(std::ostream& ostr, const SymTab& symtab)
+	{
+		std::ios_base::fmtflags base = ostr.flags(std::ios_base::basefield);
+
+		const int len_name = 24;
+		const int len_type = 24;
+		const int len_addr = 14;
+		const int len_base = 14;
+
+		ostr
+			<< std::setw(len_name) << std::left << "Name"
+			<< std::setw(len_type) << std::left << "Type"
+			<< std::setw(len_addr) << std::left << "Address"
+			<< std::setw(len_base) << std::left << "Base"
+			<< "\n";
+
+		for(const auto& [name, info] : symtab.GetSymbols())
+		{
+			std::string ty = "<unknown>";
+			if(info.is_func)
+			{
+				ty = "function, ";
+				ty += std::to_string(info.num_args) + " args";
+			}
+			else
+			{
+				ty = get_vm_type_name(info.ty);
+			}
+
+			std::string basereg = get_vm_base_reg(info.loc);
+
+			ostr
+				<< std::setw(len_name) << std::left << name
+				<< std::setw(len_type) << std::left << ty
+				<< std::setw(len_addr) << std::left << std::dec << info.addr
+				<< std::setw(len_base) << std::left << basereg
+				<< "\n";
+		}
+
+		// restore base
+		ostr.setf(base, std::ios_base::basefield);
+		return ostr;
 	}
 
 

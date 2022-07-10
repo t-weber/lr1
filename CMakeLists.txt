@@ -27,15 +27,31 @@ find_package(Threads REQUIRED)
 
 if(USE_BOOST_GIL)
 	find_package(PNG REQUIRED)
-	add_definitions(-DUSE_BOOST_GIL)
+	add_definitions(${PNG_DEFINITIONS})
+
+	try_compile(BOOST_GIL_WORKING ${CMAKE_BINARY_DIR}
+		SOURCES ${CMAKE_SOURCE_DIR}/setup/test_gil.cpp
+		COMPILE_DEFINITIONS ${Boost_CXX_FLAGS} ${PNG_DEFINITIONS}
+		CXX_STANDARD ${CMAKE_CXX_STANDARD}
+		LINK_LIBRARIES PNG::PNG
+		OUTPUT_VARIABLE gil_msgs)
+
+	if(BOOST_GIL_WORKING)
+		add_definitions(-DUSE_BOOST_GIL)
+
+	else()
+		message(WARNING "Boost.Gil test program does not compile correctly, disabling.")
+		#message(WARNING ${gil_msgs})
+	endif()
 endif()
 
 
 include_directories(
-	"${PROJECT_SOURCE_DIR}"
-	"${PROJECT_SOURCE_DIR}/src"
-	"${CMAKE_CURRENT_BINARY_DIR}"
-	"${Boost_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}/.."
+	${PROJECT_SOURCE_DIR}
+	${PROJECT_SOURCE_DIR}/src
+	${CMAKE_CURRENT_BINARY_DIR}
+	${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/..
+	${PNG_INCLUDE_DIRS}
 )
 
 
