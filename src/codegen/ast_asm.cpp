@@ -180,9 +180,9 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 				m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
 		}
 
+		// the token names a string literal
 		else
 		{
-			// the token names a string literal
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 			// write type descriptor byte
 			m_ostr->put(static_cast<t_vm_byte>(VMType::STR));
