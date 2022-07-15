@@ -532,7 +532,6 @@ protected:
 	t_bool OpComparison(const t_val& val1, const t_val& val2)
 	{
 		t_bool result = 0;
-		// TODO: include an epsilon region for float comparisons
 
 		// string comparison
 		if constexpr(std::is_same_v<std::decay_t<t_val>, t_str>)
@@ -555,9 +554,19 @@ protected:
 			else if constexpr(op == OpCode::LEQU)
 				result = (val1 <= val2);
 			else if constexpr(op == OpCode::EQU)
-				result = (val1 == val2);
+			{
+				if constexpr(std::is_same_v<std::decay_t<t_val>, t_real>)
+					result = (std::abs(val1 - val2) <= m_eps);
+				else
+					result = (val1 == val2);
+			}
 			else if constexpr(op == OpCode::NEQU)
-				result = (val1 != val2);
+			{
+				if constexpr(std::is_same_v<std::decay_t<t_val>, t_real>)
+					result = (std::abs(val1 - val2) > m_eps);
+				else
+					result = (val1 != val2);
+			}
 		}
 
 		return result;
@@ -628,6 +637,7 @@ private:
 	bool m_checks{true};               // do memory boundary checks
 	bool m_drawmemimages{false};       // write memory dump images
 	bool m_zeropoppedvals{false};      // zero memory of popped values
+	t_real m_eps{std::numeric_limits<t_real>::epsilon()};
 
 	std::unique_ptr<t_byte[]> m_mem{}; // ram
 	t_addr m_code_range[2]{-1, -1};    // address range where the code resides

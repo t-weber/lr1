@@ -63,6 +63,15 @@ VM::t_data VM::CallExternal(const t_str& func_name)
 		retval = t_data{std::in_place_index<m_realidx>,
 			std::tan(arg)};
 	}
+	else if(func_name == "set_eps")
+	{
+		OpCast<m_realidx>();
+		m_eps = std::get<m_realidx>(PopData());
+	}
+	else if(func_name == "get_eps")
+	{
+		retval = t_data{std::in_place_index<m_realidx>, m_eps};
+	}
 	else if(func_name == "print")
 	{
 		OpCast<m_stridx>();
