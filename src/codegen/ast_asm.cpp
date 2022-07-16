@@ -173,7 +173,8 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 			// register with base address
 			m_ostr->put(static_cast<t_vm_byte>(sym->loc));
 			// relative address
-			m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&sym->addr),
+				vm_type_size<VMType::ADDR_BP, false>);
 
 			// dereference it, if the variable is on the rhs of an assignment
 			if(!ast->IsLValue() && !sym->is_func)
@@ -348,7 +349,8 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		skip_addr = m_ostr->tellp();
-		m_ostr->write(reinterpret_cast<const char*>(&skipEndCond), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&skipEndCond),
+			vm_type_size<VMType::ADDR_IP, false>);
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMPCND));
 	}
 	else
@@ -369,7 +371,8 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
 			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 			skip_else_addr = m_ostr->tellp();
-			m_ostr->write(reinterpret_cast<const char*>(&skipEndIf), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&skipEndIf),
+				vm_type_size<VMType::ADDR_IP, false>);
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 		}
 		else
@@ -385,7 +388,8 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 		// go back and fill in missing number of bytes to skip
 		skipEndCond = after_if_block - before_if_block;
 		m_ostr->seekp(skip_addr);
-		m_ostr->write(reinterpret_cast<const char*>(&skipEndCond), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&skipEndCond),
+			vm_type_size<VMType::ADDR_IP, false>);
 		m_ostr->seekp(after_if_block);
 	}
 	else
@@ -405,7 +409,8 @@ void ASTAsm::visit(const ASTCondition* ast, [[maybe_unused]] std::size_t level)
 			// go back and fill in missing number of bytes to skip
 			skipEndIf = after_else_block - before_else_block;
 			m_ostr->seekp(skip_else_addr);
-			m_ostr->write(reinterpret_cast<const char*>(&skipEndIf), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&skipEndIf),
+				vm_type_size<VMType::ADDR_IP, false>);
 			m_ostr->seekp(after_else_block);
 		}
 		else
@@ -443,7 +448,8 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		skip_addr = m_ostr->tellp();
-		m_ostr->write(reinterpret_cast<const char*>(&skip), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&skip),
+			vm_type_size<VMType::ADDR_IP, false>);
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMPCND));
 	}
 	else
@@ -464,16 +470,17 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 		std::streampos after_block = m_ostr->tellp();
 		skip = after_block - before_block;
 		t_vm_addr skip_back = loop_begin - after_block;
-		skip_back -= static_cast<t_vm_addr>(sizeof(t_vm_addr)); // include the next two writes
-		skip_back -= static_cast<t_vm_addr>(sizeof(t_vm_byte));
-		m_ostr->write(reinterpret_cast<const char*>(&skip_back), sizeof(t_vm_addr));
+		skip_back -= vm_type_size<VMType::ADDR_IP, true>; // include the next two writes
+		m_ostr->write(reinterpret_cast<const char*>(&skip_back),
+			vm_type_size<VMType::ADDR_IP, false>);
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 
 		// go back and fill in missing number of bytes to skip
 		after_block = m_ostr->tellp();
 		skip = after_block - before_block;
 		m_ostr->seekp(skip_addr);
-		m_ostr->write(reinterpret_cast<const char*>(&skip), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&skip),
+			vm_type_size<VMType::ADDR_IP, false>);
 
 		// fill in any saved, unset start-of-loop jump addresses (continues)
 		while(true)
@@ -487,9 +494,10 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 
 			t_vm_addr to_skip = loop_begin - pos;
 			// already skipped over address and jmp instruction
-			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
 			m_ostr->seekp(pos);
-			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+				vm_type_size<VMType::ADDR_IP, false>);
 		}
 
 		// fill in any saved, unset end-of-loop jump addresses (breaks)
@@ -504,9 +512,10 @@ void ASTAsm::visit(const ASTLoop* ast, [[maybe_unused]] std::size_t level)
 
 			t_vm_addr to_skip = after_block - pos;
 			// already skipped over address and jmp instruction
-			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
 			m_ostr->seekp(pos);
-			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+				vm_type_size<VMType::ADDR_IP, false>);
 		}
 
 		// go to end of stream
@@ -545,7 +554,8 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH)); // push jump address
 		m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 		jmp_end_streampos = m_ostr->tellp();
-		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr),
+			vm_type_size<VMType::ADDR_IP, false>);
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 	}
 	else
@@ -559,7 +569,7 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 	if(m_binary && ast->GetArgs())
 	{
 		// skip saved ebp and return address on stack frame
-		//t_vm_addr addr_bp = 2 * (sizeof(t_vm_addr) + 1);
+		//t_vm_addr addr_bp = 2 * vm_type_size<VMType::ADDR_IP, true>;
 
 		for(std::size_t i=0; i<ast->GetArgs()->NumChildren(); ++i)
 		{
@@ -597,23 +607,26 @@ void ASTAsm::visit(const ASTFunc* ast, [[maybe_unused]] std::size_t level)
 		// push number of arguments and return
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::PUSH));
 		m_ostr->put(static_cast<t_vm_byte>(VMType::INT));
-		m_ostr->write(reinterpret_cast<const char*>(&num_args), sizeof(t_vm_int));
+		m_ostr->write(reinterpret_cast<const char*>(&num_args),
+			vm_type_size<VMType::INT, false>);
 		m_ostr->put(static_cast<t_vm_byte>(OpCode::RET));
 
 		// fill in end-of-function jump address
 		std::streampos end_func_streampos = m_ostr->tellp();
 		end_func_addr = end_func_streampos - before_block;
 		m_ostr->seekp(jmp_end_streampos);
-		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&end_func_addr),
+			vm_type_size<VMType::ADDR_IP, false>);
 
 		// fill in any saved, unset end-of-function jump addresses
 		for(std::streampos pos : m_endfunc_comefroms)
 		{
 			t_vm_addr to_skip = ret_streampos - pos;
 			// already skipped over address and jmp instruction
-			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
+			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
 			m_ostr->seekp(pos);
-			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+				vm_type_size<VMType::ADDR_IP, false>);
 		}
 		m_endfunc_comefroms.clear();
 		m_ostr->seekp(end_func_streampos);
@@ -687,15 +700,17 @@ void ASTAsm::visit(const ASTFuncCall* ast, [[maybe_unused]] std::size_t level)
 			// push absolute function address
 			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_MEM));
 			std::streampos addr_pos = m_ostr->tellp();
-			m_ostr->write(reinterpret_cast<const char*>(&func_addr), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&func_addr),
+				vm_type_size<VMType::ADDR_MEM, false>);
 	#else
 			// push relative function address
 			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 			// already skipped over address and jmp instruction
 			std::streampos addr_pos = m_ostr->tellp();
 			t_vm_addr to_skip = static_cast<t_vm_addr>(func_addr - addr_pos);
-			to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
-			m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+			to_skip -= vm_type_size<VMType::ADDR_IP, true>;
+			m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+				vm_type_size<VMType::ADDR_IP, false>);
 	#endif
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::CALL));
 
@@ -740,7 +755,8 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 			m_ostr->put(static_cast<t_vm_byte>(VMType::ADDR_IP));
 			m_endfunc_comefroms.push_back(m_ostr->tellp());
 			t_vm_addr dummy_addr = 0;
-			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr),
+				vm_type_size<VMType::ADDR_IP, false>);
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 		}
 		else
@@ -783,7 +799,8 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 			else if(ast->GetJumpType() == ASTJump::JumpType::CONTINUE)
 				m_loop_begin_comefroms.insert(std::make_pair(cur_loop, m_ostr->tellp()));
 			t_vm_addr dummy_addr = 0;
-			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr), sizeof(t_vm_addr));
+			m_ostr->write(reinterpret_cast<const char*>(&dummy_addr),
+				vm_type_size<VMType::ADDR_IP, false>);
 			m_ostr->put(static_cast<t_vm_byte>(OpCode::JMP));
 		}
 		else
@@ -845,13 +862,15 @@ void ASTAsm::PatchFunctionAddresses()
 
 #if AST_ABS_FUNC_ADDR != 0
 		// write absolute function address
-		m_ostr->write(reinterpret_cast<const char*>(&sym->addr), sizeof(t_vm_addr));
+		m_ostr->write(reinterpret_cast<const char*>(&sym->addr),
+			vm_type_size<VMType::ADDR_IP, false>);
 #else
 		// write relative function address
 		t_vm_addr to_skip = static_cast<t_vm_addr>(sym->addr - pos);
 		// already skipped over address and jmp instruction
-		to_skip -= sizeof(t_vm_byte) + sizeof(t_vm_addr);
-		m_ostr->write(reinterpret_cast<const char*>(&to_skip), sizeof(t_vm_addr));
+		to_skip -= vm_type_size<VMType::ADDR_IP, true>;
+		m_ostr->write(reinterpret_cast<const char*>(&to_skip),
+			vm_type_size<VMType::ADDR_IP, false>);
 #endif
 	}
 

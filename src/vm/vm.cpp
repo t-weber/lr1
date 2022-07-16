@@ -853,7 +853,7 @@ void VM::PushData(const VM::t_data& data, VMType ty, bool err_on_unknown)
 VM::t_addr VM::GetArgAddr(VM::t_addr addr, VM::t_addr arg_num) const
 {
 	// skip to correct argument index
-	while(arg_num > 0)
+	for(t_addr arg_idx = 0; arg_idx < arg_num; ++arg_idx)
 	{
 		// get data type info from memory
 		VMType ty = static_cast<VMType>(ReadMemRaw<t_byte>(addr));
@@ -889,8 +889,6 @@ VM::t_addr VM::GetArgAddr(VM::t_addr addr, VM::t_addr arg_num) const
 				throw std::runtime_error(msg.str());
 			}
 		}
-
-		--arg_num;
 	}
 
 	return addr;
