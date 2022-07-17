@@ -149,14 +149,11 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 				else
 				{
 					if(m_local_stack.find(m_cur_func) == m_local_stack.end())
-					{
-						// padding of maximum data type size, to avoid overwriting top stack value
-						m_local_stack[m_cur_func] = g_vm_longest_size + 1;
-					}
+						m_local_stack[m_cur_func] = 0;
 
+					m_local_stack[m_cur_func] += get_vm_type_size(symty, true);
 					sym = m_symtab.AddSymbol(varname, -m_local_stack[m_cur_func],
 						VMType::ADDR_BP, symty);
-					m_local_stack[m_cur_func] += get_vm_type_size(symty, true);
 
 					//std::cout << "added local symbol \""
 					//	<< varname << "\" with size "
