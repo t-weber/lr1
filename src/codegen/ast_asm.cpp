@@ -781,7 +781,7 @@ void ASTAsm::visit(const ASTJump* ast, [[maybe_unused]] std::size_t level)
 		}
 
 		// reduce to maximum loop depth
-		if(static_cast<std::size_t>(loop_depth) >= m_cur_loop.size())
+		if(static_cast<std::size_t>(loop_depth) >= m_cur_loop.size() || loop_depth < 0)
 			loop_depth = static_cast<t_int>(m_cur_loop.size()-1);
 
 		const std::string& cur_loop = *(m_cur_loop.rbegin() + loop_depth);
