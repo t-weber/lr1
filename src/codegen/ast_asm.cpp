@@ -175,7 +175,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 			// dereference it, if the variable is on the rhs of an assignment
 			if(!ast->IsLValue() && !sym->is_func)
-				m_ostr->put(static_cast<t_vm_byte>(OpCode::DEREF));
+				m_ostr->put(static_cast<t_vm_byte>(OpCode::RDMEM));
 		}
 
 		// the token names a string literal
@@ -201,7 +201,7 @@ void ASTAsm::visit(const ASTToken<std::string>* ast,
 
 			// dereference it, if the variable is on the rhs of an assignment
 			if(!ast->IsLValue())
-				(*m_ostr) << "deref" << std::endl;
+				(*m_ostr) << "rdmem" << std::endl;
 		}
 
 		// the token names a string literal

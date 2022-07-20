@@ -174,23 +174,6 @@ bool VM::Run()
 				break;
 			}
 
-			// pop an address and push the value it points to
-			case OpCode::DEREF:
-			{
-				t_addr addr = PopAddress();
-				auto [ty, val] = ReadMemData(addr);
-				PushData(val, ty);
-
-				if(m_debug)
-				{
-					std::cout << "dereferenced address "
-						<< addr << ": "
-						//<< std::get<m_realidx>(val)
-						<< "." << std::endl;
-				}
-				break;
-			}
-
 			case OpCode::USUB:
 			{
 				t_data val = PopData();

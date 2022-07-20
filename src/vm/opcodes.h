@@ -20,9 +20,8 @@ enum class OpCode : t_vm_byte
 
 	// memory operations
 	PUSH     = 0x10,  // push direct data
-	DEREF    = 0x11,  // dereference pointer
-	WRMEM    = 0x12,  // write mem
-	RDMEM    = 0x13,  // read mem
+	WRMEM    = 0x11,  // write memory
+	RDMEM    = 0x12,  // read memory
 
 	// arithmetic operations
 	USUB     = 0x20,  // unary -
@@ -86,7 +85,6 @@ constexpr t_str get_vm_opcode_name(OpCode op)
 		case OpCode::NOP:       return "nop";
 		case OpCode::INVALID:   return "invalid";
 		case OpCode::PUSH:      return "push";
-		case OpCode::DEREF:     return "deref";
 		case OpCode::WRMEM:     return "wrmem";
 		case OpCode::RDMEM:     return "rdmem";
 		case OpCode::USUB:      return "usub";
