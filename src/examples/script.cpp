@@ -624,7 +624,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				if(args[0]->GetType() != ASTType::TOKEN)
-					throw std::runtime_error("Expected a function mame.");
+					throw std::runtime_error("Expected a function name.");
 
 				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[0]);
 				funcname->SetIdent(true);
@@ -768,7 +768,7 @@ lr1_run_parser(const char* script_file = nullptr)
 			[&mapNonTermIdx](const std::vector<t_astbaseptr>& args) -> t_astbaseptr
 			{
 				if(args[1]->GetType() != ASTType::TOKEN)
-					throw std::runtime_error("Expected a function mame.");
+					throw std::runtime_error("Expected a function name.");
 
 				auto funcname = std::dynamic_pointer_cast<ASTToken<std::string>>(args[1]);
 				funcname->SetIdent(true);
