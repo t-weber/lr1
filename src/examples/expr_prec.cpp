@@ -233,7 +233,7 @@ static void lr1_create_parser()
 			std::make_tuple(op_mult, op_pow, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_div, op_pow, ConflictSolution::FORCE_SHIFT),
 			std::make_tuple(op_mod, op_pow, ConflictSolution::FORCE_SHIFT),
-        }};
+		}};
 
 #if USE_LALR != 0
 		auto parsetables = collsLALR.CreateParseTables(&conflicts);
