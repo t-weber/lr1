@@ -70,7 +70,7 @@ public:
 	 */
 	struct HashSymbol
 	{
-		std::size_t operator()(const SymbolPtr sym) const;
+		std::size_t operator()(const SymbolPtr& sym) const;
 	};
 
 	/**
@@ -78,7 +78,7 @@ public:
 	 */
 	struct CompareSymbolsLess
 	{
-		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+		bool operator()(const SymbolPtr& sym1, const SymbolPtr& sym2) const;
 	};
 
 	/**
@@ -86,7 +86,7 @@ public:
 	 */
 	struct CompareSymbolsEqual
 	{
-		bool operator()(const SymbolPtr sym1, const SymbolPtr sym2) const;
+		bool operator()(const SymbolPtr& sym1, const SymbolPtr& sym2) const;
 	};
 };
 
@@ -229,14 +229,14 @@ private:
 class Word
 {
 public:
-	Word(const std::initializer_list<SymbolPtr> init) : m_syms{init} {}
+	Word(const std::initializer_list<SymbolPtr>& init) : m_syms{init} {}
 	Word(const Word& other) : m_syms{other.m_syms} {}
 	Word() : m_syms{} {}
 
 	/**
 	 * add a symbol to the word
 	 */
-	void AddSymbol(SymbolPtr sym)
+	void AddSymbol(const SymbolPtr& sym)
 	{
 		m_syms.push_back(sym);
 	}
@@ -258,8 +258,8 @@ public:
 	/**
 	 * get a symbol in the word
 	 */
-	const SymbolPtr GetSymbol(const std::size_t i) const { return m_syms[i]; }
-	const SymbolPtr operator[](const std::size_t i) const { return GetSymbol(i); }
+	const SymbolPtr& GetSymbol(const std::size_t i) const { return m_syms[i]; }
+	const SymbolPtr& operator[](const std::size_t i) const { return GetSymbol(i); }
 
 	/**
 	 * test for equality
@@ -313,15 +313,15 @@ using t_map_follow = std::unordered_map<
 /**
  * calculates the first set of a nonterminal
  */
-extern void calc_first(const NonTerminalPtr nonterm,
-	t_map_first& _first, t_map_first_perrule* _first_per_rule=nullptr);
+extern void calc_first(const NonTerminalPtr& nonterm,
+	t_map_first& _first, t_map_first_perrule* _first_per_rule = nullptr);
 
 
 /**
  * calculates the follow set of a nonterminal
  */
 extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
-	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
+	const NonTerminalPtr& start, const NonTerminalPtr& nonterm,
 	const t_map_first&  _first, t_map_follow& _follow);
 
 

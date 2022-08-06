@@ -40,14 +40,14 @@ bool Symbol::operator==(const Symbol& other) const
 
 
 std::size_t Symbol::HashSymbol::operator()(
-	const SymbolPtr sym) const
+	const SymbolPtr& sym) const
 {
 	return sym->hash();
 }
 
 
 bool Symbol::CompareSymbolsLess::operator()(
-	const SymbolPtr sym1, const SymbolPtr sym2) const
+	const SymbolPtr& sym1, const SymbolPtr& sym2) const
 {
 	/*
 	 const std::string& id1 = sym1->GetStrId();
@@ -59,7 +59,7 @@ bool Symbol::CompareSymbolsLess::operator()(
 
 
 bool Symbol::CompareSymbolsEqual::operator()(
-	const SymbolPtr sym1, const SymbolPtr sym2) const
+	const SymbolPtr& sym1, const SymbolPtr& sym2) const
 {
 	return sym1->hash() == sym2->hash();
 }
@@ -267,7 +267,7 @@ std::ostream& operator<<(std::ostream& ostr, const Word& word)
  * calculates the first set of a nonterminal
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
-void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_perrule* _first_perrule)
+void calc_first(const NonTerminalPtr& nonterm, t_map_first& _first, t_map_first_perrule* _first_perrule)
 {
 	// set already calculated?
 	if(_first.find(nonterm) != _first.end())
@@ -298,7 +298,8 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
 			// non-terminal
 			else
 			{
-				const NonTerminalPtr symnonterm = std::dynamic_pointer_cast<NonTerminal>(sym);
+				const NonTerminalPtr& symnonterm =
+					std::dynamic_pointer_cast<NonTerminal>(sym);
 
 				// if the rule is left-recursive, ignore calculating the same symbol again
 				if(*symnonterm != *nonterm)
@@ -343,7 +344,7 @@ void calc_first(const NonTerminalPtr nonterm, t_map_first& _first, t_map_first_p
  * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  */
 void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
-	const NonTerminalPtr& start, const NonTerminalPtr nonterm,
+	const NonTerminalPtr& start, const NonTerminalPtr& nonterm,
 	const t_map_first& _first, t_map_follow& _follow)
 {
 	// set already calculated?

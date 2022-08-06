@@ -21,7 +21,8 @@
 #include <boost/functional/hash.hpp>
 
 
-Element::Element(const NonTerminalPtr lhs, std::size_t rhsidx, std::size_t cursor, const Terminal::t_terminalset& la)
+Element::Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
+	std::size_t cursor, const Terminal::t_terminalset& la)
 	: std::enable_shared_from_this<Element>{},
 		m_lhs{lhs}, m_rhs{&lhs->GetRule(rhsidx)}, m_semanticrule{lhs->GetSemanticRule(rhsidx)},
 		m_rhsidx{rhsidx}, m_cursor{cursor}, m_lookaheads{la}
@@ -114,7 +115,7 @@ WordPtr Element::GetRhsAfterCursor() const
 }
 
 
-const SymbolPtr Element::GetSymbolAtCursor() const
+SymbolPtr Element::GetSymbolAtCursor() const
 {
 	const Word* rhs = GetRhs();
 	if(!rhs)
@@ -128,7 +129,7 @@ const SymbolPtr Element::GetSymbolAtCursor() const
 }
 
 
-bool Element::AddLookahead(TerminalPtr term)
+bool Element::AddLookahead(const TerminalPtr& term)
 {
 	return m_lookaheads.insert(term).second;
 }
@@ -138,7 +139,7 @@ bool Element::AddLookaheads(const Terminal::t_terminalset& las)
 {
 	bool lookaheads_added = false;
 
-	for(TerminalPtr la : las)
+	for(const TerminalPtr& la : las)
 	{
 		if(AddLookahead(la))
 			lookaheads_added = true;
@@ -157,7 +158,7 @@ void Element::SetLookaheads(const Terminal::t_terminalset& las)
 /**
  * get possible transition symbol
  */
-const SymbolPtr Element::GetPossibleTransition() const
+SymbolPtr Element::GetPossibleTransition() const
 {
 	std::size_t skip_eps = 0;
 
@@ -166,7 +167,7 @@ const SymbolPtr Element::GetPossibleTransition() const
 		if(m_cursor + skip_eps >= m_rhs->size())
 			return nullptr;
 
-		SymbolPtr sym = (*m_rhs)[m_cursor + skip_eps];
+		const SymbolPtr& sym = (*m_rhs)[m_cursor + skip_eps];
 		if(sym->IsEps())
 		{
 			++skip_eps;
@@ -193,7 +194,7 @@ bool Element::IsCursorAtEnd() const
 	std::size_t skip_eps = 0;
 	for(skip_eps = 0; skip_eps + m_cursor < m_rhs->size(); ++skip_eps)
 	{
-		SymbolPtr sym = (*m_rhs)[m_cursor + skip_eps];
+		const SymbolPtr& sym = (*m_rhs)[m_cursor + skip_eps];
 		if(sym->IsEps())
 			continue;
 		else
@@ -206,7 +207,7 @@ bool Element::IsCursorAtEnd() const
 
 std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 {
-	const NonTerminalPtr lhs = elem.GetLhs();
+	NonTerminalPtr lhs = elem.GetLhs();
 	const Word* rhs = elem.GetRhs();
 
 	ostr << lhs->GetStrId() << " -> [ ";
@@ -215,7 +216,7 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		if(elem.GetCursor() == i)
 			ostr << ".";
 
-		const SymbolPtr sym = (*rhs)[i];
+		const SymbolPtr& sym = (*rhs)[i];
 
 		ostr << sym->GetStrId();
 		//if(i < rhs->size()-1)

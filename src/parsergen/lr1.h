@@ -59,26 +59,26 @@ using t_conflictsolution = std::tuple<
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
-	Element(const NonTerminalPtr lhs, std::size_t rhsidx,
+	Element(const NonTerminalPtr& lhs, std::size_t rhsidx,
 		std::size_t cursor, const Terminal::t_terminalset& la);
 
 	Element(const Element& elem);
 	const Element& operator=(const Element& elem);
 
-	const NonTerminalPtr GetLhs() const { return m_lhs; }
+	NonTerminalPtr GetLhs() const { return m_lhs; }
 	const Word* GetRhs() const { return m_rhs; }
 	std::optional<std::size_t> GetSemanticRule() const { return m_semanticrule; }
 
 	std::size_t GetCursor() const { return m_cursor; }
 	const Terminal::t_terminalset& GetLookaheads() const { return m_lookaheads; }
 	WordPtr GetRhsAfterCursor() const;
-	const SymbolPtr GetSymbolAtCursor() const;
+	SymbolPtr GetSymbolAtCursor() const;
 
-	bool AddLookahead(TerminalPtr term);
+	bool AddLookahead(const TerminalPtr& term);
 	bool AddLookaheads(const Terminal::t_terminalset& las);
 	void SetLookaheads(const Terminal::t_terminalset& las);
 
-	const SymbolPtr GetPossibleTransition() const;
+	SymbolPtr GetPossibleTransition() const;
 
 	void AdvanceCursor();
 	bool IsCursorAtEnd() const;
@@ -123,13 +123,13 @@ public:
 	// hash comefrom transitions
 	struct HashComefromTransition
 	{
-		std::size_t operator ()(const t_comefrom_transition& tr) const;
+		std::size_t operator()(const t_comefrom_transition& tr) const;
 	};
 
 	// compare comefrom transitions for equality
 	struct CompareComefromTransitionsEqual
 	{
-		bool operator ()(const t_comefrom_transition& tr1,
+		bool operator()(const t_comefrom_transition& tr1,
 			const t_comefrom_transition& tr2) const;
 	};
 
@@ -145,19 +145,19 @@ public:
 
 	std::size_t GetId() const { return m_id; }
 
-	void AddElement(const ElementPtr elem);
+	void AddElement(const ElementPtr& elem);
 	std::pair<bool, std::size_t> HasElement(
-		const ElementPtr elem, bool only_core=false) const;
+		const ElementPtr& elem, bool only_core = false) const;
 
 	std::size_t NumElements() const { return m_elems.size(); }
-	const ElementPtr GetElement(std::size_t i) const { return m_elems[i]; }
-	const ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
+	const ElementPtr& GetElement(std::size_t i) const { return m_elems[i]; }
+	ElementPtr GetElementWithCursorAtSymbol(const SymbolPtr& sym) const;
 
 	std::vector<SymbolPtr> GetPossibleTransitions() const;
-	ClosurePtr DoTransition(const SymbolPtr, bool full_lr = true) const;
+	ClosurePtr DoTransition(const SymbolPtr&, bool full_lr = true) const;
 	std::vector<std::tuple<SymbolPtr, ClosurePtr>> DoTransitions(bool full_lr = true) const;
 
-	bool AddLookaheads(const ClosurePtr closure);
+	bool AddLookaheads(const ClosurePtr& closure);
 
 	std::vector<TerminalPtr> GetComefromTerminals(
 		std::shared_ptr<std::unordered_set<std::size_t>> seen_closures = nullptr) const;
@@ -196,19 +196,19 @@ public:
 	// hash transitions
 	struct HashTransition
 	{
-		std::size_t operator ()(const t_transition& tr) const;
+		std::size_t operator()(const t_transition& tr) const;
 	};
 
 	// compare transitions for equality
 	struct CompareTransitionsEqual
 	{
-		bool operator ()(const t_transition& tr1, const t_transition& tr2) const;
+		bool operator()(const t_transition& tr1, const t_transition& tr2) const;
 	};
 
 	// compare transitions by order
 	struct CompareTransitionsLess
 	{
-		bool operator ()(const t_transition& tr1, const t_transition& tr2) const;
+		bool operator()(const t_transition& tr1, const t_transition& tr2) const;
 	};
 
 	//using t_transitions = std::set<t_transition, CompareTransitionsLess>;
@@ -217,7 +217,7 @@ public:
 
 
 public:
-	Collection(const ClosurePtr closure);
+	Collection(const ClosurePtr& closure);
 
 	void DoTransitions(bool full_lr = true);
 
@@ -241,8 +241,8 @@ public:
 protected:
 	Collection();
 
-	void DoTransitions(const ClosurePtr closure, t_closurecache closure_cache = nullptr);
-	void DoLALRTransitions(const ClosurePtr closure, t_closurecache closure_cache = nullptr);
+	void DoTransitions(const ClosurePtr& closure, t_closurecache closure_cache = nullptr);
+	void DoLALRTransitions(const ClosurePtr& closure, t_closurecache closure_cache = nullptr);
 	void Simplify();
 
 	static std::size_t hash_transition(const t_transition& trans);

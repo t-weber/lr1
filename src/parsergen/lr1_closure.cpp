@@ -68,7 +68,7 @@ const Closure& Closure::operator=(const Closure& closure)
 	this->m_id = closure.m_id;
 	this->m_comefrom_transitions = closure.m_comefrom_transitions;
 
-	for(ElementPtr elem : closure.m_elems)
+	for(const ElementPtr& elem : closure.m_elems)
 		this->m_elems.emplace_back(std::make_shared<Element>(*elem));
 
 	return *this;
@@ -78,7 +78,7 @@ const Closure& Closure::operator=(const Closure& closure)
 /**
  * adds an element and generates the rest of the closure
  */
-void Closure::AddElement(const ElementPtr elem)
+void Closure::AddElement(const ElementPtr& elem)
 {
 	//std::cout << "adding " << *elem << std::endl;
 
@@ -112,7 +112,7 @@ void Closure::AddElement(const ElementPtr elem)
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 
 		// get non-terminal at cursor
-		NonTerminalPtr nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
+		const NonTerminalPtr& nonterm = std::dynamic_pointer_cast<NonTerminal>((*rhs)[cursor]);
 
 		// iterate all rules of the non-terminal
 		for(std::size_t nonterm_rhsidx=0; nonterm_rhsidx<nonterm->NumRules(); ++nonterm_rhsidx)
@@ -159,11 +159,11 @@ void Closure::AddElement(const ElementPtr elem)
  * checks if an element is already in the closure and returns its index
  */
 std::pair<bool, std::size_t> Closure::HasElement(
-	const ElementPtr elem, bool only_core) const
+	const ElementPtr& elem, bool only_core) const
 {
 	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
 	{
-		const ElementPtr theelem = m_elems[idx];
+		const ElementPtr& theelem = m_elems[idx];
 
 		if(theelem->IsEqual(*elem, only_core, false))
 			return std::make_pair(true, idx);
@@ -176,12 +176,11 @@ std::pair<bool, std::size_t> Closure::HasElement(
 /**
  * get the element of the collection whose cursor points to the given symbol
  */
-const ElementPtr Closure::GetElementWithCursorAtSymbol(
-	const SymbolPtr& sym) const
+ElementPtr Closure::GetElementWithCursorAtSymbol(const SymbolPtr& sym) const
 {
 	for(std::size_t idx=0; idx<m_elems.size(); ++idx)
 	{
-		const ElementPtr theelem = m_elems[idx];
+		const ElementPtr& theelem = m_elems[idx];
 
 		const Word* rhs = theelem->GetRhs();
 		if(!rhs)
@@ -208,13 +207,13 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 
 	for(const ElementPtr& theelem : m_elems)
 	{
-		const SymbolPtr sym = theelem->GetPossibleTransition();
+		SymbolPtr sym = theelem->GetPossibleTransition();
 		if(!sym)
 			continue;
 
 		// do we already have this symbol?
 		bool sym_already_seen = std::find_if(syms.begin(), syms.end(),
-			[sym](const SymbolPtr sym2) -> bool
+			[sym](const SymbolPtr& sym2) -> bool
 			{
 				return *sym == *sym2;
 			}) != syms.end();
@@ -230,25 +229,25 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 /**
  * add the lookaheads from another closure with the same core
  */
-bool Closure::AddLookaheads(const ClosurePtr closure)
+bool Closure::AddLookaheads(const ClosurePtr& closure)
 {
 	bool lookaheads_added = false;
 
 	for(std::size_t elemidx=0; elemidx<m_elems.size(); ++elemidx)
 	{
-		ElementPtr elem = m_elems[elemidx];
+		const ElementPtr& elem = m_elems[elemidx];
 		std::size_t elem_hash = elem->hash(true);
 
-		//ElementPtr closure_elem = closure->m_elems[elemidx];
+		//const ElementPtr& closure_elem = closure->m_elems[elemidx];
 
 		// find the element whose core has the same hash
 		if(auto iter = std::find_if(closure->m_elems.begin(), closure->m_elems.end(),
-			[elem_hash](const ElementPtr closure_elem) -> bool
+			[elem_hash](const ElementPtr& closure_elem) -> bool
 			{
 				return closure_elem->hash(true) == elem_hash;
 			}); iter != closure->m_elems.end())
 		{
-			ElementPtr closure_elem = *iter;
+			const ElementPtr& closure_elem = *iter;
 			if(elem->AddLookaheads(closure_elem->GetLookaheads()))
 				lookaheads_added = true;
 		}
@@ -261,14 +260,14 @@ bool Closure::AddLookaheads(const ClosurePtr closure)
 /**
  * perform a transition and get the corresponding lr(1) closure
  */
-ClosurePtr Closure::DoTransition(const SymbolPtr transsym, bool full_lr) const
+ClosurePtr Closure::DoTransition(const SymbolPtr& transsym, bool full_lr) const
 {
 	ClosurePtr newclosure = std::make_shared<Closure>();
 
 	// look for elements with that transition
 	for(const ElementPtr& theelem : m_elems)
 	{
-		const SymbolPtr sym = theelem->GetPossibleTransition();
+		SymbolPtr sym = theelem->GetPossibleTransition();
 		if(!sym || *sym != *transsym)
 			continue;
 
@@ -276,7 +275,7 @@ ClosurePtr Closure::DoTransition(const SymbolPtr transsym, bool full_lr) const
 		ElementPtr newelem = std::make_shared<Element>(*theelem);
 		newelem->AdvanceCursor();
 
-		ClosurePtr this_closure = std::const_pointer_cast<Closure>(
+		const ClosurePtr& this_closure = std::const_pointer_cast<Closure>(
 			shared_from_this());
 		newclosure->AddElement(newelem);
 		newclosure->m_comefrom_transitions.emplace(
@@ -313,7 +312,7 @@ std::size_t Closure::hash(bool only_core) const
 	std::vector<std::size_t> hashes;
 	hashes.reserve(m_elems.size());
 
-	for(ElementPtr elem : m_elems)
+	for(const ElementPtr& elem : m_elems)
 		hashes.emplace_back(elem->hash(only_core));
 
 	std::sort(hashes.begin(), hashes.end(),
@@ -343,12 +342,12 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 
 	for(const t_comefrom_transition& comefrom : m_comefrom_transitions)
 	{
-		SymbolPtr sym = std::get<0>(comefrom);
-		const ClosurePtr closure = std::get<1>(comefrom);
+		const SymbolPtr& sym = std::get<0>(comefrom);
+		const ClosurePtr& closure = std::get<1>(comefrom);
 
 		if(sym->IsTerminal())
 		{
-			TerminalPtr term = std::dynamic_pointer_cast<Terminal>(sym);
+			const TerminalPtr& term = std::dynamic_pointer_cast<Terminal>(sym);
 			terms.emplace_back(std::move(term));
 		}
 		else if(closure)
@@ -369,13 +368,13 @@ std::vector<TerminalPtr> Closure::GetComefromTerminals(
 
 	// remove duplicates
 	std::stable_sort(terms.begin(), terms.end(),
-		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
 		{
 			return term1->hash() < term2->hash();
 			//return term1->GetId() < term2->GetId();
 		});
 	auto end = std::unique(terms.begin(), terms.end(),
-		[](const TerminalPtr term1, const TerminalPtr term2) -> bool
+		[](const TerminalPtr& term1, const TerminalPtr& term2) -> bool
 		{
 			return *term1 == *term2;
 		});
