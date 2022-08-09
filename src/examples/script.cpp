@@ -6,6 +6,7 @@
  */
 
 #include "parsergen/lr1.h"
+#include "parsergen/parsergen.h"
 #include "codegen/lexer.h"
 #include "codegen/ast.h"
 #include "codegen/ast_printer.h"
@@ -39,6 +40,7 @@ using t_duration = std::chrono::duration<t_real>;
 #define DEBUG_PARSERGEN   1
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
+#define WRITE_RECASC      0
 #define RUN_VM            1
 
 
@@ -1059,6 +1061,11 @@ lr1_run_parser(const char* script_file = nullptr)
 			},
 		}};
 
+
+#if WRITE_RECASC != 0
+		ParserGen parsergen{parsetables, rules};
+		parsergen.CreateParser("script_parser.cpp");
+#endif
 
 		Parser parser{parsetables, rules};
 

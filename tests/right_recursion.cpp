@@ -17,7 +17,7 @@ enum : std::size_t { PROD_SPRIME, PROD_S, PROD_AS, PROD_A, };
 int main()
 {
 	auto Sprime = std::make_shared<NonTerminal>(PROD_SPRIME, "S'");
-	auto S = std::make_shared<NonTerminal>(PROD_SPRIME, "S");
+	auto S = std::make_shared<NonTerminal>(PROD_S, "S");
 	auto As = std::make_shared<NonTerminal>(PROD_AS, "As");
 	auto A = std::make_shared<NonTerminal>(PROD_A, "A");
 

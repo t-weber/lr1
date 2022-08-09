@@ -1,42 +1,41 @@
 /**
- * lr(1) parser
+ * lr(1) recursive ascent parser generator
  * @author Tobias Weber (orcid: 0000-0002-7230-1932)
- * @date 15-jun-2020
+ * @date aug-2022
  * @license see 'LICENSE.EUPL' file
  *
  * References:
+ * 	- https://doi.org/10.1016/0020-0190(88)90061-0
  * 	- "Compilerbau Teil 1", ISBN: 3-486-25294-1 (1999)
  * 	- "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013)
  */
 
-#ifndef __LR1_PARSER_H__
-#define __LR1_PARSER_H__
+#ifndef __LR1_PARSER_GEN_H__
+#define __LR1_PARSER_GEN_H__
 
-#include "ast.h"
-#include "../parsergen/common.h"
+#include "../codegen/ast.h"
+#include "common.h"
 
 
 /**
- * lr(1) parser
+ * lr(1) parser generator
  */
-class Parser
+class ParserGen
 {
 public:
 	// directly takes the input from Collection::CreateParseTables
-	Parser(const std::tuple<
+	ParserGen(const std::tuple<
 		t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
 		const std::vector<t_semanticrule>& rules);
 
-	Parser(const std::tuple<const t_table*, const t_table*, const t_table*,
+	ParserGen(const std::tuple<const t_table*, const t_table*, const t_table*,
 		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
 		   const std::vector<t_semanticrule>& rules);
 
-	Parser() = delete;
+	ParserGen() = delete;
 
-	const t_mapIdIdx& GetTermIndexMap() const { return m_mapTermIdx; }
-
-	t_astbaseptr Parse(const std::vector<t_toknode>& input) const;
+	bool CreateParser(const std::string& file) const;
 
 
 private:

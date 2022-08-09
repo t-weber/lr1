@@ -63,6 +63,7 @@ add_library(lr1-parsergen STATIC
 	src/parsergen/lr1_collection.cpp src/parsergen/lr1.h
 	src/parsergen/ll1.cpp src/parsergen/ll1.h
 	src/parsergen/helpers.h src/parsergen/common.h
+	src/parsergen/parsergen.cpp src/parsergen/parsergen.cpp
 )
 
 target_link_libraries(lr1-parsergen ${Boost_LIBRARIES})

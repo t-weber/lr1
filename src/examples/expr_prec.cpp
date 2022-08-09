@@ -6,6 +6,7 @@
  */
 
 #include "parsergen/lr1.h"
+#include "parsergen/parsergen.h"
 #include "codegen/lexer.h"
 #include "codegen/ast.h"
 #include "codegen/ast_printer.h"
@@ -25,6 +26,7 @@
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
+#define WRITE_RECASC      0
 
 
 enum : std::size_t
@@ -440,6 +442,10 @@ static void lr1_run_parser()
 			},
 		}};
 
+#if WRITE_RECASC != 0
+		ParserGen parsergen{parsetables};
+		parsergen.CreateParser("expr_prec_parser.cpp");
+#endif
 
 		Parser parser{parsetables, rules};
 
