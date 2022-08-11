@@ -503,6 +503,11 @@ static bool lr1_create_parser()
 		auto parsetables = colls.CreateParseTables(/*&conflicts*/);
 		colls.SaveParseTables(parsetables, "script.tab");
 #endif
+
+#if WRITE_RECASC != 0
+		ParserGen parsergen{parsetables};
+		parsergen.CreateParser("script_parser.cpp");
+#endif
 	}
 	catch(const std::exception& err)
 	{
@@ -1060,12 +1065,6 @@ lr1_run_parser(const char* script_file = nullptr)
 					id, tableidx, args[0], args[2], op_shift_right->GetId());
 			},
 		}};
-
-
-#if WRITE_RECASC != 0
-		ParserGen parsergen{parsetables, rules};
-		parsergen.CreateParser("script_parser.cpp");
-#endif
 
 		Parser parser{parsetables, rules};
 

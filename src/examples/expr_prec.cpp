@@ -26,7 +26,7 @@
 #define DEBUG_WRITEGRAPH  0
 #define DEBUG_CODEGEN     1
 #define WRITE_BINFILE     0
-#define WRITE_RECASC      0
+#define USE_RECASC        0
 
 
 enum : std::size_t
@@ -244,6 +244,12 @@ static void lr1_create_parser()
 		auto parsetables = colls.CreateParseTables(&conflicts);
 		colls.SaveParseTables(parsetables, "expr_prec.tab");
 #endif
+
+#if USE_RECASC != 0
+		ParserGen parsergen{parsetables};
+		//parsergen.SetGenerateDebug(true);
+		parsergen.CreateParser("expr_prec_parser.cpp");
+#endif
 	}
 	catch(const std::exception& err)
 	{
@@ -268,6 +274,11 @@ static void lr1_run_parser()
 #else
 
 #include "codegen/parser.h"
+
+#if USE_RECASC != 0
+	#include "expr_prec_parser.cpp.h"
+	#include "expr_prec_parser.cpp"
+#endif
 #include "expr_prec.tab"
 
 static void lr1_run_parser()
@@ -442,12 +453,11 @@ static void lr1_run_parser()
 			},
 		}};
 
-#if WRITE_RECASC != 0
-		ParserGen parsergen{parsetables};
-		parsergen.CreateParser("expr_prec_parser.cpp");
-#endif
-
+#if USE_RECASC != 0
+		ParserRecAsc parser{&rules};
+#else
 		Parser parser{parsetables, rules};
+#endif
 
 		while(1)
 		{
@@ -472,7 +482,11 @@ static void lr1_run_parser()
 			std::cout << "\n";
 #endif
 
+#if USE_RECASC != 0
+			auto ast = ASTBase::cst_to_ast(parser.Parse(&tokens));
+#else
 			auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
+#endif
 			ast->AssignLineNumbers();
 			ast->DeriveDataType();
 

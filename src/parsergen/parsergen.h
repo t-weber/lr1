@@ -26,15 +26,14 @@ public:
 	// directly takes the input from Collection::CreateParseTables
 	ParserGen(const std::tuple<
 		t_table, t_table, t_table,
-		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init,
-		const std::vector<t_semanticrule>& rules);
+		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& init);
 
 	ParserGen(const std::tuple<const t_table*, const t_table*, const t_table*,
-		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init,
-		   const std::vector<t_semanticrule>& rules);
+		   const t_mapIdIdx*, const t_mapIdIdx*, const t_vecIdx*>& init);
 
 	ParserGen() = delete;
 
+	void SetGenerateDebug(bool b) { m_generate_debug = b; }
 	bool CreateParser(const std::string& file) const;
 
 
@@ -51,8 +50,8 @@ private:
 	// number of symbols on right hand side of a rule
 	t_vecIdx m_numRhsSymsPerRule{};
 
-	// semantic rules
-	std::vector<t_semanticrule> m_semantics{};
+	// generate debug messages
+	bool m_generate_debug{true};
 };
 
 
