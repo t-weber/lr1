@@ -52,26 +52,6 @@ ParserGen::ParserGen(
 {}
 
 
-template<class t_toknode>
-std::string get_line_numbers(const t_toknode& node)
-{
-	std::ostringstream ostr;
-
-	if(auto lines = node->GetLineRange(); lines)
-	{
-		auto line_start = std::get<0>(*lines);
-		auto line_end = std::get<1>(*lines);
-
-		if(line_start == line_end)
-			ostr << " (line " << line_start << ")";
-		else
-			ostr << " (lines " << line_start << "..." << line_end << ")";
-	}
-
-	return ostr.str();
-}
-
-
 bool ParserGen::CreateParser(const std::string& filename_cpp) const
 {
 	// output header file stub
@@ -95,7 +75,7 @@ public:
 	t_astbaseptr Parse(const std::vector<t_toknode>* input);
 
 protected:
-	void PrintSymbols();
+	void PrintSymbols() const;
 	void GetNextLookahead();
 
 %%DECLARE_CLOSURES%%
@@ -138,7 +118,7 @@ ParserRecAsc::ParserRecAsc(const std::vector<t_semanticrule>* rules)
 	: m_semantics{rules}
 {}
 
-void ParserRecAsc::PrintSymbols()
+void ParserRecAsc::PrintSymbols() const
 {
 	std::stack<t_astbaseptr> symbols = m_symbols;
 
