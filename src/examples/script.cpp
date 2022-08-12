@@ -86,7 +86,7 @@ static TerminalPtr comma, stmt_end;
 static TerminalPtr sym_real, sym_int, sym_str, ident;
 
 
-static void create_grammar()
+static void create_symbols()
 {
 	// non-terminals
 	start = std::make_shared<NonTerminal>(START, "start");
@@ -144,65 +144,71 @@ static void create_grammar()
 	keyword_return = std::make_shared<Terminal>(static_cast<std::size_t>(Token::RETURN), "return");
 	keyword_continue = std::make_shared<Terminal>(static_cast<std::size_t>(Token::CONTINUE), "continue");
 	keyword_break = std::make_shared<Terminal>(static_cast<std::size_t>(Token::BREAK), "break");
+}
 
-	{
-		// operator precedences and associativities
-		// see: https://en.cppreference.com/w/c/language/operator_precedence
-		op_assign->SetPrecedence(10);
-		op_assign->SetAssociativity('r');
 
-		op_or->SetPrecedence(20);
-		op_and->SetPrecedence(21);
-		op_or->SetAssociativity('l');
-		op_and->SetAssociativity('l');
 
-		op_binor->SetPrecedence(30);
-		op_binxor->SetPrecedence(31);
-		op_binand->SetPrecedence(32);
-		op_binor->SetAssociativity('l');
-		op_binxor->SetAssociativity('l');
-		op_binand->SetAssociativity('l');
+#ifdef CREATE_PARSER
 
-		op_equ->SetPrecedence(40);
-		op_nequ->SetPrecedence(40);
-		op_equ->SetAssociativity('l');
-		op_nequ->SetAssociativity('l');
+static void create_grammar()
+{
+	// operator precedences and associativities
+	// see: https://en.cppreference.com/w/c/language/operator_precedence
+	op_assign->SetPrecedence(10);
+	op_assign->SetAssociativity('r');
 
-		op_lt->SetPrecedence(50);
-		op_gt->SetPrecedence(50);
-		op_gequ->SetPrecedence(50);
-		op_lequ->SetPrecedence(50);
-		op_lt->SetAssociativity('l');
-		op_gt->SetAssociativity('l');
-		op_gequ->SetAssociativity('l');
-		op_lequ->SetAssociativity('l');
+	op_or->SetPrecedence(20);
+	op_and->SetPrecedence(21);
+	op_or->SetAssociativity('l');
+	op_and->SetAssociativity('l');
 
-		op_shift_left->SetPrecedence(60);
-		op_shift_right->SetPrecedence(60);
-		op_shift_left->SetAssociativity('l');
-		op_shift_right->SetAssociativity('l');
+	op_binor->SetPrecedence(30);
+	op_binxor->SetPrecedence(31);
+	op_binand->SetPrecedence(32);
+	op_binor->SetAssociativity('l');
+	op_binxor->SetAssociativity('l');
+	op_binand->SetAssociativity('l');
 
-		op_plus->SetPrecedence(70);
-		op_minus->SetPrecedence(70);
-		op_plus->SetAssociativity('l');
-		op_minus->SetAssociativity('l');
+	op_equ->SetPrecedence(40);
+	op_nequ->SetPrecedence(40);
+	op_equ->SetAssociativity('l');
+	op_nequ->SetAssociativity('l');
 
-		op_mult->SetPrecedence(80);
-		op_div->SetPrecedence(80);
-		op_mod->SetPrecedence(80);
-		op_mult->SetAssociativity('l');
-		op_div->SetAssociativity('l');
-		op_mod->SetAssociativity('l');
+	op_lt->SetPrecedence(50);
+	op_gt->SetPrecedence(50);
+	op_gequ->SetPrecedence(50);
+	op_lequ->SetPrecedence(50);
+	op_lt->SetAssociativity('l');
+	op_gt->SetAssociativity('l');
+	op_gequ->SetAssociativity('l');
+	op_lequ->SetAssociativity('l');
 
-		op_not->SetPrecedence(90);
-		op_not->SetAssociativity('l');
+	op_shift_left->SetPrecedence(60);
+	op_shift_right->SetPrecedence(60);
+	op_shift_left->SetAssociativity('l');
+	op_shift_right->SetAssociativity('l');
 
-		op_binnot->SetPrecedence(100);
-		op_binnot->SetAssociativity('l');
+	op_plus->SetPrecedence(70);
+	op_minus->SetPrecedence(70);
+	op_plus->SetAssociativity('l');
+	op_minus->SetAssociativity('l');
 
-		op_pow->SetPrecedence(110);
-		op_pow->SetAssociativity('r');
-	}
+	op_mult->SetPrecedence(80);
+	op_div->SetPrecedence(80);
+	op_mod->SetPrecedence(80);
+	op_mult->SetAssociativity('l');
+	op_div->SetAssociativity('l');
+	op_mod->SetAssociativity('l');
+
+	op_not->SetPrecedence(90);
+	op_not->SetAssociativity('l');
+
+	op_binnot->SetPrecedence(100);
+	op_binnot->SetAssociativity('l');
+
+	op_pow->SetPrecedence(110);
+	op_pow->SetAssociativity('r');
+
 
 	// rule number
 	std::size_t semanticindex = 0;
@@ -329,9 +335,6 @@ static void create_grammar()
 	expr->AddRule({ expr, op_shift_right, expr }, semanticindex++);
 }
 
-
-
-#ifdef CREATE_PARSER
 
 static bool lr1_create_parser()
 {
@@ -1265,6 +1268,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 #ifdef CREATE_PARSER
 	t_timepoint start_parsergen = t_clock::now();
 
+	create_symbols();
 	create_grammar();
 	if(lr1_create_parser())
 	{
@@ -1279,7 +1283,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 	if(argc >= 2)
 		script_file = argv[1];
 
-	create_grammar();
+	create_symbols();
 	if(auto [code_ok, prog] = lr1_run_parser(script_file); code_ok)
 	{
 		t_duration time_codegen = t_clock::now() - start_codegen;

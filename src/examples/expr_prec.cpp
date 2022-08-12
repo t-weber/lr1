@@ -43,7 +43,7 @@ static TerminalPtr bracket_open, bracket_close, comma;
 static TerminalPtr sym_real, sym_int, ident;
 
 
-static void create_grammar()
+static void create_symbols()
 {
 	start = std::make_shared<NonTerminal>(START, "start");
 	expr = std::make_shared<NonTerminal>(EXPR, "expr");
@@ -60,7 +60,14 @@ static void create_grammar()
 	sym_real = std::make_shared<Terminal>((std::size_t)Token::REAL, "real");
 	sym_int = std::make_shared<Terminal>((std::size_t)Token::INT, "integer");
 	ident = std::make_shared<Terminal>((std::size_t)Token::IDENT, "ident");
+}
 
+
+#ifdef CREATE_PARSER
+
+
+static void create_grammar()
+{
 	std::size_t semanticindex = 0;
 
 	// rule 0: start -> expr
@@ -98,9 +105,6 @@ static void create_grammar()
 	expr->AddRule({ op_plus, expr }, semanticindex++);
 }
 
-
-
-#ifdef CREATE_PARSER
 
 static void lr1_create_parser()
 {
@@ -575,12 +579,13 @@ int main()
 	std::ios_base::sync_with_stdio(false);
 
 #ifdef CREATE_PARSER
+	create_symbols();
 	create_grammar();
 	lr1_create_parser();
 #endif
 
 #ifdef RUN_PARSER
-	create_grammar();
+	create_symbols();
 	lr1_run_parser();
 #endif
 
