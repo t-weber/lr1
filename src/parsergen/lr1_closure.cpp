@@ -105,10 +105,10 @@ void Closure::AddElement(const ElementPtr& elem)
 	// if the cursor is before a non-terminal, add the rule as element
 	const Word* rhs = elem->GetRhs();
 	std::size_t cursor = elem->GetCursor();
+
 	if(cursor < rhs->size() && !(*rhs)[cursor]->IsTerminal())
 	{
-		// get rest of the rule after the cursor and lookaheads
-		WordPtr ruleaftercursor = elem->GetRhsAfterCursor();
+		// get lookaheads
 		const Terminal::t_terminalset& nonterm_la = elem->GetLookaheads();
 
 		// get non-terminal at cursor
@@ -120,29 +120,17 @@ void Closure::AddElement(const ElementPtr& elem)
 			// iterate lookaheads
 			for(const TerminalPtr& la : nonterm_la)
 			{
-				// copy ruleaftercursor and add lookahead
-				WordPtr _ruleaftercursor = std::make_shared<Word>(*ruleaftercursor);
-				_ruleaftercursor->AddSymbol(la);
-				//std::cout << nonterm->GetId() << ", " << *_ruleaftercursor << std::endl;
-
-				NonTerminalPtr tmpNT = std::make_shared<NonTerminal>(0, "tmp");
-				tmpNT->AddRule(*_ruleaftercursor);
-
-				t_map_first tmp_first;
-				calc_first(tmpNT, tmp_first);
-
 				Terminal::t_terminalset first_la;
-				for(const auto& set_first_pair : tmp_first)
+				Terminal::t_terminalset set_first = calc_first<decltype(rhs)>(rhs, la, cursor+1);
+
+				for(const TerminalPtr& la : set_first)
 				{
-					const Terminal::t_terminalset& set_first = set_first_pair.second;
-					for(const TerminalPtr& la : set_first)
-					{
-						//std::cout << "lookahead: " << la->GetId() << std::endl;
-						if(la->IsEps())
-							continue;
-						first_la.insert(la);
-					}
+					//std::cout << "lookahead: " << la->GetId() << std::endl;
+					if(la->IsEps())
+						continue;
+					first_la.insert(la);
 				}
+
 				/*if(first_la.size() != 1)
 				{
 					std::cerr << "Info: Multiple look-ahead terminals, epsilon transition?" << std::endl;

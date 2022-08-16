@@ -316,13 +316,76 @@ using t_map_follow = std::unordered_map<
 extern void calc_first(const NonTerminalPtr& nonterm,
 	t_map_first& _first, t_map_first_perrule* _first_per_rule = nullptr);
 
-
 /**
  * calculates the follow set of a nonterminal
  */
 extern void calc_follow(const std::vector<NonTerminalPtr>& allnonterms,
 	const NonTerminalPtr& start, const NonTerminalPtr& nonterm,
 	const t_map_first&  _first, t_map_follow& _follow);
+
+
+/**
+ * calculates the first set of a symbol string
+ * @see https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
+ */
+template<class t_wordptr>
+Terminal::t_terminalset calc_first(const t_wordptr& word,
+	const TerminalPtr& additional_sym = nullptr, std::size_t word_offs = 0)
+{
+	Terminal::t_terminalset first;
+
+	const std::size_t num_rule_symbols = word->NumSymbols();
+	std::size_t num_all_symbols = num_rule_symbols;
+
+	// add an additional symbol to the end of the rules
+	if(additional_sym)
+		++num_all_symbols;
+
+	t_map_first first_nonterms;
+
+	// iterate RHS of rule
+	for(std::size_t sym_idx=word_offs; sym_idx<num_all_symbols; ++sym_idx)
+	{
+		const SymbolPtr& sym = sym_idx < num_rule_symbols ? (*word)[sym_idx] : additional_sym;
+
+		// reached terminal symbol -> end
+		if(sym->IsTerminal())
+		{
+			first.insert(std::dynamic_pointer_cast<Terminal>(sym));
+			break;
+		}
+
+		// non-terminal
+		else
+		{
+			const NonTerminalPtr& symnonterm = std::dynamic_pointer_cast<NonTerminal>(sym);
+			calc_first(symnonterm, first_nonterms);
+
+			// add first set except eps
+			bool has_eps = false;
+			for(const TerminalPtr& symprod : first_nonterms[symnonterm])
+			{
+				bool insert = true;
+				if(symprod->IsEps())
+				{
+					has_eps = true;
+
+					// if last non-terminal is reached -> add epsilon
+					insert = (sym_idx == num_all_symbols-1);
+				}
+
+				if(insert)
+					first.insert(std::dynamic_pointer_cast<Terminal>(symprod));
+			}
+
+			// no epsilon in production -> end
+			if(!has_eps)
+				break;
+		}
+	}
+
+	return first;
+}
 
 
 #endif

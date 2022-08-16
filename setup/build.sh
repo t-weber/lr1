@@ -7,6 +7,9 @@
 # @license see 'LICENSE.EUPL' file
 #
 
+#export CXX=g++
+#export CXX=clang++-13
+
 
 echo -e "\nPreparing build directory..."
 
