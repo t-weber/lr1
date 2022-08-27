@@ -162,6 +162,8 @@ public:
 	std::vector<TerminalPtr> GetComefromTerminals(
 		std::shared_ptr<std::unordered_set<std::size_t>> seen_closures = nullptr) const;
 
+	bool HasReduceConflict() const;
+
 	std::size_t hash(bool only_core = false) const;
 
 	void PrintComefroms(std::ostream& ostr) const;
@@ -220,6 +222,7 @@ public:
 	Collection(const ClosurePtr& closure);
 
 	void DoTransitions(bool full_lr = true);
+	std::tuple<bool, std::size_t> HasReduceConflict() const;
 
 	Collection ConvertToLALR() const;
 	Collection ConvertToSLR(const t_map_follow& follow) const;

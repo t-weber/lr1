@@ -250,6 +250,14 @@ void Collection::DoTransitions(bool full_lr)
 
 	Simplify();
 	ReportProgress("All transitions done.", true);
+
+	if(auto [has_conflict, conflict_closure] = HasReduceConflict(); has_conflict)
+	{
+		std::string grammar_type = full_lr ? "LR(1)" : "LALR(1)";
+		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
+			<< conflict_closure << " and is thus not of type " << grammar_type << "."
+			<< std::endl;
+	}
 }
 
 
@@ -427,6 +435,13 @@ Collection Collection::ConvertToLALR() const
 	}
 
 	coll.Simplify();
+	if(auto [has_conflict, conflict_closure] = coll.HasReduceConflict(); has_conflict)
+	{
+		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
+			<< conflict_closure << " and is thus not of type LALR(1)."
+			<< std::endl;
+	}
+
 	return coll;
 }
 
@@ -458,7 +473,29 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 		}
 	}
 
+	if(auto [has_conflict, conflict_closure] = coll.HasReduceConflict(); has_conflict)
+	{
+		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
+			<< conflict_closure << " and is thus not of type SLR(1)."
+			<< std::endl;
+	}
+
 	return coll;
+}
+
+
+/**
+ * tests if the LR(1) collection has a reduce/reduce conflict
+ */
+std::tuple<bool, std::size_t> Collection::HasReduceConflict() const
+{
+	for(const ClosurePtr& closure : m_collection)
+	{
+		if(closure->HasReduceConflict())
+			return std::make_tuple(true, closure->GetId());
+	}
+
+	return std::make_tuple(false, 0);
 }
 
 
