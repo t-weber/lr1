@@ -251,12 +251,17 @@ void Collection::DoTransitions(bool full_lr)
 	Simplify();
 	ReportProgress("All transitions done.", true);
 
-	if(auto [has_conflict, conflict_closure] = HasReduceConflict(); has_conflict)
+	if(auto [has_conflict, conflict_closure] = HasReduceReduceConflict(); has_conflict)
 	{
 		std::string grammar_type = full_lr ? "LR(1)" : "LALR(1)";
 		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
 			<< conflict_closure << " and is thus not of type " << grammar_type << "."
 			<< std::endl;
+	}
+	if(auto [has_conflict, conflict_closure] = HasShiftReduceConflict(); has_conflict)
+	{
+		std::cerr << "Warning: Grammar has a potential shift/reduce conflict in closure "
+			<< conflict_closure << " (might be solved later)." << std::endl;
 	}
 }
 
@@ -435,11 +440,16 @@ Collection Collection::ConvertToLALR() const
 	}
 
 	coll.Simplify();
-	if(auto [has_conflict, conflict_closure] = coll.HasReduceConflict(); has_conflict)
+	if(auto [has_conflict, conflict_closure] = coll.HasReduceReduceConflict(); has_conflict)
 	{
 		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
 			<< conflict_closure << " and is thus not of type LALR(1)."
 			<< std::endl;
+	}
+	if(auto [has_conflict, conflict_closure] = coll.HasShiftReduceConflict(); has_conflict)
+	{
+		std::cerr << "Warning: Grammar has a potential shift/reduce conflict in closure "
+			<< conflict_closure << " (might be solved later)." << std::endl;
 	}
 
 	return coll;
@@ -473,11 +483,16 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 		}
 	}
 
-	if(auto [has_conflict, conflict_closure] = coll.HasReduceConflict(); has_conflict)
+	if(auto [has_conflict, conflict_closure] = coll.HasReduceReduceConflict(); has_conflict)
 	{
 		std::cerr << "Error: Grammar has a reduce/reduce conflict in closure "
 			<< conflict_closure << " and is thus not of type SLR(1)."
 			<< std::endl;
+	}
+	if(auto [has_conflict, conflict_closure] = coll.HasShiftReduceConflict(); has_conflict)
+	{
+		std::cerr << "Warning: Grammar has a potential shift/reduce conflict in closure "
+			<< conflict_closure << " (might be solved later)." << std::endl;
 	}
 
 	return coll;
@@ -487,12 +502,55 @@ Collection Collection::ConvertToSLR(const t_map_follow& follow) const
 /**
  * tests if the LR(1) collection has a reduce/reduce conflict
  */
-std::tuple<bool, std::size_t> Collection::HasReduceConflict() const
+std::tuple<bool, std::size_t> Collection::HasReduceReduceConflict() const
 {
 	for(const ClosurePtr& closure : m_collection)
 	{
-		if(closure->HasReduceConflict())
+		if(closure->HasReduceReduceConflict())
 			return std::make_tuple(true, closure->GetId());
+	}
+
+	return std::make_tuple(false, 0);
+}
+
+
+/**
+ * tests if the LR(1) collection has a shift/reduce conflict
+ */
+std::tuple<bool, std::size_t> Collection::HasShiftReduceConflict() const
+{
+	for(const ClosurePtr& closure : m_collection)
+	{
+		// get all terminals leading to a reduction
+		Terminal::t_terminalset reduce_lookaheads;
+
+		for(std::size_t elem_idx=0; elem_idx<closure->NumElements(); ++elem_idx)
+		{
+			const ElementPtr& elem = closure->GetElement(elem_idx);
+
+			// reductions take place for finished elements
+			if(!elem->IsCursorAtEnd())
+				continue;
+
+			const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
+			reduce_lookaheads.insert(lookaheads.begin(), lookaheads.end());
+		}
+
+		// get all terminals leading to a shift
+		for(const Collection::t_transition& tup : m_transitions)
+		{
+			const ClosurePtr& stateFrom = std::get<0>(tup);
+			const SymbolPtr& symTrans = std::get<2>(tup);
+
+			if(stateFrom->hash() != closure->hash())
+				continue;
+			if(symTrans->IsEps() || !symTrans->IsTerminal())
+				continue;
+
+			const TerminalPtr termTrans = std::dynamic_pointer_cast<Terminal>(symTrans);
+			if(reduce_lookaheads.find(termTrans) != reduce_lookaheads.end())
+				return std::make_tuple(true, closure->GetId());
+		}
 	}
 
 	return std::make_tuple(false, 0);

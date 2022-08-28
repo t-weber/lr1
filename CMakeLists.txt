@@ -141,6 +141,9 @@ if(BUILD_TESTS)
 	add_executable(right_recursion tests/right_recursion.cpp)
 	target_link_libraries(right_recursion lr1-parsergen)
 
+	add_executable(conflicts tests/conflicts.cpp)
+	target_link_libraries(conflicts lr1-parsergen)
+
 
 	add_executable(expr_simplified tests/expr_simplified.cpp)
 	target_link_libraries(expr_simplified lr1-parsergen lr1-codegen)

@@ -217,23 +217,25 @@ std::vector<SymbolPtr> Closure::GetPossibleTransitions() const
 /**
  * tests if the LR(1) closure has a reduce/reduce conflict
  */
-bool Closure::HasReduceConflict() const
+bool Closure::HasReduceReduceConflict() const
 {
+	// lookaheads have to be unique between different elements of the closure
 	Terminal::t_terminalset seen_lookaheads;
 
 	for(const ElementPtr& elem : m_elems)
 	{
+		// reductions take place for finished elements
 		if(!elem->IsCursorAtEnd())
 			continue;
 
+		// different finished closure elements cannot share the same lookaheads
 		const Terminal::t_terminalset& lookaheads = elem->GetLookaheads();
 		for(const TerminalPtr& lookahead : lookaheads)
 		{
-			auto iter = seen_lookaheads.find(lookahead);
-			if(iter != seen_lookaheads.end())
+			if(auto iter = seen_lookaheads.find(lookahead);
+				iter != seen_lookaheads.end())
 				return true;
-			else
-				seen_lookaheads.insert(lookahead);
+			seen_lookaheads.insert(lookahead);
 		}
 	}
 
