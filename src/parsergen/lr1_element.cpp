@@ -205,8 +205,73 @@ bool Element::IsCursorAtEnd() const
 }
 
 
+/**
+ * write the table data items of a graph label
+ * @see https://graphviz.org/doc/info/shapes.html#html
+ */
+bool Element::WriteGraphLabel(std::ostream& ostr, bool use_colour) const
+{
+	// closure core
+	bool at_end = IsCursorAtEnd();
+	const Word* rhs = GetRhs();
+
+	ostr << "<td align=\"left\">";
+	if(use_colour)
+	{
+		if(at_end)
+			ostr << "<font color=\"#007700\">";
+		else
+			ostr << "<font color=\"#000000\">";
+	}
+	ostr << GetLhs()->GetStrId();
+	ostr << " &#8594; ";
+
+	for(std::size_t i=0; i<rhs->size(); ++i)
+	{
+		if(GetCursor() == i)
+			ostr << "&#8226;";
+
+		const SymbolPtr& sym = (*rhs)[i];
+
+		ostr << sym->GetStrId();
+		if(i < rhs->size()-1)
+			ostr << " ";
+	}
+	if(at_end)
+		ostr << "&#8226;";
+	if(use_colour)
+		ostr << "</font>";
+	ostr << "</td>";
+
+	// lookaheads
+	ostr << "<td align=\"left\">";
+	if(use_colour)
+	{
+		if(at_end)
+			ostr << "<font color=\"#007700\">";
+		else
+			ostr << "<font color=\"#000000\">";
+	}
+	const Terminal::t_terminalset& lookaheads = GetLookaheads();
+	std::size_t lookahead_num = 0;
+	for(const auto& la : lookaheads)
+	{
+		ostr << la->GetStrId();
+		if(lookahead_num < lookaheads.size()-1)
+			ostr << " ";
+		++lookahead_num;
+	}
+	if(use_colour)
+		ostr << "</font>";
+	ostr << "</td>";
+
+	return true;
+}
+
+
 std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 {
+	// closure core
 	NonTerminalPtr lhs = elem.GetLhs();
 	const Word* rhs = elem.GetRhs();
 
@@ -219,19 +284,17 @@ std::ostream& operator<<(std::ostream& ostr, const Element& elem)
 		const SymbolPtr& sym = (*rhs)[i];
 
 		ostr << sym->GetStrId();
-		//if(i < rhs->size()-1)
-			ostr << " ";
+		ostr << " ";
 	}
 
 	if(elem.IsCursorAtEnd())
 		ostr << ".";
 
+	// lookaheads
 	ostr << ", ";
-
 	for(const auto& la : elem.GetLookaheads())
 		ostr << la->GetStrId() << " ";
 
 	ostr << "]";
-
 	return ostr;
 }

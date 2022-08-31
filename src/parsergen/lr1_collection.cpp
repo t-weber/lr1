@@ -309,28 +309,28 @@ void Collection::Simplify()
 
 
 /**
- * write out the transitions graph
+ * write out the transitions graph to an ostream
+ * @see https://graphviz.org/doc/info/shapes.html#html
  */
-bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
+bool Collection::WriteGraph(std::ostream& ofstr, bool write_full_coll, bool use_colour) const
 {
-	std::string outfile_graph = file + ".graph";
-	std::string outfile_svg = file + ".svg";
-
-	std::ofstream ofstr{outfile_graph};
-	if(!ofstr)
-		return false;
-
 	ofstr << "digraph G_lr1\n{\n";
 
 	// write states
 	for(const ClosurePtr& closure : m_collection)
 	{
-		ofstr << "\t" << closure->GetId() << " [label=\"";
+		ofstr << "\t" << closure->GetId() << " [label=";
 		if(write_full_coll)
-			ofstr << *closure;
+		{
+			ofstr << "<";
+			closure->WriteGraphLabel(ofstr, use_colour);
+			ofstr << ">";
+		}
 		else
-			ofstr << closure->GetId();
-		ofstr << "\"];\n";
+		{
+			ofstr << "\"" << closure->GetId() << "\"";
+		}
+		ofstr << "];\n";
 	}
 
 	// write transitions
@@ -348,10 +348,39 @@ bool Collection::WriteGraph(const std::string& file, bool write_full_coll) const
 			continue;
 
 		ofstr << "\t" << closure_from->GetId() << " -> " << closure_to->GetId()
-			<< " [label=\"" << symTrans->GetStrId() << "\"];\n";
+			<< " [label=\"" << symTrans->GetStrId()
+			<< "\", ";
+
+		if(use_colour)
+		{
+			if(symTrans->IsTerminal())
+				ofstr << "color=\"#ff0000\", fontcolor=\"#ff0000\"";
+			else
+				ofstr << "color=\"#0000ff\", fontcolor=\"#0000ff\"";
+		}
+		ofstr << "];\n";
 	}
 
 	ofstr << "}" << std::endl;
+	return true;
+}
+
+
+/**
+ * write out the transitions graph to a file
+ */
+bool Collection::WriteGraph(const std::string& file, bool write_full_coll, bool use_colour) const
+{
+	std::string outfile_graph = file + ".graph";
+	std::string outfile_svg = file + ".svg";
+
+	std::ofstream ofstr{outfile_graph};
+	if(!ofstr)
+		return false;
+
+	if(!WriteGraph(ofstr, write_full_coll, use_colour))
+		return false;
+
 	ofstr.flush();
 	ofstr.close();
 

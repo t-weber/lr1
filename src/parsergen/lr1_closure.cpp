@@ -421,6 +421,28 @@ void Closure::PrintComefroms(std::ostream& ostr) const
 
 
 /**
+ * write the graph labels as a table
+ * @see https://graphviz.org/doc/info/shapes.html#html
+ */
+bool Closure::WriteGraphLabel(std::ostream& ostr, bool use_colour) const
+{
+	ostr << "<table border=\"0\">";
+	ostr << "<tr><td colspan=\"2\"><b>" << "Closure/State " << GetId() << "</b></td></tr>";
+
+	for(std::size_t i=0; i<NumElements(); ++i)
+	{
+		const ElementPtr& elem = GetElement(i);
+		ostr << "<tr>";
+		elem->WriteGraphLabel(ostr, use_colour);
+		ostr << "</tr>";
+	}
+	ostr << "</table>";
+
+	return true;
+}
+
+
+/**
  * prints a closure
  */
 std::ostream& operator<<(std::ostream& ostr, const Closure& closure)

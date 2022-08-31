@@ -92,6 +92,7 @@ public:
 
 	std::size_t hash(bool only_core = false) const;
 
+	bool WriteGraphLabel(std::ostream& ostr, bool use_colour=true) const;
 	friend std::ostream& operator<<(std::ostream& ostr, const Element& elem);
 
 
@@ -167,6 +168,8 @@ public:
 	std::size_t hash(bool only_core = false) const;
 
 	void PrintComefroms(std::ostream& ostr) const;
+
+	bool WriteGraphLabel(std::ostream& ostr, bool use_colour=true) const;
 	friend std::ostream& operator<<(std::ostream& ostr, const Closure& coll);
 
 
@@ -236,7 +239,8 @@ public:
 	static bool SaveParseTables(const std::tuple<t_table, t_table, t_table,
 		t_mapIdIdx, t_mapIdIdx, t_vecIdx>& tabs, const std::string& file);
 
-	bool WriteGraph(const std::string& file, bool write_full_coll=1) const;
+	bool WriteGraph(std::ostream& ostr, bool write_full_coll=true, bool use_colour=true) const;
+	bool WriteGraph(const std::string& file, bool write_full_coll=true, bool use_colour=true) const;
 
 	void SetProgressObserver(std::function<void(const std::string&, bool)> func);
 	void ReportProgress(const std::string& msg, bool finished = false);
