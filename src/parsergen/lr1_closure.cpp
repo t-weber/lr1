@@ -426,8 +426,8 @@ void Closure::PrintComefroms(std::ostream& ostr) const
  */
 bool Closure::WriteGraphLabel(std::ostream& ostr, bool use_colour) const
 {
-	ostr << "<table border=\"0\">";
-	ostr << "<tr><td colspan=\"2\"><b>" << "Closure/State " << GetId() << "</b></td></tr>";
+	ostr << "<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\" sides=\"invis\">";
+	ostr << "<tr><td colspan=\"2\" sides=\"b\"><b>" << "Closure/State " << GetId() << "</b></td></tr>";
 
 	for(std::size_t i=0; i<NumElements(); ++i)
 	{

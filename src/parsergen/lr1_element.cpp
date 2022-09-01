@@ -215,7 +215,7 @@ bool Element::WriteGraphLabel(std::ostream& ostr, bool use_colour) const
 	bool at_end = IsCursorAtEnd();
 	const Word* rhs = GetRhs();
 
-	ostr << "<td align=\"left\">";
+	ostr << "<td align=\"left\" sides=\"r\">";
 	if(use_colour)
 	{
 		if(at_end)
@@ -244,7 +244,7 @@ bool Element::WriteGraphLabel(std::ostream& ostr, bool use_colour) const
 	ostr << "</td>";
 
 	// lookaheads
-	ostr << "<td align=\"left\">";
+	ostr << "<td align=\"left\" sides=\"l\"> ";
 	if(use_colour)
 	{
 		if(at_end)

@@ -186,21 +186,21 @@ void lalr1_grammar()
 	std::cout << "Calculating LR(1) closures..." << std::endl;
 	Collection colls{coll};
 	colls.DoTransitions();
-	colls.WriteGraph("reduce_conflict", 1);
+	colls.WriteGraph("shift_conflict", 1);
 	std::cout << "\n\nLR(1):\n" << colls << std::endl;
 	std::cout << "================================================================================" << std::endl;
 
 	std::cout << "\n\n================================================================================" << std::endl;
 	std::cout << "Converting grammar to LALR(1)..." << std::endl;
 	Collection collsLALR = colls.ConvertToLALR();
-	collsLALR.WriteGraph("reduce_conflict_lalr", 1);
+	collsLALR.WriteGraph("shift_conflict_lalr", 1);
 	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
 	std::cout << "================================================================================" << std::endl;
 
 	std::cout << "\n\n================================================================================" << std::endl;
 	std::cout << "Converting grammar to SLR(1)..." << std::endl;
 	Collection collsSLR = colls.ConvertToSLR(follow);
-	collsSLR.WriteGraph("reduce_conflict_slr", 1);
+	collsSLR.WriteGraph("shift_conflict_slr", 1);
 	std::cout << "\n\nSLR(1):\n" << collsSLR << std::endl;
 	std::cout << "================================================================================" << std::endl;
 }
