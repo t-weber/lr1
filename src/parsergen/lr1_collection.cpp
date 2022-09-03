@@ -341,7 +341,7 @@ bool Collection::WriteGraph(std::ostream& ofstr, bool write_full_coll, bool use_
 		const ClosurePtr& closure_to = std::get<1>(tup);
 		const SymbolPtr& symTrans = std::get<2>(tup);
 
-		//bool symIsTerm = symTrans->IsTerminal();
+		bool symIsTerm = symTrans->IsTerminal();
 		bool symIsEps = symTrans->IsEps();
 
 		if(symIsEps)
@@ -353,7 +353,7 @@ bool Collection::WriteGraph(std::ostream& ofstr, bool write_full_coll, bool use_
 
 		if(use_colour)
 		{
-			if(symTrans->IsTerminal())
+			if(symIsTerm)
 				ofstr << "color=\"#ff0000\", fontcolor=\"#ff0000\"";
 			else
 				ofstr << "color=\"#0000ff\", fontcolor=\"#0000ff\"";
