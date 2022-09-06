@@ -667,7 +667,7 @@ Collection::CreateParseTables(
 			if(!elem->IsCursorAtEnd())
 				continue;
 
-			std::optional<std::size_t> rulenr = *elem->GetSemanticRule();
+			std::optional<std::size_t> rulenr = elem->GetSemanticRule();
 			if(!rulenr)		// no semantic rule assigned
 				continue;
 			std::size_t rule = *rulenr;
