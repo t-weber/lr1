@@ -32,8 +32,10 @@ std::size_t Closure::HashComefromTransition::operator()(
 	std::size_t hashSym = std::get<0>(trans)->hash();
 	std::size_t hashFrom = std::get<1>(trans)->hash(!full_lr1);
 
-	boost::hash_combine(hashFrom, hashSym);
-	return hashFrom;
+	std::size_t fullhash = 0;
+	boost::hash_combine(fullhash, hashFrom);
+	boost::hash_combine(fullhash, hashSym);
+	return fullhash;
 }
 
 

@@ -82,10 +82,11 @@ std::size_t Terminal::hash() const
 	std::size_t hashEps = std::hash<bool>{}(IsEps());
 	std::size_t hashEnd = std::hash<bool>{}(IsEnd());
 
-	boost::hash_combine(hashId, hashEps);
-	boost::hash_combine(hashId, hashEnd);
-
-	return hashId;
+	std::size_t fullhash = 0;
+	boost::hash_combine(fullhash, hashId);
+	boost::hash_combine(fullhash, hashEps);
+	boost::hash_combine(fullhash, hashEnd);
+	return fullhash;
 }
 
 
@@ -236,15 +237,15 @@ bool Word::operator==(const Word& other) const
 
 std::size_t Word::hash() const
 {
-	std::size_t hash = 0;
+	std::size_t fullhash = 0;
 
 	for(std::size_t i=0; i<NumSymbols(); ++i)
 	{
 		std::size_t hashSym = m_syms[i]->hash();
-		boost::hash_combine(hash, hashSym);
+		boost::hash_combine(fullhash, hashSym);
 	}
 
-	return hash;
+	return fullhash;
 }
 
 

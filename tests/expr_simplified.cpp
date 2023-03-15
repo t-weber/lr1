@@ -114,6 +114,12 @@ int main()
 	collsLALR.WriteGraph("expr_simplified_lalr_full", 1);
 	std::cout << "\n\nLALR(1):\n" << collsLALR << std::endl;
 
+	/*Collection collsLALR_direct(coll);
+	collsLALR_direct.DoTransitions(false);
+	collsLALR_direct.WriteGraph("expr_simplified_lalr_direct", 0);
+	collsLALR_direct.WriteGraph("expr_simplified_lalr_direct_full", 1);
+	std::cout << "\n\nLALR(1):\n" << collsLALR_direct << std::endl;*/
+
 	Collection collsSLR = colls.ConvertToSLR(follow);
 	collsSLR.WriteGraph("expr_simplified_slr", 0);
 	collsSLR.WriteGraph("expr_simplified_slr_full", 1);
@@ -187,9 +193,20 @@ int main()
 
 	Parser parser{parsetables, rules};
 
-	std::string exprstr{"(2*3 + (5+4) * (1+2)) * 5+12"};
+	std::string exprstr{"(2.*3. + (5.+4.) * (1.+2.)) * 5.+12."};
 	std::istringstream istr{exprstr};
 	auto tokens = get_all_tokens(istr, &mapTermIdx);
+	std::cout << "Tokens: ";
+	for(const t_toknode& tok : tokens)
+	{
+		std::size_t tokid = tok->GetId();
+		if(tokid == (std::size_t)Token::END)
+			std::cout << "END";
+		else
+			std::cout << tokid;
+		std::cout << " ";
+	}
+	std::cout << "\n";
 
 	auto ast = ASTBase::cst_to_ast(parser.Parse(tokens));
 	std::cout << "AST for expression " << exprstr << ":\n";

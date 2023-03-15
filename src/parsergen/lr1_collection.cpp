@@ -34,10 +34,11 @@ std::size_t Collection::HashTransition::operator()(
 	std::size_t hashTo = std::get<1>(trans)->hash(!full_lr1);
 	std::size_t hashSym = std::get<2>(trans)->hash();
 
-	boost::hash_combine(hashFrom, hashTo);
-	boost::hash_combine(hashFrom, hashSym);
-
-	return hashFrom;
+	std::size_t fullhash = 0;
+	boost::hash_combine(fullhash, hashFrom);
+	boost::hash_combine(fullhash, hashTo);
+	boost::hash_combine(fullhash, hashSym);
+	return fullhash;
 }
 
 

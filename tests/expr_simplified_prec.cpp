@@ -183,7 +183,7 @@ int main()
 
 		{
 			// test operator precedence
-			std::string exprstr{"(2*3 + (5+4) * (1+2)) * 5+12"};
+			std::string exprstr{"(2.*3. + (5.+4.) * (1.+2.)) * 5.+12."};
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
@@ -195,7 +195,7 @@ int main()
 
 		{
 			// test associativity -> forced reduce -> left associative
-			std::string exprstr{"1 + 2 + 3 + 4 + 5"};
+			std::string exprstr{"1. + 2. + 3. + 4. + 5."};
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 
@@ -207,7 +207,7 @@ int main()
 
 		{
 			// test associativity -> forced shift -> right associative
-			std::string exprstr{"1 * 2 * 3 * 4 * 5"};
+			std::string exprstr{"1. * 2. * 3. * 4. * 5."};
 			std::istringstream istr{exprstr};
 			auto tokens = get_all_tokens(istr, &mapTermIdx);
 

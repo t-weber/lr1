@@ -88,19 +88,21 @@ std::size_t Element::hash(bool only_core) const
 	std::size_t hashRhs = this->GetRhs()->hash();
 	std::size_t hashCursor = std::hash<std::size_t>{}(this->GetCursor());
 
-	boost::hash_combine(hashLhs, hashRhs);
-	boost::hash_combine(hashLhs, hashCursor);
+	std::size_t fullhash = 0;
+	boost::hash_combine(fullhash, hashLhs);
+	boost::hash_combine(fullhash, hashRhs);
+	boost::hash_combine(fullhash, hashCursor);
 
 	if(!only_core)
 	{
 		for(const TerminalPtr& la : GetLookaheads())
 		{
 			std::size_t hashLA = la->hash();
-			boost::hash_combine(hashLhs, hashLA);
+			boost::hash_combine(fullhash, hashLA);
 		}
 	}
 
-	return hashLhs;
+	return fullhash;
 }
 
 
